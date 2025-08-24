@@ -1,0 +1,54 @@
+{
+  "dxt_version": "0.1",
+  "name": "windows-operations-mcp",
+  "version": "0.1.0",
+  "description": "Windows Operations MCP - Comprehensive Windows system operations for Claude Desktop",
+  "author": {
+    "name": "Sandra",
+    "email": "sandra@example.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sandraschi/windows-operations-mcp"
+  },
+  "server": {
+    "type": "python",
+    "entry_point": "src/windows_operations_mcp/mcp_server.py",
+    "mcp_config": {
+      "command": "python",
+      "args": ["-m", "windows_operations_mcp.mcp_server"],
+      "env": {
+        "PYTHONPATH": "${PWD}"
+      }
+    }
+  },
+  "user_config": {
+    "log_level": {
+      "type": "string",
+      "default": "INFO",
+      "title": "Log Level",
+      "description": "Logging verbosity level"
+    },
+    "temp_dir": {
+      "type": "string",
+      "default": "C:\\Temp\\windows_operations_mcp",
+      "title": "Temporary Directory",
+      "description": "Directory for temporary file operations"
+    }
+  },
+  "prompts": [
+    {
+      "name": "system",
+      "text": "dxt/prompts/system.md"
+    },
+    {
+      "name": "user",
+      "text": "dxt/prompts/user.md"
+    },
+    {
+      "name": "examples",
+      "text": "dxt/prompts/examples.json"
+    }
+  ]
+}

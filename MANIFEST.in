@@ -1,0 +1,49 @@
+# Include root files
+include LICENSE
+include README.md
+include pyproject.toml
+include requirements*.txt
+include MANIFEST.in
+
+# Include DXT package files
+recursive-include dxt *
+
+# Include package data
+recursive-include src/windows_operations_mcp *.py
+recursive-include src/windows_operations_mcp/templates *
+recursive-include src/windows_operations_mcp/static *
+recursive-include src/windows_operations_mcp/data *
+recursive-include src/windows_operations_mcp/tools *
+
+# Include tests
+recursive-include tests *
+
+# Include documentation
+recursive-include docs *
+
+# Include examples
+recursive-include examples *
+
+# Include configuration files
+include .gitignore
+include .editorconfig
+include .flake8
+include .pylintrc
+include mypy.ini
+include pytest.ini
+
+# Ensure all Python files are included
+global-include *.py
+
+# Include documentation
+recursive-include docs *
+
+# Include tests for source distribution
+recursive-include tests *
+
+# Exclude build and cache files
+global-exclude __pycache__
+global-exclude *.py[cod]
+
+# Include DXT specific files
+recursive-include dxt *

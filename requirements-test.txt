@@ -1,0 +1,21 @@
+# Test dependencies for Windows Operations MCP
+
+# Core testing
+pytest>=7.0.0
+pytest-cov>=3.0.0
+pytest-mock>=3.10.0
+pytest-asyncio>=0.20.0
+
+# Code quality and linting
+pylint>=2.12.0
+mypy>=0.910
+black>=22.0.0
+flake8>=4.0.0
+
+# Test utilities
+coverage>=6.0.0
+pytest-randomly>=3.10.0
+pytest-xdist>=2.4.0
+
+# Windows-specific (for development environments)
+pypiwin32>=223; sys_platform == 'win32'

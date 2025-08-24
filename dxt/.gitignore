@@ -1,0 +1,57 @@
+# DXT build artifacts
+*.dxt
+*.dxt.sig
+
+# Temporary files
+*.tmp
+*~
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Local development
+.env
+.venv
+venv/
+ENV/
+
+# IDE specific
+.idea/
+.vscode/
+*.code-workspace
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Local development settings
+local_settings.py
+db.sqlite3

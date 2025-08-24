@@ -1,0 +1,46 @@
+{
+  "name": "Windows Operations MCP",
+  "version": "1.0.0",
+  "description": "Windows system operations MCP for Claude Desktop",
+  "entrypoint": "windows_operations_mcp.mcp_server:mcp",
+  "python": {
+    "executable": "python",
+    "version": ">=3.8",
+    "dependencies": [
+      "fastmcp>=2.11.3",
+      "structlog>=23.0.0",
+      "psutil>=5.9.0"
+    ]
+  },
+  "mcp": {
+    "version": "2.0",
+    "transport": "stdio"
+  },
+  "capabilities": [
+    "run_command",
+    "file_operations",
+    "process_management",
+    "system_info"
+  ],
+  "settings": {
+    "log_level": "INFO",
+    "timeout": 30,
+    "max_output_size": 10000
+  },
+  "permissions": {
+    "file_system": {
+      "read": ["C:\\", "D:\\"],
+      "write": ["C:\\Temp", "D:\\Temp"]
+    },
+    "network": {
+      "outbound": true,
+      "inbound": false
+    }
+  },
+  "ui": {
+    "display_name": "Windows Operations",
+    "description": "Manage Windows system operations",
+    "icon": "windows",
+    "color": "#0078D4"
+  }
+}

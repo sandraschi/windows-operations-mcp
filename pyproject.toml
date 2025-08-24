@@ -1,0 +1,139 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "windows-operations-mcp"
+version = "0.2.0"
+description = "Windows Operations MCP - Comprehensive Windows system operations for Claude Desktop (FIXED PowerShell stdout capture)"
+readme = "README.md"
+authors = [
+    { name = "Sandra", email = "sandra@example.com" },
+]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = [
+    "fastmcp>=2.11.3,<3.0.0",  # Using 2.11.3 for stateful tools support
+    "psutil>=5.9.0",
+    "structlog>=23.0.0",
+    "fastapi>=0.95.0",
+    "uvicorn>=0.22.0",
+    "pydantic>=1.10.0",
+    "python-dotenv>=1.0.0",
+    "pywin32>=305; sys_platform == 'win32'",
+    "rarfile>=4.0",
+    "python-libarchive-c>=4.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.20.0",
+    "pytest-xdist>=3.0.0",
+    "pytest-randomly>=3.10.0",
+    "coverage>=6.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pylint>=2.12.0",
+    "mkdocs>=1.4.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.20.0"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# Dependencies will be set dynamically
+
+[project.urls]
+Homepage = "https://github.com/sandraschi/windows-operations-mcp"
+Documentation = "https://github.com/sandraschi/windows-operations-mcp#readme"
+Issues = "https://github.com/sandraschi/windows-operations-mcp/issues"
+Source = "https://github.com/sandraschi/windows-operations-mcp"
+
+# Optional dependencies will be set dynamically
+
+# Lint and format configuration
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[tool.pylint]
+master.disable = [
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=src --cov-report=term-missing"
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["**/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 90
+
+[tool.coverage.html]
+directory = "coverage_html"
+title = "Windows Operations MCP Test Coverage"
+
+[project.scripts]
+windows-operations-mcp = "windows_operations_mcp.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.md", "*.json", "*.yaml", "*.yml"]
+
+[[tool.mypy.overrides]]
+module = ["psutil", "fastmcp"]
+ignore_missing_imports = true
