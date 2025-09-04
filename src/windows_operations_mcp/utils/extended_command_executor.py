@@ -294,8 +294,9 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
                 error=f'Command timed out after {timeout_seconds} seconds'
             )
 
-    @staticmethod
-    def execute_powershell_advanced(
+    @classmethod
+    async def execute_powershell_advanced(
+        cls,
         script: str,
         working_directory: Optional[str] = None,
         timeout_seconds: int = 60,
@@ -308,6 +309,23 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
         """
         Execute a PowerShell script with advanced features.
         
+        Args:
+            script: PowerShell script to execute
+            working_directory: Working directory for the command
+            timeout_seconds: Maximum execution time in seconds
+            capture_output: Whether to capture command output
+            as_admin: Run with elevated privileges (Windows only)
+            output_encoding: Encoding for command output
+            convert_json: Whether to automatically parse JSON output
+            **kwargs: Additional arguments for command execution
+            
+        Returns:
+            CommandResult with execution details and parsed JSON (if convert_json is True)
+        """
+        # Create a temporary script file
+        with tempfile.NamedTemporaryFile(suffix='.ps1', delete=False) as f:
+            f.write(script.encode('utf-8'))
+            temp_script_path = f.name
         
         try:
             # Build command
@@ -337,7 +355,7 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
                 ]
             
             # Execute with timeout
-            result = ExtendedCommandExecutor.execute_with_timeout_async(
+            result = await ExtendedCommandExecutor.execute_async(
                 command=command,
                 working_directory=working_directory,
                 timeout_seconds=timeout_seconds,
@@ -350,12 +368,8 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
             if convert_json and capture_output and result.stdout.strip():
                 try:
                     output = json.loads(result.stdout)
-                    if isinstance(output, dict):
+                    if isinstance(output, (dict, list)):
                         result.metadata = output
-                        result.stdout = '\n'.join(output.get('stdout', []))
-                        result.stderr = '\n'.join(output.get('stderr', []))
-                        result.exit_code = output.get('exit_code', result.exit_code)
-                        result.success = output.get('success', result.success)
                 except json.JSONDecodeError:
                     pass
             
@@ -376,16 +390,12 @@ async def example_usage():
     )
     print(f"Exit code: {result.exit_code}")
     
-    # PowerShell with JSON output
-    ps_script = """
-    Get-Process | 
-        Select-Object -First 3 | 
-        Select-Object Name, Id, CPU, WorkingSet |
-        ConvertTo-Json
-    """
+    # PowerShell with JSON output (single line to avoid string issues)
+    ps_script = "Get-Process | Select-Object -First 3 | Select-Object Name, Id, CPU, WorkingSet | ConvertTo-Json"
     
-    result = ExtendedCommandExecutor.execute_powershell_advanced(
+    result = await ExtendedCommandExecutor.execute_powershell_advanced(
         ps_script,
+        on_output=lambda t, d: print(f"[{t.upper()}] {d}"),
         convert_json=True
     )
     

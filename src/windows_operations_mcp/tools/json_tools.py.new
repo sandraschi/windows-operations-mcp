@@ -7,7 +7,7 @@ validating, and manipulating JSON content with proper error handling.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Union, TypeVar
+from typing import Any, Dict, List, Union, TypeVar, Optional
 from datetime import datetime
 
 T = TypeVar('T')
@@ -167,6 +167,67 @@ def json_to_string(
     except (TypeError, ValueError) as e:
         raise TypeError(f"Data is not JSON serializable: {str(e)}") from e
 
+def format_json_string(
+    json_str: str,
+    indent: int = 2,
+    sort_keys: bool = False
+) -> str:
+    """
+    Format a JSON string with proper indentation.
+    
+    Args:
+        json_str: JSON string to format
+        indent: Number of spaces for indentation
+        sort_keys: Whether to sort dictionary keys
+        
+    Returns:
+        str: Formatted JSON string
+        
+    Raises:
+        json.JSONDecodeError: If the input is not valid JSON
+    """
+    try:
+        data = json.loads(json_str)
+        return json_to_string(data, indent=indent, sort_keys=sort_keys)
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(
+            f"Invalid JSON string: {str(e)}",
+            e.doc,
+            e.pos
+        ) from e
+
+def extract_json_from_text(text: str) -> List[Dict]:
+    """
+    Extract JSON objects from a text string.
+    
+    Args:
+        text: Text potentially containing JSON objects
+        
+    Returns:
+        List[Dict]: List of extracted JSON objects as dictionaries
+    """
+    result = []
+    stack = []
+    start_index = -1
+    
+    for i, char in enumerate(text):
+        if char == '{':
+            if not stack:
+                start_index = i
+            stack.append(char)
+        elif char == '}':
+            if stack:
+                stack.pop()
+                if not stack and start_index != -1:
+                    try:
+                        json_str = text[start_index:i+1]
+                        result.append(json.loads(json_str))
+                        start_index = -1
+                    except json.JSONDecodeError:
+                        continue
+    
+    return result
+
 def _json_serializer(obj: Any) -> Any:
     """
     Custom JSON serializer for objects not serializable by default.
@@ -224,68 +285,25 @@ if __name__ == "__main__":
             {"a": 1, "b": {"x": 10}},
             {"b": {"y": 20}, "c": 30}
         )
-        print("Merged data:")
+        print("Merged JSON:")
         print(json_to_string(merged, indent=2))
+        
+        # Test format_json_string
+        ugly_json = '{"a":1,"b":2}'
+        pretty_json = format_json_string(ugly_json, indent=2)
+        print("Formatted JSON:")
+        print(pretty_json)
+        
+        # Test extract_json_from_text
+        text_with_json = """
+        Some text before
+        {"key1": "value1", "key2": [1, 2, 3]}
+        More text in between
+        {"another": "object"}
+        """
+        print("Extracted JSON objects:")
+        for i, obj in enumerate(extract_json_from_text(text_with_json), 1):
+            print(f"Object {i}:", json_to_string(obj, indent=2))
         
     except Exception as e:
         print(f"Error: {str(e)}")
-
-def format_json_string(
-    json_str: str, 
-    indent: int = 2, 
-    sort_keys: bool = False
-) -> str:
-    """
-    Format a JSON string with proper indentation.
-    
-    Args:
-        json_str: JSON string to format
-        indent: Number of spaces for indentation
-        sort_keys: Whether to sort dictionary keys
-        
-    Returns:
-        Formatted JSON string
-        
-    Raises:
-        json.JSONDecodeError: If the input is not valid JSON
-    """
-    parsed = json.loads(json_str)
-    return json.dumps(parsed, indent=indent, sort_keys=sort_keys, ensure_ascii=False)
-
-def convert_to_json(data: Any, indent: Optional[int] = None) -> str:
-    """
-    Convert a Python object to a JSON string.
-    
-    Args:
-        data: Python object to convert
-        indent: Number of spaces for indentation (None for compact output)
-        
-    Returns:
-        JSON string representation of the data
-    """
-    return json.dumps(data, indent=indent, ensure_ascii=False)
-
-def extract_json_from_text(text: str) -> List[Dict]:
-    """
-    Extract JSON objects from a text string.
-    
-    Args:
-        text: Text potentially containing JSON objects
-        
-    Returns:
-        List of extracted JSON objects as dictionaries
-    """
-    import re
-    
-    # Pattern to match JSON objects and arrays
-    json_pattern = r'(\{.*?\}|\[.*?\])'
-    
-    results = []
-    for match in re.finditer(json_pattern, text, re.DOTALL):
-        try:
-            json_obj = json.loads(match.group(0))
-            results.append(json_obj)
-        except json.JSONDecodeError:
-            continue
-            
-    return results
