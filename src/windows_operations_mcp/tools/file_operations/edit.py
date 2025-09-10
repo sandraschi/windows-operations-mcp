@@ -386,7 +386,7 @@ def fix_markdown(content: str) -> str:
                 if '#' in stripped and not stripped.startswith('# '):
                     # Fix headers without space after #
                     count = len(stripped) - len(stripped.lstrip('#'))
-                    line = line.replace('#' * count, f"{" "#" * count} ", 1)
+                    line = line.replace('#' * count, f"{"#" * count} ", 1)
             
             # Fix code blocks with incorrect backticks
             if '`' in stripped and not any(block in stripped for block in ['```', '`']):
@@ -397,7 +397,7 @@ def fix_markdown(content: str) -> str:
     # Join lines with proper line endings
     line_ending = detect_line_endings(content)
     result = line_ending.join(fixed_lines)
-    
+    return result
     # Ensure exactly one newline at the end of file
     result = result.rstrip() + line_ending
     

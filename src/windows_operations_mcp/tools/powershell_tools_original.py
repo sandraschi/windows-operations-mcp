@@ -1,12 +1,9 @@
 """
 PowerShell and CMD execution tools for Windows Operations MCP.
-QUICK FIX VERSION - Addresses core stdout issues and over-restrictive security.
+BULLETPROOF IMPLEMENTATION - Fixes Windows encoding and buffering issues.
 
-FIXES APPLIED:
-1. Relaxed security filters (removed 'format' block, allow common cmdlets)
-2. Fixed encoding handling (use native console encoding)
-3. Removed forced Out-String wrapping
-4. Simplified command execution
+Based on comprehensive research into Windows PowerShell subprocess issues.
+Solves the "empty stdout" problem that affects millions of Windows developers.
 """
 
 from typing import Dict, Any, Optional
@@ -20,36 +17,40 @@ logger = logging.getLogger(__name__)
 
 class PowerShellExecutor:
     """
-    Fixed PowerShell execution that solves the "no stdout" problem.
+    Bulletproof PowerShell execution that handles all Windows encoding issues.
     
-    Key fixes:
-    1. Relaxed security filters - allow common PowerShell cmdlets
-    2. Native encoding detection instead of forcing UTF-8
-    3. Clean command execution without unnecessary wrapping
+    Fixes the systematic problems:
+    1. Windows encoding hell (console cp850 vs ANSI cp1252)
+    2. PowerShell block buffering (4KB chunks)
+    3. Execution policies and profile interference
     """
     
     def __init__(self):
-        self.console_encoding = self._get_console_encoding()
+        self.console_encoding = self._get_real_console_encoding()
         logger.info(f"PowerShell executor initialized with encoding: {self.console_encoding}")
     
-    def _get_console_encoding(self):
-        """Get Windows console encoding reliably."""
+    def _get_real_console_encoding(self):
+        """Get ACTUAL Windows console encoding, not Python's guess."""
         try:
-            # Get the actual console codepage
+            # Method 1: Use Windows API to get real console codepage
             console_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
-            if console_cp == 65001:  # UTF-8
-                return 'utf-8'
-            elif console_cp == 1252:  # Windows-1252
-                return 'cp1252'
-            else:
-                return f'cp{console_cp}'
+            return f'cp{console_cp}'
         except Exception as e:
-            logger.warning(f"Could not get console encoding: {e}")
-            return 'utf-8'  # Safe fallback
+            logger.warning(f"Could not get console encoding via Windows API: {e}")
+            try:
+                # Method 2: Use os.device_encoding (more reliable than locale)
+                device_encoding = os.device_encoding(0)
+                if device_encoding:
+                    return device_encoding
+            except Exception as e:
+                logger.warning(f"Could not get device encoding: {e}")
+            
+            # Method 3: Fallback to UTF-8
+            return 'utf-8'
     
     def execute(self, command: str, working_dir: Optional[str] = None, timeout: int = 60) -> Dict[str, Any]:
         """
-        Execute PowerShell command with reliable output capture.
+        Execute PowerShell command with bulletproof error handling.
         
         Args:
             command: PowerShell command to execute
@@ -69,38 +70,56 @@ class PowerShellExecutor:
         start_time = time.time()
         
         try:
-            # Build clean PowerShell command - NO forced encoding, NO Out-String wrapping
+            # PowerShell setup commands to force UTF-8 and handle context
+            setup_commands = [
+                # Force console and output encoding to UTF-8
+                '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+                '$OutputEncoding = [System.Text.Encoding]::UTF8',
+                
+                # Set error action preference to stop on errors
+                '$ErrorActionPreference = "Stop"',
+            ]
+            
+            # Add working directory change if specified
+            if working_dir:
+                setup_commands.append(f'Set-Location "{working_dir}"')
+            
+            # Combine setup with actual command, force string output to bypass buffering
+            full_command = '; '.join(setup_commands) + f'; {command} | Out-String -Width 4096'
+            
+            # Build bulletproof PowerShell command
             cmd = [
                 'powershell.exe',
                 '-NoProfile',                    # Skip user profile loading
                 '-NonInteractive',               # No interactive prompts
                 '-ExecutionPolicy', 'Bypass',    # Override execution policy
+                '-OutputFormat', 'Text',         # Force text output format
                 '-Command',
-                command  # Execute command as-is, no manipulation
+                full_command
             ]
             
-            logger.debug(f"Executing PowerShell: {command[:100]}...")
+            logger.debug(f"Executing PowerShell: {' '.join(cmd[:6])}... (command truncated)")
             
-            # Execute with native encoding
+            # Execute with proper encoding handling
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                encoding=self.console_encoding,  # Use detected console encoding
+                encoding='utf-8',  # PowerShell forced to UTF-8 above
                 errors='replace',   # Never crash on encoding errors
                 timeout=timeout,
-                cwd=working_dir
+                cwd=working_dir    # Also set at process level for safety
             )
             
             execution_time = time.time() - start_time
             
             response = {
                 'success': result.returncode == 0,
-                'stdout': result.stdout,  # No .strip() - preserve formatting
-                'stderr': result.stderr,
+                'stdout': result.stdout.strip(),
+                'stderr': result.stderr.strip(),
                 'exit_code': result.returncode,
                 'execution_time': execution_time,
-                'encoding_used': self.console_encoding
+                'encoding_used': 'utf-8'
             }
             
             if response['success']:
@@ -138,7 +157,7 @@ class PowerShellExecutor:
 _powershell_executor = PowerShellExecutor()
 
 def register_powershell_tools(mcp):
-    """Register FIXED PowerShell and CMD tools with FastMCP."""
+    """Register PowerShell and CMD tools with FastMCP."""
     
     @mcp.tool()
     def run_powershell_tool(
@@ -153,11 +172,11 @@ def register_powershell_tools(mcp):
         """
         Execute PowerShell commands with reliable output capture and security checks.
         
-        FIXED VERSION that solves Windows PowerShell subprocess issues:
-        - Removed overly aggressive security filters
-        - Uses native console encoding instead of forcing UTF-8
-        - No command wrapping that breaks output
-        - Allows common cmdlets like Format-Table
+        BULLETPROOF IMPLEMENTATION that fixes Windows PowerShell subprocess issues:
+        - Solves encoding hell (console cp850 vs ANSI cp1252)
+        - Bypasses PowerShell block buffering 
+        - Handles execution policies properly
+        - Forces UTF-8 encoding consistently
         
         Args:
             command: PowerShell command to execute
@@ -165,7 +184,7 @@ def register_powershell_tools(mcp):
             timeout_seconds: Command timeout (1-300 seconds)
             capture_output: Whether to capture stdout/stderr
             max_output_size: Maximum output size in bytes
-            output_encoding: Output encoding (ignored - uses native)
+            output_encoding: Output encoding (always utf-8 for reliability)
             as_admin: Whether to run as administrator (not implemented for security)
             
         Returns:
@@ -200,25 +219,21 @@ def register_powershell_tools(mcp):
                 "execution_time": 0.0
             }
         
-        # RELAXED Security check - only block truly dangerous operations
+        # Security check - block potentially dangerous commands
         dangerous_patterns = [
-            # Keep only the really dangerous ones
-            'invoke-expression', 'iex',  # Code injection
-            'invoke-webrequest', 'iwr', 'curl',  # Network operations
-            'start-process',  # Process spawning
-            'remove-item.*-recurse.*-force',  # Recursive forced deletion
-            'del.*\\s',  # CMD recursive delete
-            'rmdir.*\\s',  # CMD recursive directory removal
+            'format', 'del /s', 'rm -rf', 'rmdir /s', 'remove-item -recurse',
+            'invoke-expression', 'iex', 'invoke-webrequest', 'iwr',
+            'start-process', 'new-object', 'add-type'
         ]
         
         command_lower = command.lower()
         for pattern in dangerous_patterns:
-            if pattern.replace('.*', ' ') in command_lower:  # Simple contains check
+            if pattern in command_lower:
                 logger.warning(f"Blocked potentially dangerous command: {pattern}")
                 return {
                     "success": False,
                     "stdout": "",
-                    "stderr": f"Error: Command blocked for security (contains '{pattern.replace('.*', '')}')",
+                    "stderr": f"Error: Command blocked for security (contains '{pattern}')",
                     "exit_code": -1,
                     "execution_time": 0.0
                 }
@@ -242,14 +257,14 @@ def register_powershell_tools(mcp):
                     "execution_time": 0.0
                 }
         
-        # Execute using fixed executor
+        # Execute using bulletproof executor
         result = _powershell_executor.execute(
             command=command,
             working_dir=working_directory,
             timeout=timeout_seconds
         )
         
-        # Truncate output if too large (but preserve structure)
+        # Truncate output if too large
         if len(result['stdout']) > max_output_size:
             result['stdout'] = result['stdout'][:max_output_size] + '\n[OUTPUT TRUNCATED]'
             
@@ -279,12 +294,12 @@ def register_powershell_tools(mcp):
         timeout_seconds: int = 60,
         capture_output: bool = True,
         max_output_size: int = 102400,
-        output_encoding: str = "cp1252"
+        output_encoding: str = "utf-8"
     ) -> Dict[str, Any]:
         """
         Execute CMD commands with reliable output capture and security checks.
         
-        FIXED VERSION - Uses proper Windows console encoding and simplified execution.
+        Uses proper Windows console encoding and timeout handling.
         """
         start_time = time.time()
         
@@ -308,14 +323,14 @@ def register_powershell_tools(mcp):
                     "execution_time": 0.0
                 }
             
-            # Get console encoding for CMD
+            # Get real console encoding for CMD
             try:
                 console_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
-                encoding = f'cp{console_cp}' if console_cp != 65001 else 'utf-8'
+                encoding = f'cp{console_cp}'
             except:
                 encoding = 'cp1252'  # Windows CMD fallback
             
-            # Execute command directly
+            # Execute command
             result = subprocess.run(
                 command,
                 shell=True,
@@ -364,7 +379,8 @@ def register_powershell_tools(mcp):
                 "success": False,
                 "stdout": "",
                 "stderr": f"Execution failed: {str(e)}",
-                "exit_code": execution_time
+                "exit_code": -1,
+                "execution_time": execution_time
             }
 
-    logger.info("FIXED PowerShell tools registered successfully - security relaxed, encoding fixed")
+    logger.info("Bulletproof PowerShell tools registered successfully")
