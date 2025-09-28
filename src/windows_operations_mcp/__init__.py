@@ -1,5 +1,5 @@
 """
-Windows Operations MCP - FastMCP 2.11.3 Implementation
+Windows Operations MCP - FastMCP 2.12.3 Implementation
 
 A comprehensive Windows system operations server for Claude Desktop.
 Provides reliable PowerShell, CMD, file operations, and system monitoring.

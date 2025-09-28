@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Any
 from textwrap import dedent
 
 from ..logging_config import get_logger
+from ..decorators import tool
 
 logger = get_logger(__name__)
 
@@ -20,36 +21,65 @@ TOOL_CATEGORIES = {
     "help": "Help system"
 }
 
+@tool(
+    name="get_help",
+    description="Get help about available commands and their usage",
+    parameters={
+        "command": {
+            "type": "string",
+            "description": "Specific command to get detailed help for"
+        },
+        "category": {
+            "type": "string",
+            "description": "Filter tools by category"
+        },
+        "detail": {
+            "type": "integer",
+            "description": "Detail level (0=names only, 1=with descriptions, 2=verbose)",
+            "default": 1
+        }
+    },
+    required=[],
+    returns={
+        "type": "object",
+        "properties": {
+            "status": {"type": "string"},
+            "message": {"type": "string"}
+        }
+    }
+)
+def get_help(command: Optional[str] = None, category: Optional[str] = None, detail: int = 1) -> Dict[str, Any]:
+    """
+    Get help about available commands and their usage.
+
+    This tool provides comprehensive help information about all available MCP tools,
+    with support for filtering by category and adjustable detail levels.
+
+    Args:
+        command: Specific command to get detailed help for
+        category: Filter tools by category
+        detail: Detail level (0=names only, 1=with descriptions, 2=verbose)
+
+    Returns:
+        Dict containing help information and status
+    """
+    try:
+        if command:
+            return _get_command_help(command, detail)
+        return _list_commands(category, detail)
+    except Exception as e:
+        logger.error(f"Help system error: {e}")
+        return {
+            "status": "error",
+            "message": f"Help system error: {str(e)}"
+        }
+
+
 def register_help_tools(mcp):
     """Register help tools with FastMCP."""
-    
-    @mcp.tool()
-    def get_help(command: Optional[str] = None, category: Optional[str] = None, detail: int = 1) -> Dict[str, Any]:
-        """
-        Get help about available commands and their usage.
-        
-        This tool provides comprehensive help information about all available MCP tools,
-        with support for filtering by category and adjustable detail levels.
-        
-        Args:
-            command: Specific command to get detailed help for
-            category: Filter tools by category
-            detail: Detail level (0=names only, 1=with descriptions, 2=verbose)
-            
-        Returns:
-            Dict containing help information and status
-        """
-        try:
-            if command:
-                return _get_command_help(command, detail)
-            return _list_commands(category, detail)
-        except Exception as e:
-            logger.error(f"Help system error: {e}")
-            return {
-                "status": "error",
-                "message": f"Help system error: {str(e)}"
-            }
-    
+    # Register the get_help tool with MCP
+    mcp.tool(get_help)
+
     logger.info("help_tools_registered", tools=["get_help"])
 
 def _get_command_help(command: str, detail: int) -> Dict[str, Any]:

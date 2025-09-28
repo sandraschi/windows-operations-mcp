@@ -1,5 +1,5 @@
 """
-Windows Operations MCP Server - FastMCP 2.11.3 Implementation
+Windows Operations MCP Server - FastMCP 2.12.3 Implementation
 
 Main server module that registers all tools with FastMCP 2.x.
 Provides Windows system operations through a standardized MCP interface.
@@ -18,7 +18,7 @@ log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 setup_logging(level=log_level)
 logger = get_logger(__name__)
 
-# Import FastMCP 2.11.3+ components
+# Import FastMCP 2.12.3+ components
 try:
     import fastmcp
     from fastmcp import FastMCP

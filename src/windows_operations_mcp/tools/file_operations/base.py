@@ -8,6 +8,7 @@ used across all file operation modules.
 import os
 import ctypes
 import logging
+from windows_operations_mcp.logging_config import get_logger
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, Callable, TypeVar, Type, cast
 from functools import wraps
@@ -76,7 +77,7 @@ if os.name == 'nt':
     _CloseHandle.restype = BOOL
 
 # Logger
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class FileOperationError(Exception):
     """Base exception for file operations."""

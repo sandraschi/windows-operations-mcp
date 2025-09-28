@@ -87,7 +87,7 @@ def get_mime_type(file_path: Path) -> str:
     return mime_type
 
 @log_operation("get_file_info")
-@handle_operation()
+@handle_operation("get_file_info")
 def get_file_info(
     file_path: Union[str, Path],
     include_content: bool = False,
@@ -192,7 +192,7 @@ def get_file_info(
     return info
 
 @log_operation("list_directory")
-@handle_operation()
+@handle_operation("get_file_info")
 def list_directory(
     path: str,
     include_hidden: bool = False,

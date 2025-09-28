@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any, Union
 
 from ..logging_config import get_logger
+from ..decorators import tool
 
 logger = get_logger(__name__)
 
@@ -43,8 +44,46 @@ def _run_git_command(args: List[str], repo_path: Optional[str] = None) -> Dict[s
 
 def register_git_tools(mcp):
     """Register Git tools with FastMCP."""
+    # Register the git tools with MCP
+    mcp.tool(git_add)
+    mcp.tool(git_commit)
+    mcp.tool(git_push)
+    mcp.tool(git_status)
     
-    @mcp.tool()
+    @tool(
+        name="git_add",
+        description="Add file contents to the Git staging area",
+        parameters={
+            "pathspec": {
+                "type": "string",
+                "description": "Path specification for files to add",
+                "default": "."
+            },
+            "all": {
+                "type": "boolean",
+                "description": "Add all files",
+                "default": False
+            },
+            "force": {
+                "type": "boolean",
+                "description": "Force add files",
+                "default": False
+            },
+            "repo_path": {
+                "type": "string",
+                "description": "Path to the git repository (optional)"
+            }
+        },
+        required=[],
+        returns={
+            "type": "object",
+            "properties": {
+                "status": {"type": "string"},
+                "message": {"type": "string"},
+                "pathspec": {"type": "string"}
+            }
+        }
+    )
     def git_add(pathspec: str = ".", all: bool = False, force: bool = False, repo_path: Optional[str] = None) -> Dict[str, Any]:
         """Add file contents to the Git staging area."""
         args = ["add"]
@@ -62,7 +101,39 @@ def register_git_tools(mcp):
             logger.error(f"Git add failed: {result['stderr']}")
             return {"status": "error", "message": result["stderr"]}
 
-    @mcp.tool()
+    @tool(
+        name="git_commit",
+        description="Record changes to the repository",
+        parameters={
+            "message": {
+                "type": "string",
+                "description": "Commit message"
+            },
+            "all": {
+                "type": "boolean",
+                "description": "Stage all changes before committing",
+                "default": False
+            },
+            "amend": {
+                "type": "boolean",
+                "description": "Amend the previous commit",
+                "default": False
+            },
+            "repo_path": {
+                "type": "string",
+                "description": "Path to the git repository (optional)"
+            }
+        },
+        required=["message"],
+        returns={
+            "type": "object",
+            "properties": {
+                "status": {"type": "string"},
+                "message": {"type": "string"},
+                "commit_hash": {"type": "string"}
+            }
+        }
+    )
     def git_commit(message: str, all: bool = False, amend: bool = False, repo_path: Optional[str] = None) -> Dict[str, Any]:
         """Record changes to the repository."""
         args = ["commit", "-m", message]
@@ -79,8 +150,44 @@ def register_git_tools(mcp):
             logger.error(f"Git commit failed: {result['stderr']}")
             return {"status": "error", "message": result["stderr"]}
 
-    @mcp.tool()
-    def git_push(remote: str = "origin", branch: Optional[str] = None, 
+    @tool(
+        name="git_push",
+        description="Update remote refs along with associated objects",
+        parameters={
+            "remote": {
+                "type": "string",
+                "description": "Remote repository name",
+                "default": "origin"
+            },
+            "branch": {
+                "type": "string",
+                "description": "Branch to push"
+            },
+            "force": {
+                "type": "boolean",
+                "description": "Force push",
+                "default": False
+            },
+            "set_upstream": {
+                "type": "boolean",
+                "description": "Set upstream branch",
+                "default": False
+            },
+            "repo_path": {
+                "type": "string",
+                "description": "Path to the git repository (optional)"
+            }
+        },
+        required=["remote"],
+        returns={
+            "type": "object",
+            "properties": {
+                "status": {"type": "string"},
+                "message": {"type": "string"}
+            }
+        }
+    )
+    def git_push(remote: str = "origin", branch: Optional[str] = None,
                 force: bool = False, set_upstream: bool = False, repo_path: Optional[str] = None) -> Dict[str, Any]:
         """Update remote refs along with associated objects."""
         args = ["push"]
@@ -101,7 +208,26 @@ def register_git_tools(mcp):
             logger.error(f"Git push failed: {result['stderr']}")
             return {"status": "error", "message": result["stderr"]}
 
-    @mcp.tool()
+    @tool(
+        name="git_status",
+        description="Show the working tree status",
+        parameters={
+            "repo_path": {
+                "type": "string",
+                "description": "Path to the git repository (optional)"
+            }
+        },
+        required=[],
+        returns={
+            "type": "object",
+            "properties": {
+                "status": {"type": "string"},
+                "changes": {"type": "array", "items": {"type": "string"}},
+                "change_count": {"type": "integer"},
+                "message": {"type": "string"}
+            }
+        }
+    )
     def git_status(repo_path: Optional[str] = None) -> Dict[str, Any]:
         """Show the working tree status."""
         result = _run_git_command(["status", "--porcelain"], repo_path)

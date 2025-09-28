@@ -7,7 +7,7 @@ validating, and manipulating JSON content with proper error handling.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Union, TypeVar
+from typing import Any, Dict, List, Union, TypeVar, Optional
 from datetime import datetime
 
 T = TypeVar('T')

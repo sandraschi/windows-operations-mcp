@@ -13,7 +13,7 @@ long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 # Main dependencies
 install_requires = [
-    'fastmcp>=2.11.3,<3.0.0',  # Using 2.11.3 for stateful tools support
+    'fastmcp>=2.12.3,<3.0.0',  # Using 2.12.3 for stateful tools support
     'psutil>=5.9.0',
     'structlog>=23.0.0',
     'fastapi>=0.95.0',

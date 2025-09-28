@@ -12,6 +12,7 @@ from typing import Dict, Any, Tuple, Optional
 from pathlib import Path
 
 from ..logging_config import get_logger
+from ..decorators import tool
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -172,8 +173,42 @@ def _test_udp_port(ip: str, port: int, timeout_seconds: int, start_time: float) 
 
 def register_network_tools(mcp):
     """Register network tools with FastMCP."""
+    # Register the test_port tool with MCP
+    mcp.tool(test_port)
     
-    @mcp.tool()
+    @tool(
+        name="test_port",
+        description="Test network port accessibility with detailed diagnostics",
+        parameters={
+            "host": {
+                "type": "string",
+                "description": "Hostname or IP address to test"
+            },
+            "port": {
+                "type": "integer",
+                "description": "Port number to test (1-65535)"
+            },
+            "timeout_seconds": {
+                "type": "integer",
+                "description": "Connection timeout in seconds (1-300)",
+                "default": 30
+            },
+            "protocol": {
+                "type": "string",
+                "description": "Protocol to test (tcp or udp)",
+                "default": "tcp"
+            }
+        },
+        required=["host", "port"],
+        returns={
+            "type": "object",
+            "properties": {
+                "accessible": {"type": "boolean"},
+                "response_time_ms": {"type": "number"},
+                "error": {"type": "string"}
+            }
+        }
+    )
     def test_port(
         host: str,
         port: int,
@@ -182,16 +217,16 @@ def register_network_tools(mcp):
     ) -> Dict[str, Any]:
         """
         Test network port accessibility with detailed diagnostics.
-        
+
         This tool tests whether a specific port on a host is accessible,
         providing detailed timing and connection information.
-        
+
         Args:
             host: Hostname or IP address to test
             port: Port number to test (1-65535)
             timeout_seconds: Connection timeout in seconds (1-300)
             protocol: Protocol to test (tcp or udp)
-            
+
         Returns:
             Dict containing test results, timing information, and diagnostics
         """

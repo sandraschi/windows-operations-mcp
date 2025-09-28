@@ -49,7 +49,7 @@ ATTRIBUTE_MAP = {
 }
 
 @log_operation("get_file_attributes")
-@handle_operation()
+@handle_operation("get_file_attributes")
 def get_file_attributes(file_path: Union[str, Path]) -> Dict[str, bool]:
     """
     Get file attributes for the specified file.
@@ -100,7 +100,7 @@ def get_file_attributes(file_path: Union[str, Path]) -> Dict[str, bool]:
     return attributes
 
 @log_operation("set_file_attributes")
-@handle_operation()
+@handle_operation("get_file_attributes")
 def set_file_attributes(
     file_path: Union[str, Path],
     attributes: Dict[str, bool]

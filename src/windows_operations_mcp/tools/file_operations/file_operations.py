@@ -16,24 +16,57 @@ from .base import (
     log_operation,
     handle_operation
 )
+from ..decorators import tool
 
-@log_operation("create_file")
-@handle_operation()
-def create_file(
+@tool(
+    name="write_file",
+    description="Create or overwrite a file with specified content",
+    parameters={
+        "path": {
+            "type": "string",
+            "description": "Path where the file should be created"
+        },
+        "content": {
+            "type": "string",
+            "description": "Content to write to the file",
+            "default": ""
+        },
+        "overwrite": {
+            "type": "boolean",
+            "description": "Whether to overwrite if file exists",
+            "default": False
+        },
+        "encoding": {
+            "type": "string",
+            "description": "File encoding to use",
+            "default": "utf-8"
+        }
+    },
+    required=["path"],
+    returns={
+        "type": "object",
+        "properties": {
+            "path": {"type": "string"},
+            "size": {"type": "integer"},
+            "created": {"type": "boolean"}
+        }
+    }
+)
+def write_file(
     path: str,
     content: str = "",
     overwrite: bool = False,
     encoding: str = "utf-8"
 ) -> Dict[str, Any]:
     """
-    Create a new file with the specified content.
-    
+    Create or overwrite a file with specified content.
+
     Args:
         path: Path where the file should be created
         content: Content to write to the file
         overwrite: Whether to overwrite if file exists
         encoding: File encoding to use
-        
+
     Returns:
         Dictionary with operation status and file info
     """
@@ -55,8 +88,78 @@ def create_file(
         "created": True
     }
 
+@tool(
+    name="read_file",
+    description="Read the contents of a file",
+    parameters={
+        "path": {
+            "type": "string",
+            "description": "Path to the file to read"
+        },
+        "encoding": {
+            "type": "string",
+            "description": "File encoding to use",
+            "default": "utf-8"
+        },
+        "max_size": {
+            "type": "integer",
+            "description": "Maximum file size to read (in bytes)"
+        }
+    },
+    required=["path"],
+    returns={
+        "type": "object",
+        "properties": {
+            "path": {"type": "string"},
+            "content": {"type": "string"},
+            "size": {"type": "integer"},
+            "encoding": {"type": "string"}
+        }
+    }
+)
+def read_file(
+    path: str,
+    encoding: str = "utf-8",
+    max_size: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Read the contents of a file.
+
+    Args:
+        path: Path to the file to read
+        encoding: File encoding to use
+        max_size: Maximum file size to read (in bytes)
+
+    Returns:
+        Dictionary with file content and metadata
+    """
+    path = normalize_path(path)
+
+    if not path.exists():
+        raise FileOperationError(f"File does not exist: {path}")
+
+    if not path.is_file():
+        raise FileOperationError(f"Path is not a file: {path}")
+
+    # Check file size if max_size is specified
+    if max_size is not None:
+        file_size = path.stat().st_size
+        if file_size > max_size:
+            raise FileOperationError(f"File too large: {file_size} bytes (max: {max_size})")
+
+    # Read file content
+    with open(path, 'r', encoding=encoding) as f:
+        content = f.read()
+
+    return {
+        "path": str(path),
+        "content": content,
+        "size": len(content),
+        "encoding": encoding
+    }
+
 @log_operation("delete_file")
-@handle_operation()
+@handle_operation("create_file")
 def delete_file(path: str) -> Dict[str, Any]:
     """
     Delete a file or directory.
@@ -83,7 +186,7 @@ def delete_file(path: str) -> Dict[str, Any]:
     }
 
 @log_operation("move_file")
-@handle_operation()
+@handle_operation("create_file")
 def move_file(
     source: str,
     destination: str,
@@ -126,7 +229,7 @@ def move_file(
     }
 
 @log_operation("copy_file")
-@handle_operation()
+@handle_operation("create_file")
 def copy_file(
     source: str,
     destination: str,

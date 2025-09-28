@@ -69,7 +69,7 @@ def filetime_to_datetime(filetime: int) -> datetime.datetime:
     return datetime.datetime.utcfromtimestamp(timestamp)
 
 @log_operation("get_file_dates")
-@handle_operation()
+@handle_operation("get_file_dates")
 def get_file_dates(file_path: Union[str, Path]) -> Dict[str, datetime.datetime]:
     """
     Get file dates (created, modified, accessed) for the specified file.
@@ -133,7 +133,7 @@ def get_file_dates(file_path: Union[str, Path]) -> Dict[str, datetime.datetime]:
         }
 
 @log_operation("set_file_dates")
-@handle_operation()
+@handle_operation("get_file_dates")
 def set_file_dates(
     file_path: Union[str, Path],
     created: Optional[datetime.datetime] = None,

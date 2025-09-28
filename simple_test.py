@@ -1,5 +1,5 @@
 """
-Simple test script to verify FastMCP 2.11.3 integration with stateful tools support.
+Simple test script to verify FastMCP 2.12.3 integration with stateful tools support.
 """
 
 import asyncio

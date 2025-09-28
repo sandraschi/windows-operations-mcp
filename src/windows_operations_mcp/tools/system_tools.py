@@ -14,6 +14,7 @@ import time
 from typing import Dict, Any, Optional, List, Tuple
 
 from ..logging_config import get_logger
+from ..decorators import tool
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -42,15 +43,37 @@ def _update_cache(cache_key: str, data: Dict) -> None:
 
 def register_system_tools(mcp):
     """Register system information tools with FastMCP."""
+    # Register the system tools with MCP
+    mcp.tool(get_system_info)
+    mcp.tool(health_check)
     
-    @mcp.tool()
+    @tool(
+        name="get_system_info",
+        description="Get comprehensive system information with optional detailed system metrics",
+        parameters={
+            "detailed": {
+                "type": "boolean",
+                "description": "If True, includes more detailed system information (may be slower)",
+                "default": False
+            }
+        },
+        required=[],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "system": {"type": "object"},
+                "error": {"type": "string"}
+            }
+        }
+    )
     def get_system_info(detailed: bool = False) -> Dict[str, Any]:
         """
         Get comprehensive system information with optional detailed system metrics.
-        
+
         Args:
             detailed: If True, includes more detailed system information (may be slower)
-            
+
         Returns:
             Dict containing:
                 - success (bool): Whether the operation succeeded
@@ -228,7 +251,42 @@ def register_system_tools(mcp):
                 "execution_time_ms": round((time.time() - start_time) * 1000, 2)
             }
 
-    @mcp.tool()
+    @tool(
+        name="health_check",
+        description="Perform comprehensive health check of the Windows Operations MCP server",
+        parameters={
+            "detailed": {
+                "type": "boolean",
+                "description": "If True, includes more detailed health information (may be slower)",
+                "default": False
+            },
+            "check_services": {
+                "type": "boolean",
+                "description": "If True, verifies required services are running",
+                "default": True
+            },
+            "check_disk_space": {
+                "type": "boolean",
+                "description": "If True, checks disk space usage",
+                "default": True
+            },
+            "check_network": {
+                "type": "boolean",
+                "description": "If True, verifies network connectivity",
+                "default": True
+            }
+        },
+        required=[],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "status": {"type": "string"},
+                "checks": {"type": "object"},
+                "error": {"type": "string"}
+            }
+        }
+    )
     def health_check(
         detailed: bool = False,
         check_services: bool = True,
@@ -237,13 +295,13 @@ def register_system_tools(mcp):
     ) -> Dict[str, Any]:
         """
         Perform comprehensive health check of the Windows Operations MCP server.
-        
+
         Args:
             detailed: If True, includes more detailed health information (may be slower)
             check_services: If True, verifies required services are running
             check_disk_space: If True, checks disk space usage
             check_network: If True, verifies network connectivity
-            
+
         Returns:
             Dict containing:
                 - success (bool): Overall health status

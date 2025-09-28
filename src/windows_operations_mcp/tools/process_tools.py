@@ -18,6 +18,7 @@ except ImportError:
     HAS_PSUTIL = False
 
 from ..logging_config import get_logger
+from ..decorators import tool
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -72,8 +73,41 @@ def _get_process_basic_info(proc: 'psutil.Process') -> Dict[str, Any]:
 
 def register_process_tools(mcp):
     """Register process tools with FastMCP."""
+    # Register the process tools with MCP
+    mcp.tool(get_process_list)
+    mcp.tool(get_process_info)
+    mcp.tool(get_system_resources)
     
-    @mcp.tool()
+    @tool(
+        name="get_process_list",
+        description="Get list of running processes with filtering options",
+        parameters={
+            "filter_name": {
+                "type": "string",
+                "description": "Filter processes by name (optional)"
+            },
+            "include_system": {
+                "type": "boolean",
+                "description": "Include system processes",
+                "default": False
+            },
+            "max_processes": {
+                "type": "integer",
+                "description": "Maximum number of processes to return",
+                "default": 100
+            }
+        },
+        required=[],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "processes": {"type": "array"},
+                "total_count": {"type": "integer"},
+                "error": {"type": "string"}
+            }
+        }
+    )
     def get_process_list(
         filter_name: Optional[str] = None,
         include_system: bool = False,
@@ -142,7 +176,25 @@ def register_process_tools(mcp):
             logger.error("get_process_list_error", error=error_msg, exc_info=True)
             return {"success": False, "error": error_msg, "processes": [], "total_count": 0}
 
-    @mcp.tool()
+    @tool(
+        name="get_process_info",
+        description="Get detailed information about a specific process",
+        parameters={
+            "pid": {
+                "type": "integer",
+                "description": "Process ID to get information for"
+            }
+        },
+        required=["pid"],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "process": {"type": "object"},
+                "error": {"type": "string"}
+            }
+        }
+    )
     def get_process_info(pid: int) -> Dict[str, Any]:
         """Get detailed information about a specific process."""
         logger.info("get_process_info_started", pid=pid)
@@ -239,7 +291,20 @@ def register_process_tools(mcp):
             logger.error("get_process_info_error", pid=pid, error=error_msg, exc_info=True)
             return {"success": False, "error": error_msg}
 
-    @mcp.tool()
+    @tool(
+        name="get_system_resources",
+        description="Get comprehensive system resource usage information",
+        parameters={},
+        required=[],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "resources": {"type": "object"},
+                "error": {"type": "string"}
+            }
+        }
+    )
     def get_system_resources() -> Dict[str, Any]:
         """Get comprehensive system resource usage information."""
         logger.info("get_system_resources_started")

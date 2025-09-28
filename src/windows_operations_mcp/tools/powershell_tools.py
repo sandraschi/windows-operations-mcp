@@ -16,7 +16,10 @@ import os
 import logging
 import ctypes
 
-logger = logging.getLogger(__name__)
+from ..logging_config import get_logger
+from ..decorators import tool
+
+logger = get_logger(__name__)
 
 class PowerShellExecutor:
     """
@@ -139,8 +142,60 @@ _powershell_executor = PowerShellExecutor()
 
 def register_powershell_tools(mcp):
     """Register FIXED PowerShell and CMD tools with FastMCP."""
+    # Register the PowerShell and CMD tools with MCP
+    mcp.tool(run_powershell_tool)
+    mcp.tool(run_cmd_tool)
     
-    @mcp.tool()
+    @tool(
+        name="run_powershell_tool",
+        description="Execute PowerShell commands with reliable output capture and security checks",
+        parameters={
+            "command": {
+                "type": "string",
+                "description": "PowerShell command to execute"
+            },
+            "working_directory": {
+                "type": "string",
+                "description": "Working directory for command execution"
+            },
+            "timeout_seconds": {
+                "type": "integer",
+                "description": "Command timeout in seconds",
+                "default": 60
+            },
+            "capture_output": {
+                "type": "boolean",
+                "description": "Whether to capture command output",
+                "default": True
+            },
+            "max_output_size": {
+                "type": "integer",
+                "description": "Maximum output size to capture",
+                "default": 102400
+            },
+            "output_encoding": {
+                "type": "string",
+                "description": "Output encoding",
+                "default": "utf-8"
+            },
+            "as_admin": {
+                "type": "boolean",
+                "description": "Run as administrator",
+                "default": False
+            }
+        },
+        required=["command"],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "output": {"type": "string"},
+                "error": {"type": "string"},
+                "return_code": {"type": "integer"},
+                "execution_time": {"type": "number"}
+            }
+        }
+    )
     def run_powershell_tool(
         command: str,
         working_directory: Optional[str] = None,
@@ -152,7 +207,7 @@ def register_powershell_tools(mcp):
     ) -> Dict[str, Any]:
         """
         Execute PowerShell commands with reliable output capture and security checks.
-        
+
         FIXED VERSION that solves Windows PowerShell subprocess issues:
         - Removed overly aggressive security filters
         - Uses native console encoding instead of forcing UTF-8
@@ -272,7 +327,53 @@ def register_powershell_tools(mcp):
             "working_directory": working_directory or os.getcwd()
         }
     
-    @mcp.tool()
+    @tool(
+        name="run_cmd_tool",
+        description="Execute CMD commands with reliable output capture and security checks",
+        parameters={
+            "command": {
+                "type": "string",
+                "description": "CMD command to execute"
+            },
+            "working_directory": {
+                "type": "string",
+                "description": "Working directory for command execution"
+            },
+            "timeout_seconds": {
+                "type": "integer",
+                "description": "Command timeout in seconds",
+                "default": 60
+            },
+            "capture_output": {
+                "type": "boolean",
+                "description": "Whether to capture command output",
+                "default": True
+            },
+            "max_output_size": {
+                "type": "integer",
+                "description": "Maximum output size to capture",
+                "default": 102400
+            },
+            "output_encoding": {
+                "type": "string",
+                "description": "Output encoding",
+                "default": "cp1252"
+            }
+        },
+        required=["command"],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "stdout": {"type": "string"},
+                "stderr": {"type": "string"},
+                "exit_code": {"type": "integer"},
+                "execution_time": {"type": "number"},
+                "command": {"type": "string"},
+                "working_directory": {"type": "string"}
+            }
+        }
+    )
     def run_cmd_tool(
         command: str,
         working_directory: Optional[str] = None,
@@ -283,7 +384,7 @@ def register_powershell_tools(mcp):
     ) -> Dict[str, Any]:
         """
         Execute CMD commands with reliable output capture and security checks.
-        
+
         FIXED VERSION - Uses proper Windows console encoding and simplified execution.
         """
         start_time = time.time()
