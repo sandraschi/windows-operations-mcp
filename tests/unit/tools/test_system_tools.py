@@ -18,11 +18,17 @@ class MockMCP:
     def __init__(self):
         self.tools = {}
 
-    def tool(self, **kwargs):
-        def decorator(func):
+    def tool(self, func=None, **kwargs):
+        if func is not None:
+            # Direct function registration: mcp.tool(function)
             self.tools[func.__name__] = func
             return func
-        return decorator
+        else:
+            # Decorator pattern: @mcp.tool()
+            def decorator(f):
+                self.tools[f.__name__] = f
+                return f
+            return decorator
 
 class TestSystemTools(unittest.TestCase):
     """Test system tools functionality."""

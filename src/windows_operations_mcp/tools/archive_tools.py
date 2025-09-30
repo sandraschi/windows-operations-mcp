@@ -461,230 +461,229 @@ def list_archive(archive_path: str) -> Dict[str, Any]:
     except Exception as e:
         return {"success": False, "message": f"Failed to list archive contents: {str(e)}"}
 
+@tool(
+    name="create_archive",
+    description="Create a new archive file containing the specified files and directories with optional exclusion patterns",
+    parameters={
+        "archive_path": {
+            "type": "string",
+            "description": "Path where the archive will be created"
+        },
+        "source_paths": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of files/directories to include in the archive"
+        },
+        "compression_level": {
+            "type": "integer",
+            "description": "Compression level (0-9, where 0 is no compression and 9 is maximum compression)",
+            "default": 6
+        },
+        "exclude_patterns": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of glob patterns to exclude from the archive"
+        },
+        "use_gitignore": {
+            "type": "boolean",
+            "description": "Automatically include .gitignore patterns from repository",
+            "default": True
+        },
+        "use_default_exclusions": {
+            "type": "boolean",
+            "description": "Include default exclusion patterns for common artifacts",
+            "default": True
+        }
+    },
+    required=["archive_path", "source_paths"],
+    returns={
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "message": {"type": "string"},
+            "archive_path": {"type": "string"},
+            "excluded_count": {"type": "integer"},
+            "included_count": {"type": "integer"}
+        }
+    }
+)
+def create_archive(
+    archive_path: str,
+    source_paths: List[str],
+    compression_level: int = 6,
+    exclude_patterns: Optional[List[str]] = None,
+    use_gitignore: bool = True,
+    use_default_exclusions: bool = True
+) -> Dict[str, Any]:
+    """
+    Create a new archive file containing the specified files and directories with exclusion support.
+
+    Args:
+        archive_path: Path where the archive will be created
+        source_paths: List of files/directories to include in the archive
+        compression_level: Compression level (0-9, where 0 is no compression and 9 is maximum compression)
+        exclude_patterns: List of glob patterns to exclude from the archive
+        use_gitignore: Whether to automatically include .gitignore patterns from repository
+        use_default_exclusions: Whether to include default exclusion patterns for common artifacts
+
+    Returns:
+        dict: Dictionary with success status, message, path to created archive, and counts
+    """
+    try:
+        archive_path = os.path.abspath(archive_path)
+        archive_format = _get_archive_format(archive_path)
+
+        # Build exclusion patterns
+        all_exclusions = []
+
+        # Add user-specified patterns
+        if exclude_patterns:
+            all_exclusions.extend(exclude_patterns)
+
+        # Add default exclusions if requested
+        if use_default_exclusions:
+            all_exclusions.extend(_get_default_exclusion_patterns())
+
+        # Try to detect repository root and add .gitignore patterns
+        if use_gitignore:
+            # Look for .git directory in source paths or parent directories
+            repo_root = None
+            for source_path in source_paths:
+                source_abs = os.path.abspath(source_path)
+                # Check if current path or any parent has .git
+                current = Path(source_abs)
+                for parent in [current] + list(current.parents):
+                    if (parent / '.git').exists():
+                        repo_root = str(parent)
+                        break
+                    if parent.parent == parent:  # Reached root
+                        break
+
+            if repo_root:
+                gitignore_patterns = _load_gitignore_patterns(repo_root)
+                all_exclusions.extend(gitignore_patterns)
+                logger.info(f"Loaded {len(gitignore_patterns)} patterns from .gitignore")
+
+        # Ensure parent directory exists
+        os.makedirs(os.path.dirname(archive_path), exist_ok=True)
+
+        if archive_format == 'zip':
+            return _create_zip(archive_path, source_paths, compression_level, all_exclusions)
+        elif archive_format in ('tar', 'tar.gz'):
+            return _create_tar(archive_path, source_paths, compression_level, all_exclusions)
+        else:
+            return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
+    except Exception as e:
+        return {"success": False, "message": f"Failed to create archive: {str(e)}"}
+
+@tool(
+    name="extract_archive",
+    description="Extract files from an archive to the specified directory",
+    parameters={
+        "archive_path": {
+            "type": "string",
+            "description": "Path to the archive file"
+        },
+        "extract_dir": {
+            "type": "string",
+            "description": "Directory where files will be extracted"
+        },
+        "members": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Optional list of files to extract (default: all files)"
+        }
+    },
+    required=["archive_path", "extract_dir"],
+    returns={
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "message": {"type": "string"},
+            "extracted_files": {"type": "array", "items": {"type": "string"}}
+        }
+    }
+)
+def extract_archive(
+    archive_path: str,
+    extract_dir: str,
+    members: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    Extract files from an archive to the specified directory.
+
+    Args:
+        archive_path: Path to the archive file
+        extract_dir: Directory where files will be extracted
+        members: Optional list of files to extract (default: all files)
+
+    Returns:
+        dict: Dictionary with success status, message, and list of extracted files
+    """
+    try:
+        archive_path = os.path.abspath(archive_path)
+        extract_dir = os.path.abspath(extract_dir)
+        archive_format = _get_archive_format(archive_path)
+        
+        # Ensure extract directory exists
+        os.makedirs(extract_dir, exist_ok=True)
+        
+        if archive_format == 'zip':
+            return _extract_zip(archive_path, extract_dir, members)
+        elif archive_format in ('tar', 'tar.gz'):
+            return _extract_tar(archive_path, extract_dir, members)
+        else:
+            return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
+    except Exception as e:
+        return {"success": False, "message": f"Failed to extract archive: {str(e)}"}
+
+@tool(
+    name="list_archive",
+    description="List the contents of an archive file",
+    parameters={
+        "archive_path": {
+            "type": "string",
+            "description": "Path to the archive file"
+        }
+    },
+    required=["archive_path"],
+    returns={
+        "type": "object",
+        "properties": {
+            "success": {"type": "boolean"},
+            "message": {"type": "string"},
+            "files": {"type": "array", "items": {"type": "string"}}
+        }
+    }
+)
+def list_archive(archive_path: str) -> Dict[str, Any]:
+    """
+    List the contents of an archive file.
+
+    Args:
+        archive_path: Path to the archive file
+
+    Returns:
+        dict: Dictionary with success status, message, and list of files in the archive
+    """
+    try:
+        archive_path = os.path.abspath(archive_path)
+        archive_format = _get_archive_format(archive_path)
+        
+        if archive_format == 'zip':
+            return _list_zip(archive_path)
+        elif archive_format in ('tar', 'tar.gz'):
+            return _list_tar(archive_path)
+        else:
+            return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
+    except Exception as e:
+        return {"success": False, "message": f"Failed to list archive contents: {str(e)}"}
+
 def register_archive_tools(mcp):
     """Register archive tools with FastMCP."""
-    # Register the archive tools with MCP
     mcp.tool(create_archive)
     mcp.tool(extract_archive)
     mcp.tool(list_archive)
-    
-    @tool(
-        name="create_archive",
-        description="Create a new archive file containing the specified files and directories with optional exclusion patterns",
-        parameters={
-            "archive_path": {
-                "type": "string",
-                "description": "Path where the archive will be created"
-            },
-            "source_paths": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of files/directories to include in the archive"
-            },
-            "compression_level": {
-                "type": "integer",
-                "description": "Compression level (0-9, where 0 is no compression and 9 is maximum compression)",
-                "default": 6
-            },
-            "exclude_patterns": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of glob patterns to exclude from the archive"
-            },
-            "use_gitignore": {
-                "type": "boolean",
-                "description": "Automatically include .gitignore patterns from repository",
-                "default": True
-            },
-            "use_default_exclusions": {
-                "type": "boolean",
-                "description": "Include default exclusion patterns for common artifacts",
-                "default": True
-            }
-        },
-        required=["archive_path", "source_paths"],
-        returns={
-            "type": "object",
-            "properties": {
-                "success": {"type": "boolean"},
-                "message": {"type": "string"},
-                "archive_path": {"type": "string"},
-                "excluded_count": {"type": "integer"},
-                "included_count": {"type": "integer"}
-            }
-        }
-    )
-    def create_archive(
-        archive_path: str,
-        source_paths: List[str],
-        compression_level: int = 6,
-        exclude_patterns: Optional[List[str]] = None,
-        use_gitignore: bool = True,
-        use_default_exclusions: bool = True
-    ) -> Dict[str, Any]:
-        """
-        Create a new archive file containing the specified files and directories with exclusion support.
-
-        Args:
-            archive_path: Path where the archive will be created
-            source_paths: List of files/directories to include in the archive
-            compression_level: Compression level (0-9, where 0 is no compression and 9 is maximum compression)
-            exclude_patterns: List of glob patterns to exclude from the archive
-            use_gitignore: Whether to automatically include .gitignore patterns from repository
-            use_default_exclusions: Whether to include default exclusion patterns for common artifacts
-
-        Returns:
-            dict: Dictionary with success status, message, path to created archive, and counts
-        """
-        try:
-            archive_path = os.path.abspath(archive_path)
-            archive_format = _get_archive_format(archive_path)
-
-            # Build exclusion patterns
-            all_exclusions = []
-
-            # Add user-specified patterns
-            if exclude_patterns:
-                all_exclusions.extend(exclude_patterns)
-
-            # Add default exclusions if requested
-            if use_default_exclusions:
-                all_exclusions.extend(_get_default_exclusion_patterns())
-
-            # Try to detect repository root and add .gitignore patterns
-            if use_gitignore:
-                # Look for .git directory in source paths or parent directories
-                repo_root = None
-                for source_path in source_paths:
-                    source_abs = os.path.abspath(source_path)
-                    # Check if current path or any parent has .git
-                    current = Path(source_abs)
-                    for parent in [current] + list(current.parents):
-                        if (parent / '.git').exists():
-                            repo_root = str(parent)
-                            break
-                        if parent.parent == parent:  # Reached root
-                            break
-
-                if repo_root:
-                    gitignore_patterns = _load_gitignore_patterns(repo_root)
-                    all_exclusions.extend(gitignore_patterns)
-                    logger.info(f"Loaded {len(gitignore_patterns)} patterns from .gitignore")
-
-            # Ensure parent directory exists
-            os.makedirs(os.path.dirname(archive_path), exist_ok=True)
-
-            if archive_format == 'zip':
-                return _create_zip(archive_path, source_paths, compression_level, all_exclusions)
-            elif archive_format in ('tar', 'tar.gz'):
-                return _create_tar(archive_path, source_paths, compression_level, all_exclusions)
-            else:
-                return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
-        except Exception as e:
-            return {"success": False, "message": f"Failed to create archive: {str(e)}"}
-
-    @tool(
-        name="extract_archive",
-        description="Extract files from an archive to the specified directory",
-        parameters={
-            "archive_path": {
-                "type": "string",
-                "description": "Path to the archive file"
-            },
-            "extract_dir": {
-                "type": "string",
-                "description": "Directory where files will be extracted"
-            },
-            "members": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Optional list of files to extract (default: all files)"
-            }
-        },
-        required=["archive_path", "extract_dir"],
-        returns={
-            "type": "object",
-            "properties": {
-                "success": {"type": "boolean"},
-                "message": {"type": "string"},
-                "extracted_files": {"type": "array", "items": {"type": "string"}}
-            }
-        }
-    )
-    def extract_archive(
-        archive_path: str,
-        extract_dir: str,
-        members: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """
-        Extract files from an archive to the specified directory.
-
-        Args:
-            archive_path: Path to the archive file
-            extract_dir: Directory where files will be extracted
-            members: Optional list of files to extract (default: all files)
-
-        Returns:
-            dict: Dictionary with success status, message, and list of extracted files
-        """
-        try:
-            archive_path = os.path.abspath(archive_path)
-            extract_dir = os.path.abspath(extract_dir)
-            archive_format = _get_archive_format(archive_path)
-            
-            # Ensure extract directory exists
-            os.makedirs(extract_dir, exist_ok=True)
-            
-            if archive_format == 'zip':
-                return _extract_zip(archive_path, extract_dir, members)
-            elif archive_format in ('tar', 'tar.gz'):
-                return _extract_tar(archive_path, extract_dir, members)
-            else:
-                return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
-        except Exception as e:
-            return {"success": False, "message": f"Failed to extract archive: {str(e)}"}
-
-    @tool(
-        name="list_archive",
-        description="List the contents of an archive file",
-        parameters={
-            "archive_path": {
-                "type": "string",
-                "description": "Path to the archive file"
-            }
-        },
-        required=["archive_path"],
-        returns={
-            "type": "object",
-            "properties": {
-                "success": {"type": "boolean"},
-                "message": {"type": "string"},
-                "files": {"type": "array", "items": {"type": "string"}}
-            }
-        }
-    )
-    def list_archive(archive_path: str) -> Dict[str, Any]:
-        """
-        List the contents of an archive file.
-
-        Args:
-            archive_path: Path to the archive file
-
-        Returns:
-            dict: Dictionary with success status, message, and list of files in the archive
-        """
-        try:
-            archive_path = os.path.abspath(archive_path)
-            archive_format = _get_archive_format(archive_path)
-            
-            if archive_format == 'zip':
-                return _list_zip(archive_path)
-            elif archive_format in ('tar', 'tar.gz'):
-                return _list_tar(archive_path)
-            else:
-                return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
-        except Exception as e:
-            return {"success": False, "message": f"Failed to list archive contents: {str(e)}"}
     
     logger.info("archive_tools_registered", tools=["create_archive", "extract_archive", "list_archive"])
 

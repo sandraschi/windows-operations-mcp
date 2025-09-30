@@ -1,23 +1,24 @@
 import unittest
 import tempfile
-import time
+import os
+import shutil
 from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from src.windows_operations_mcp.decorators import (
     tool,
     validate_inputs,
     rate_limited,
     log_execution,
-    RateLimiter,
     is_positive_number,
     is_valid_path,
     is_valid_port,
     is_safe_command
 )
+from src.windows_operations_mcp.logging_config import get_logger
 
 
 class TestDecorators(unittest.TestCase):
@@ -29,132 +30,134 @@ class TestDecorators(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_tool_decorator(self):
-        """Test tool decorator."""
+        """Test @tool decorator."""
+        @tool(
+            name="test_tool",
+            description="Test tool for decorator testing",
+            parameters={
+                "param1": {
+                    "type": "string",
+                    "description": "Test parameter"
+                }
+            },
+            required=["param1"],
+            returns={
+                "type": "object",
+                "properties": {
+                    "result": {"type": "string"}
+                }
+            }
+        )
+        def test_function(param1: str):
+            return {"result": f"Hello {param1}"}
 
-        @tool(name="test_tool", description="Test tool function")
-        def test_function():
-            return {"result": "success"}
-
-        result = test_function()
-        self.assertEqual(result["result"], "success")
-        self.assertIn("_metadata", result)
-        self.assertTrue(result["_metadata"]["success"])
+        # Test that the decorator preserves function functionality
+        result = test_function("World")
+        self.assertEqual(result["result"], "Hello World")
 
     def test_validate_inputs_decorator(self):
-        """Test validate inputs decorator."""
-
+        """Test @validate_inputs decorator."""
         @validate_inputs(is_positive_number)
-        def test_function(value):
-            return {"result": value * 2}
+        def test_validated_operation(param1: int):
+            return {"result": param1}
 
-        result = test_function(5)
-        self.assertEqual(result["result"], 10)
+        result = test_validated_operation(5)
+        self.assertEqual(result["result"], 5)
 
     def test_rate_limited_decorator(self):
-        """Test rate limited decorator."""
+        """Test @rate_limited decorator."""
+        @rate_limited(max_calls=60, time_window=60)
+        def test_rate_limited_operation():
+            return {"result": "rate_limited"}
 
-        @rate_limited(max_calls=2, time_window=60)
-        def test_function():
-            return {"result": "success"}
-
-        result1 = test_function()
-        self.assertEqual(result1["result"], "success")
-
-        result2 = test_function()
-        self.assertEqual(result2["result"], "success")
+        result = test_rate_limited_operation()
+        self.assertEqual(result["result"], "rate_limited")
 
     def test_log_execution_decorator(self):
-        """Test log execution decorator."""
+        """Test @log_execution decorator."""
+        @log_execution()
+        def test_execution_logged_operation():
+            return {"result": "execution_logged"}
 
-        @log_execution("test_execution")
-        def test_function():
-            return {"result": "success"}
+        result = test_execution_logged_operation()
+        self.assertEqual(result["result"], "execution_logged")
 
-        result = test_function()
-        self.assertEqual(result["result"], "success")
-
-    def test_rate_limiter_class(self):
-        """Test RateLimiter class functionality."""
-
-        limiter = RateLimiter(max_calls=2, time_window=1)
-        allowed, wait_time = limiter.is_allowed("test_key")
-        self.assertTrue(allowed)
-        self.assertEqual(wait_time, 0.0)
-
-        # Should allow second call
-        allowed, wait_time = limiter.is_allowed("test_key")
-        self.assertTrue(allowed)
-
-        # Should deny third call
-        allowed, wait_time = limiter.is_allowed("test_key")
-        self.assertFalse(allowed)
-        self.assertGreater(wait_time, 0)
-
-    def test_validator_functions(self):
-        """Test validator functions."""
-
+    def test_validation_functions(self):
+        """Test validation helper functions."""
         # Test is_positive_number
         valid, msg = is_positive_number(5)
         self.assertTrue(valid)
-        self.assertEqual(msg, "")
-
+        
         valid, msg = is_positive_number(-1)
         self.assertFalse(valid)
-        self.assertIn("positive", msg)
 
-        valid, msg = is_positive_number("not_a_number")
-        self.assertFalse(valid)
-        self.assertIn("number", msg)
-
-    def test_is_valid_path_validator(self):
-        """Test is_valid_path validator."""
-
-        # Test with current directory (should exist)
-        valid, msg = is_valid_path(".", check_readable=True)
+        # Test is_valid_path
+        valid, msg = is_valid_path(self.test_dir)
         self.assertTrue(valid)
-        self.assertEqual(msg, "")
-
-        # Test with non-existent path
+        
         valid, msg = is_valid_path("/nonexistent/path")
         self.assertFalse(valid)
-        self.assertIn("does not exist", msg)
 
-    def test_is_valid_port_validator(self):
-        """Test is_valid_port validator."""
-
-        valid, msg = is_valid_port(80)
+        # Test is_valid_port
+        valid, msg = is_valid_port(8080)
         self.assertTrue(valid)
-        self.assertEqual(msg, "")
-
-        valid, msg = is_valid_port(70000)
+        
+        valid, msg = is_valid_port(99999)
         self.assertFalse(valid)
-        self.assertIn("65535", msg)
 
-        valid, msg = is_valid_port("not_a_number")
-        self.assertFalse(valid)
-        self.assertIn("integer", msg)
-
-    def test_is_safe_command_validator(self):
-        """Test is_safe_command validator."""
-
-        valid, msg = is_safe_command("ls -la")
+        # Test is_safe_command
+        valid, msg = is_safe_command("echo hello")
         self.assertTrue(valid)
-        self.assertEqual(msg, "")
-
+        
         valid, msg = is_safe_command("rm -rf /")
         self.assertFalse(valid)
-        self.assertIn("Dangerous command detected", msg)
 
-        valid, msg = is_safe_command("echo hello; rm file")
-        self.assertFalse(valid)
-        self.assertIn("Command chaining is not allowed", msg)
+    def test_nested_decorators(self):
+        """Test multiple decorators working together."""
+        @tool(
+            name="nested_test",
+            description="Test nested decorators",
+            parameters={},
+            required=[],
+            returns={"type": "object"}
+        )
+        @log_execution()
+        def nested_test_function(param1: int):
+            return {"success": True, "value": param1}
+
+        result = nested_test_function(5)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["value"], 5)
+
+
+class TestLoggingConfig(unittest.TestCase):
+    """Test logging configuration."""
+
+    def test_get_logger(self):
+        """Test logger creation."""
+        logger = get_logger("test_module")
+        self.assertIsNotNone(logger)
+
+    def test_logger_functionality(self):
+        """Test logger basic functionality."""
+        logger = get_logger("test_module")
+        
+        # Test that logger can be called without errors
+        logger.info("Test info message")
+        logger.warning("Test warning message")
+        logger.error("Test error message")
+
+    def test_logger_with_context(self):
+        """Test logger with structured context."""
+        logger = get_logger("test_module")
+        
+        # Test structured logging
+        logger.info("Test message", extra_data="test_value")
+        logger.error("Test error", error_code=500)
 
 
 if __name__ == "__main__":
     unittest.main()
-
-

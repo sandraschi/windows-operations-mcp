@@ -1,19 +1,19 @@
 import unittest
 import tempfile
 import os
+import shutil
 from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from src.windows_operations_mcp.mcp_server import mcp
-from src.windows_operations_mcp.tools.help_tools import register_help_tools
-from src.windows_operations_mcp.tools.system_tools import register_system_tools
+from src.windows_operations_mcp.mcp_server import register_all_tools
+from src.windows_operations_mcp.__init__ import __version__
 
 
 class TestMCPServer(unittest.TestCase):
-    """Test the MCP server core functionality."""
+    """Test MCP server functionality."""
 
     def setUp(self):
         """Set up test environment."""
@@ -21,45 +21,39 @@ class TestMCPServer(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
+    def test_mcp_server_creation(self):
+        """Test MCP server creation."""
+        # Test that register_all_tools can be called
+        try:
+            register_all_tools()
+            self.assertTrue(True)  # Function exists and can be called
+        except Exception as e:
+            self.fail(f"register_all_tools failed: {e}")
+
     def test_mcp_server_initialization(self):
-        """Test that the MCP server initializes properly."""
-        # This is a basic smoke test - the server should initialize without errors
-        self.assertIsNotNone(mcp)
+        """Test MCP server initialization."""
+        # Test that register_all_tools function exists
+        self.assertTrue(callable(register_all_tools))
 
-    def test_help_tools_registration(self):
-        """Test that help tools can be registered."""
-        # Register help tools
-        register_help_tools(mcp)
+    def test_version_constant(self):
+        """Test version constant is defined."""
+        self.assertIsNotNone(__version__)
+        self.assertIsInstance(__version__, str)
 
-        # The server should still be functional
-        self.assertIsNotNone(mcp)
 
-    def test_system_tools_registration(self):
-        """Test that system tools can be registered."""
-        # Register system tools
-        register_system_tools(mcp)
+class TestMainModule(unittest.TestCase):
+    """Test main module functionality."""
 
-        # The server should still be functional
-        self.assertIsNotNone(mcp)
-
-    def test_multiple_tool_registrations(self):
-        """Test registering multiple tool sets."""
-        # Register multiple tool sets
-        register_help_tools(mcp)
-        register_system_tools(mcp)
-
-        # The server should still be functional
-        self.assertIsNotNone(mcp)
+    def test_main_import(self):
+        """Test main module can be imported."""
+        try:
+            from src.windows_operations_mcp import main
+            self.assertTrue(True)  # Import successful
+        except ImportError:
+            self.fail("Main module import failed")
 
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
-

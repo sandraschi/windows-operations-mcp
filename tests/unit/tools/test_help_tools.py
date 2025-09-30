@@ -16,11 +16,17 @@ class MockMCP:
     def __init__(self):
         self.tools = {}
 
-    def tool(self, **kwargs):
-        def decorator(func):
+    def tool(self, func=None, **kwargs):
+        if func is not None:
+            # Direct function registration: mcp.tool(function)
             self.tools[func.__name__] = func
             return func
-        return decorator
+        else:
+            # Decorator pattern: @mcp.tool()
+            def decorator(f):
+                self.tools[f.__name__] = f
+                return f
+            return decorator
 
 class TestHelpTools(unittest.TestCase):
     """Test help tools functionality."""
@@ -49,7 +55,7 @@ class TestHelpTools(unittest.TestCase):
 
         result = get_help_func()
 
-        self.assertTrue(result['success'])
+        self.assertEqual(result['status'], 'success')
         self.assertIn('message', result)
 
     def test_get_help_with_command(self):
@@ -59,7 +65,7 @@ class TestHelpTools(unittest.TestCase):
 
         result = get_help_func(command="get_system_info")
 
-        self.assertTrue(result['success'])
+        self.assertEqual(result['status'], 'success')
         self.assertIn('message', result)
 
     def test_get_help_with_category(self):
@@ -69,7 +75,7 @@ class TestHelpTools(unittest.TestCase):
 
         result = get_help_func(category="system")
 
-        self.assertTrue(result['success'])
+        self.assertEqual(result['status'], 'success')
         self.assertIn('message', result)
 
     def test_get_help_with_invalid_command(self):
@@ -79,7 +85,7 @@ class TestHelpTools(unittest.TestCase):
 
         result = get_help_func(command="nonexistent_command")
 
-        self.assertFalse(result['success'])
+        self.assertEqual(result['status'], 'error')
         self.assertIn('not found', result['message'])
 
 

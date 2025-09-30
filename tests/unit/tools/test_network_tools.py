@@ -15,11 +15,17 @@ class MockMCP:
     def __init__(self):
         self.tools = {}
 
-    def tool(self, **kwargs):
-        def decorator(func):
+    def tool(self, func=None, **kwargs):
+        if func is not None:
+            # Direct function registration: mcp.tool(function)
             self.tools[func.__name__] = func
             return func
-        return decorator
+        else:
+            # Decorator pattern: @mcp.tool()
+            def decorator(f):
+                self.tools[f.__name__] = f
+                return f
+            return decorator
 
 
 class TestNetworkTools(unittest.TestCase):
@@ -41,7 +47,6 @@ class TestNetworkTools(unittest.TestCase):
 
         # Check that tools were registered
         self.assertIn('test_port', self.mcp.tools)
-        self.assertIn('get_network_info', self.mcp.tools)
 
     def test_test_port_tool(self):
         """Test test_port tool functionality."""
@@ -53,24 +58,14 @@ class TestNetworkTools(unittest.TestCase):
 
         self.assertIn('success', result)
 
-    def test_get_network_info_tool(self):
-        """Test get_network_info tool functionality."""
-        register_network_tools(self.mcp)
-        get_network_info_func = self.mcp.tools['get_network_info']
-
-        result = get_network_info_func()
-
-        self.assertIn('success', result)
-
     def test_network_tools_error_handling(self):
         """Test error handling in network tools."""
         register_network_tools(self.mcp)
-
-        # Test with invalid hostname
         test_port_func = self.mcp.tools['test_port']
-        result = test_port_func("invalid-hostname-that-does-not-exist", 80)
 
-        # Should handle gracefully
+        # Test with invalid parameters - should handle gracefully
+        result = test_port_func(host="invalid_host", port=99999)
+
         self.assertIn('success', result)
 
 

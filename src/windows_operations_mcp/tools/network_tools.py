@@ -171,143 +171,144 @@ def _test_udp_port(ip: str, port: int, timeout_seconds: int, start_time: float) 
             "message": f"UDP test failed: {str(e)}"
         }
 
+@tool(
+    name="test_port",
+    description="Test network port accessibility with detailed diagnostics",
+    parameters={
+        "host": {
+            "type": "string",
+            "description": "Hostname or IP address to test"
+        },
+        "port": {
+            "type": "integer",
+            "description": "Port number to test (1-65535)"
+        },
+        "timeout_seconds": {
+            "type": "integer",
+            "description": "Connection timeout in seconds (1-300)",
+            "default": 30
+        },
+        "protocol": {
+            "type": "string",
+            "description": "Protocol to test (tcp or udp)",
+            "default": "tcp"
+        }
+    },
+    required=["host", "port"],
+    returns={
+        "type": "object",
+        "properties": {
+            "accessible": {"type": "boolean"},
+            "response_time_ms": {"type": "number"},
+            "error": {"type": "string"}
+        }
+    }
+)
+def test_port(
+    host: str,
+    port: int,
+    timeout_seconds: int = DEFAULT_TIMEOUT,
+    protocol: str = "tcp"
+) -> Dict[str, Any]:
+    """
+    Test network port accessibility with detailed diagnostics.
+
+    This tool tests whether a specific port on a host is accessible,
+    providing detailed timing and connection information.
+
+    Args:
+        host: Hostname or IP address to test
+        port: Port number to test (1-65535)
+        timeout_seconds: Connection timeout in seconds (1-300)
+        protocol: Protocol to test (tcp or udp)
+
+    Returns:
+        Dict containing test results, timing information, and diagnostics
+    """
+    start_time = time.time()
+    
+    # Validate inputs
+    is_valid, error_msg = _validate_network_inputs(host, port, timeout_seconds, protocol)
+    if not is_valid:
+        return {
+            "success": False,
+            "error": f"Invalid parameters: {error_msg}",
+            "execution_time": time.time() - start_time
+        }
+    
+    # Log the test attempt
+    logger.info(
+        "port_test_started",
+        host=host,
+        port=port,
+        protocol=protocol,
+        timeout_seconds=timeout_seconds
+    )
+    
+    try:
+        # Resolve hostname first
+        resolve_success, resolved_ip, resolve_error = _resolve_host(host)
+        if not resolve_success:
+            logger.error(f"Host resolution failed: {resolve_error}")
+            return {
+                "success": False,
+                "error": resolve_error,
+                "host": host,
+                "port": port,
+                "protocol": protocol,
+                "execution_time": time.time() - start_time
+            }
+        
+        # Test the port
+        if protocol.lower() == "tcp":
+            result = _test_tcp_port(resolved_ip, port, timeout_seconds, start_time)
+        else:  # UDP
+            result = _test_udp_port(resolved_ip, port, timeout_seconds, start_time)
+        
+        # Add common fields
+        result.update({
+            "host": host,
+            "resolved_ip": resolved_ip,
+            "port": port,
+            "protocol": protocol,
+            "execution_time": time.time() - start_time
+        })
+        
+        # Log the result
+        logger.info(
+            "port_test_completed",
+            host=host,
+            port=port,
+            protocol=protocol,
+            success=result.get("success", False),
+            execution_time=result["execution_time"]
+        )
+        
+        return result
+        
+    except Exception as e:
+        error_msg = f"Port test failed: {str(e)}"
+        logger.error(
+            "port_test_error",
+            host=host,
+            port=port,
+            protocol=protocol,
+            error=error_msg,
+            exc_info=True
+        )
+        return {
+            "success": False,
+            "error": error_msg,
+            "host": host,
+            "port": port,
+            "protocol": protocol,
+            "execution_time": time.time() - start_time
+        }
+
+
 def register_network_tools(mcp):
     """Register network tools with FastMCP."""
     # Register the test_port tool with MCP
     mcp.tool(test_port)
-    
-    @tool(
-        name="test_port",
-        description="Test network port accessibility with detailed diagnostics",
-        parameters={
-            "host": {
-                "type": "string",
-                "description": "Hostname or IP address to test"
-            },
-            "port": {
-                "type": "integer",
-                "description": "Port number to test (1-65535)"
-            },
-            "timeout_seconds": {
-                "type": "integer",
-                "description": "Connection timeout in seconds (1-300)",
-                "default": 30
-            },
-            "protocol": {
-                "type": "string",
-                "description": "Protocol to test (tcp or udp)",
-                "default": "tcp"
-            }
-        },
-        required=["host", "port"],
-        returns={
-            "type": "object",
-            "properties": {
-                "accessible": {"type": "boolean"},
-                "response_time_ms": {"type": "number"},
-                "error": {"type": "string"}
-            }
-        }
-    )
-    def test_port(
-        host: str,
-        port: int,
-        timeout_seconds: int = DEFAULT_TIMEOUT,
-        protocol: str = "tcp"
-    ) -> Dict[str, Any]:
-        """
-        Test network port accessibility with detailed diagnostics.
-
-        This tool tests whether a specific port on a host is accessible,
-        providing detailed timing and connection information.
-
-        Args:
-            host: Hostname or IP address to test
-            port: Port number to test (1-65535)
-            timeout_seconds: Connection timeout in seconds (1-300)
-            protocol: Protocol to test (tcp or udp)
-
-        Returns:
-            Dict containing test results, timing information, and diagnostics
-        """
-        start_time = time.time()
-        
-        # Validate inputs
-        is_valid, error_msg = _validate_network_inputs(host, port, timeout_seconds, protocol)
-        if not is_valid:
-            return {
-                "success": False,
-                "error": f"Invalid parameters: {error_msg}",
-                "execution_time": time.time() - start_time
-            }
-        
-        # Log the test attempt
-        logger.info(
-            "port_test_started",
-            host=host,
-            port=port,
-            protocol=protocol,
-            timeout_seconds=timeout_seconds
-        )
-        
-        try:
-            # Resolve hostname first
-            resolve_success, resolved_ip, resolve_error = _resolve_host(host)
-            if not resolve_success:
-                logger.error(f"Host resolution failed: {resolve_error}")
-                return {
-                    "success": False,
-                    "error": resolve_error,
-                    "host": host,
-                    "port": port,
-                    "protocol": protocol,
-                    "execution_time": time.time() - start_time
-                }
-            
-            # Test the port
-            if protocol.lower() == "tcp":
-                result = _test_tcp_port(resolved_ip, port, timeout_seconds, start_time)
-            else:  # UDP
-                result = _test_udp_port(resolved_ip, port, timeout_seconds, start_time)
-            
-            # Add common fields
-            result.update({
-                "host": host,
-                "resolved_ip": resolved_ip,
-                "port": port,
-                "protocol": protocol,
-                "execution_time": time.time() - start_time
-            })
-            
-            # Log the result
-            logger.info(
-                "port_test_completed",
-                host=host,
-                port=port,
-                protocol=protocol,
-                success=result.get("success", False),
-                execution_time=result["execution_time"]
-            )
-            
-            return result
-            
-        except Exception as e:
-            error_msg = f"Port test failed: {str(e)}"
-            logger.error(
-                "port_test_error",
-                host=host,
-                port=port,
-                protocol=protocol,
-                error=error_msg,
-                exc_info=True
-            )
-            return {
-                "success": False,
-                "error": error_msg,
-                "host": host,
-                "port": port,
-                "protocol": protocol,
-                "execution_time": time.time() - start_time
-            }
     
     logger.info("network_tools_registered", tools=["test_port"])

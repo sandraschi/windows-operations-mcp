@@ -21,6 +21,78 @@ from ..decorators import tool
 
 logger = get_logger(__name__)
 
+class CMDExecutor:
+    """
+    CMD execution with reliable output capture.
+    """
+    
+    def __init__(self):
+        self.encoding = self._get_console_encoding()
+        logger.info(f"CMD executor initialized with encoding: {self.encoding}")
+    
+    def _get_console_encoding(self) -> str:
+        """Get the native console encoding."""
+        try:
+            # Try to get the console code page
+            kernel32 = ctypes.windll.kernel32
+            cp = kernel32.GetConsoleCP()
+            if cp:
+                return f"cp{cp}"
+        except:
+            pass
+        return "cp850"  # Default Windows console encoding
+    
+    def execute(self, command: str, working_directory: Optional[str] = None, timeout: int = 30) -> Dict[str, Any]:
+        """Execute CMD command with reliable output capture."""
+        start_time = time.time()
+        
+        try:
+            # Use cmd.exe /c to execute the command
+            cmd_args = ["cmd.exe", "/c", command]
+            
+            # Set working directory
+            cwd = working_directory or os.getcwd()
+            
+            # Execute command
+            result = subprocess.run(
+                cmd_args,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                encoding=self.encoding,
+                timeout=timeout,
+                errors='replace'
+            )
+            
+            execution_time = time.time() - start_time
+            
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.returncode,
+                "execution_time": execution_time
+            }
+            
+        except subprocess.TimeoutExpired:
+            execution_time = time.time() - start_time
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": f"Command timed out after {timeout} seconds",
+                "exit_code": -1,
+                "execution_time": execution_time
+            }
+        except Exception as e:
+            execution_time = time.time() - start_time
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": f"Execution error: {str(e)}",
+                "exit_code": -1,
+                "execution_time": execution_time
+            }
+
 class PowerShellExecutor:
     """
     Fixed PowerShell execution that solves the "no stdout" problem.
@@ -468,4 +540,110 @@ def register_powershell_tools(mcp):
                 "exit_code": execution_time
             }
 
-    logger.info("FIXED PowerShell tools registered successfully - security relaxed, encoding fixed")
+def register_powershell_tools(mcp):
+    """Register PowerShell and CMD execution tools with FastMCP."""
+    # Create executor instances
+    ps_executor = PowerShellExecutor()
+    cmd_executor = CMDExecutor()
+    
+    # Register PowerShell tool
+    @mcp.tool(
+        name="run_powershell_tool",
+        description="Execute PowerShell commands with reliable output capture and security checks",
+        parameters={
+            "command": {
+                "type": "string",
+                "description": "PowerShell command to execute"
+            },
+            "working_directory": {
+                "type": "string",
+                "description": "Working directory for command execution"
+            },
+            "timeout_seconds": {
+                "type": "integer",
+                "description": "Command timeout in seconds (1-300)",
+                "default": 30
+            },
+            "max_output_size": {
+                "type": "integer",
+                "description": "Maximum output size in characters",
+                "default": 10000
+            }
+        },
+        required=["command"],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "stdout": {"type": "string"},
+                "stderr": {"type": "string"},
+                "exit_code": {"type": "integer"},
+                "execution_time": {"type": "number"}
+            }
+        }
+    )
+    def run_powershell_tool(
+        command: str,
+        working_directory: Optional[str] = None,
+        timeout_seconds: int = 30,
+        max_output_size: int = 10000
+    ) -> Dict[str, Any]:
+        """Execute PowerShell command with reliable output capture."""
+        return ps_executor.execute_command(
+            command=command,
+            working_directory=working_directory,
+            timeout_seconds=timeout_seconds,
+            max_output_size=max_output_size
+        )
+    
+    # Register CMD tool
+    @mcp.tool(
+        name="run_cmd_tool",
+        description="Execute CMD commands with reliable output capture and security checks",
+        parameters={
+            "command": {
+                "type": "string",
+                "description": "CMD command to execute"
+            },
+            "working_directory": {
+                "type": "string",
+                "description": "Working directory for command execution"
+            },
+            "timeout_seconds": {
+                "type": "integer",
+                "description": "Command timeout in seconds (1-300)",
+                "default": 30
+            },
+            "max_output_size": {
+                "type": "integer",
+                "description": "Maximum output size in characters",
+                "default": 10000
+            }
+        },
+        required=["command"],
+        returns={
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "stdout": {"type": "string"},
+                "stderr": {"type": "string"},
+                "exit_code": {"type": "integer"},
+                "execution_time": {"type": "number"}
+            }
+        }
+    )
+    def run_cmd_tool(
+        command: str,
+        working_directory: Optional[str] = None,
+        timeout_seconds: int = 30,
+        max_output_size: int = 10000
+    ) -> Dict[str, Any]:
+        """Execute CMD command with reliable output capture."""
+        return cmd_executor.execute_command(
+            command=command,
+            working_directory=working_directory,
+            timeout_seconds=timeout_seconds,
+            max_output_size=max_output_size
+        )
+    
+    logger.info("PowerShell and CMD tools registered successfully")
