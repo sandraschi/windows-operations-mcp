@@ -236,48 +236,60 @@ async def run_command():
 #### Create an Archive
 
 ```python
-from windows_operations_mcp.tools.archive_tools import create_archive_tool
+# Using the MCP tool (recommended when integrated with Claude Desktop)
+# The create_archive tool will be available automatically
+
+# Direct Python usage (for scripting):
+from windows_operations_mcp.tools.archive_tools import create_archive
 
 # Create a ZIP archive
-create_archive_tool(
+result = create_archive(
     archive_path="C:\\path\\to\\archive.zip",
     source_paths=["C:\\path\\to\\file1.txt", "C:\\path\\to\\folder1"],
     compression_level=6,  # 0-9 where 0 is no compression, 9 is maximum
-    password=None,        # Optional password for encryption
-    include_base_dir=True # Include the base directory in the archive
+    exclude_patterns=["*.log", "*.tmp"],  # Optional exclusion patterns
+    use_gitignore=True,   # Automatically exclude .gitignore patterns
+    use_default_exclusions=True  # Exclude common artifacts
 )
+print(result)  # {'success': True, 'message': '...', 'included_count': 10, ...}
 ```
 
 #### Extract an Archive
 
 ```python
-from windows_operations_mcp.tools.archive_tool import extract_archive_tool
+# Using the MCP tool (recommended when integrated with Claude Desktop)
+# The extract_archive tool will be available automatically
+
+# Direct Python usage (for scripting):
+from windows_operations_mcp.tools.archive_tools import extract_archive
 
 # Extract a ZIP archive
-extract_archive_tool(
+result = extract_archive(
     archive_path="C:\\path\\to\\archive.zip",
-    output_dir="C:\\path\\to\\extract\\to",
-    password=None,        # Required if archive is password protected
-    members=None,         # Optional: list of specific files to extract
-    overwrite=False,      # Overwrite existing files
-    create_subdir=True    # Create a subdirectory with the archive name
+    extract_dir="C:\\path\\to\\extract\\to",
+    members=None  # Optional: list of specific files to extract
 )
+print(result)  # {'success': True, 'message': '...', 'extracted_files': [...]}
 ```
 
 #### List Archive Contents
 
 ```python
-from windows_operations_mcp.tools.archive_tools import list_archive_tool
+# Using the MCP tool (recommended when integrated with Claude Desktop)
+# The list_archive tool will be available automatically
+
+# Direct Python usage (for scripting):
+from windows_operations_mcp.tools.archive_tools import list_archive
 
 # List contents of an archive
-contents = list_archive_tool(
-    archive_path="C:\\path\\to\\archive.zip",
-    password=None  # Required if archive is password protected
+result = list_archive(
+    archive_path="C:\\path\\to\\archive.zip"
 )
 
 # Print the contents
-for file_info in contents:
-    print(f"{file_info['filename']} - {file_info['size']} bytes")
+if result['success']:
+    for filename in result['files']:
+        print(f"File: {filename}")
 ```
 
 ### Configuration Options

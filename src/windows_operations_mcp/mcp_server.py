@@ -130,6 +130,38 @@ def register_all_tools() -> None:
             logger.info("Registered Archive tools")
         except Exception as e:
             logger.warning(f"Archive tools not available or not converted: {e}")
+
+        # Import and register Windows Services tools
+        try:
+            from .tools.windows_services import register_windows_services_tools
+            register_windows_services_tools(mcp)
+            logger.info("Registered Windows Services tools")
+        except Exception as e:
+            logger.warning(f"Windows Services tools not available: {e}")
+
+        # Import and register Windows Event Log tools
+        try:
+            from .tools.windows_event_logs import register_windows_event_log_tools
+            register_windows_event_log_tools(mcp)
+            logger.info("Registered Windows Event Log tools")
+        except Exception as e:
+            logger.warning(f"Windows Event Log tools not available: {e}")
+
+        # Import and register Windows Performance tools
+        try:
+            from .tools.windows_performance import register_windows_performance_tools
+            register_windows_performance_tools(mcp)
+            logger.info("Registered Windows Performance tools")
+        except Exception as e:
+            logger.warning(f"Windows Performance tools not available: {e}")
+
+        # Import and register Windows Permissions tools
+        try:
+            from .tools.windows_permissions import register_windows_permissions_tools
+            register_windows_permissions_tools(mcp)
+            logger.info("Registered Windows Permissions tools")
+        except Exception as e:
+            logger.warning(f"Windows Permissions tools not available: {e}")
         
         logger.info("Tool registration completed")
         
