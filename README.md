@@ -355,9 +355,10 @@ MIT License - see LICENSE file for details.
 - **Documentation**: Check the `docs/` directory for comprehensive guides
 
 ### Documentation
-- 📖 **[MCPB Building Guide](docs/MCPB_BUILDING_GUIDE.md)** - Package building instructions
-- 📖 **[Getting Started](docs/GETTING_STARTED.md)** - Quick start guide
-- 📖 **[Examples](docs/EXAMPLES.md)** - Usage examples
+- 📖 **[Documentation Index](docs/README.md)** - Complete documentation guide
+- 📖 **[MCPB Building Guide](docs/mcp/MCPB_BUILDING_GUIDE.md)** - Package building instructions
+- 📖 **[Getting Started](docs/mcp/GETTING_STARTED.md)** - Quick start guide
+- 📖 **[Examples](docs/mcp/EXAMPLES.md)** - Usage examples
 - 📖 **[Repository Status](REPOSITORY_STATUS_REPORT.md)** - Current project status
 
 ### Quick Links
