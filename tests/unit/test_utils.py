@@ -6,18 +6,16 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.utils.command_executor import (
+from windows_operations_mcp.utils.command_executor import (
     CommandExecutor,
     ProcessOutput
 )
-from src.windows_operations_mcp.utils.file_utils import (
+from windows_operations_mcp.utils.file_utils import (
     create_temp_file,
     safe_cleanup_file,
     validate_directory
 )
-from src.windows_operations_mcp.utils.common import (
+from windows_operations_mcp.utils.common import (
     get_execution_result
 )
 
@@ -158,7 +156,7 @@ class TestCommonUtils(unittest.TestCase):
 
     def test_get_execution_result_with_process_output(self):
         """Test get_execution_result with ProcessOutput."""
-        from src.windows_operations_mcp.utils.command_executor import ProcessOutput
+        from windows_operations_mcp.utils.command_executor import ProcessOutput
         
         process_output = ProcessOutput(
             stdout="test output",

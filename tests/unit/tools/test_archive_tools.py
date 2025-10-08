@@ -6,9 +6,7 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.tools.archive_tools import (
+from windows_operations_mcp.tools.archive_tools import (
     register_archive_tools,
     create_archive,
     extract_archive,

@@ -6,10 +6,8 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.mcp_server import register_all_tools
-from src.windows_operations_mcp.__init__ import __version__
+from windows_operations_mcp.mcp_server import register_all_tools
+from windows_operations_mcp.__init__ import __version__
 
 
 class TestMCPServer(unittest.TestCase):
@@ -49,7 +47,7 @@ class TestMainModule(unittest.TestCase):
     def test_main_import(self):
         """Test main module can be imported."""
         try:
-            from src.windows_operations_mcp import main
+            from windows_operations_mcp import main
             self.assertTrue(True)  # Import successful
         except ImportError:
             self.fail("Main module import failed")

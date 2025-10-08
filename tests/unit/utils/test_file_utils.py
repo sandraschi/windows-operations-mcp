@@ -5,9 +5,7 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.utils.file_utils import (
+from windows_operations_mcp.utils.file_utils import (
     create_temp_file,
     safe_cleanup_file,
     validate_directory

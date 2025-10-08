@@ -6,9 +6,7 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.tools.file_operations.file_operations import (
+from windows_operations_mcp.tools.file_operations.file_operations import (
     read_file,
     write_file,
     copy_file,

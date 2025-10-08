@@ -5,9 +5,7 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.utils.common import (
+from windows_operations_mcp.utils.common import (
     get_execution_result
 )
 
@@ -26,7 +24,7 @@ class TestCommonUtils(unittest.TestCase):
 
     def test_get_execution_result(self):
         """Test get_execution_result function."""
-        from src.windows_operations_mcp.utils.command_executor import ProcessOutput
+        from windows_operations_mcp.utils.command_executor import ProcessOutput
 
         # Test with ProcessOutput object
         process_output = ProcessOutput(

@@ -7,9 +7,7 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.logging_config import (
+from windows_operations_mcp.logging_config import (
     get_logger,
     setup_logging,
     add_service_context,
@@ -83,7 +81,7 @@ class TestLoggingConfig(unittest.TestCase):
         # The add_service_context function is a processor, not a direct call
         # We can test that it exists and can be imported
         try:
-            from src.windows_operations_mcp.logging_config import add_service_context
+            from windows_operations_mcp.logging_config import add_service_context
             self.assertTrue(callable(add_service_context))
         except Exception as e:
             self.fail(f"add_service_context import failed: {e}")
@@ -93,7 +91,7 @@ class TestLoggingConfig(unittest.TestCase):
         # Test that debug logs can be dropped
         # The drop_debug_logs function is a processor, not a direct call
         try:
-            from src.windows_operations_mcp.logging_config import drop_debug_logs
+            from windows_operations_mcp.logging_config import drop_debug_logs
             self.assertTrue(callable(drop_debug_logs))
         except Exception as e:
             self.fail(f"drop_debug_logs import failed: {e}")

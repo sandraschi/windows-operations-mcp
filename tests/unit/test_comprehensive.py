@@ -6,15 +6,13 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
 # Import all main modules for comprehensive testing
-from src.windows_operations_mcp import decorators, logging_config, utils, __init__
-from src.windows_operations_mcp.tools import (
+from windows_operations_mcp import decorators, logging_config, utils, __init__
+from windows_operations_mcp.tools import (
     system_tools, help_tools, network_tools, git_tools,
     process_tools, archive_tools
 )
-from src.windows_operations_mcp.tools.file_operations import file_operations
+from windows_operations_mcp.tools.file_operations import file_operations
 
 
 class TestComprehensive(unittest.TestCase):
@@ -30,7 +28,7 @@ class TestComprehensive(unittest.TestCase):
 
     def test_decorators_functionality(self):
         """Test all decorator functions."""
-        from src.windows_operations_mcp.decorators import (
+        from windows_operations_mcp.decorators import (
             tool, validate_inputs, rate_limited, log_execution,
             is_positive_number, is_valid_path, is_valid_port, is_safe_command
         )
@@ -68,8 +66,8 @@ class TestComprehensive(unittest.TestCase):
 
     def test_utils_functionality(self):
         """Test utility functions."""
-        from src.windows_operations_mcp.utils.common import get_execution_result
-        from src.windows_operations_mcp.utils.file_utils import create_temp_file, safe_cleanup_file
+        from windows_operations_mcp.utils.common import get_execution_result
+        from windows_operations_mcp.utils.file_utils import create_temp_file, safe_cleanup_file
 
         # Test execution result processing
         test_result = {

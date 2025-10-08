@@ -6,11 +6,9 @@ import sys
 import asyncio
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from src.windows_operations_mcp.mcp_server import mcp
-from src.windows_operations_mcp.tools.help_tools import register_help_tools
-from src.windows_operations_mcp.tools.system_tools import register_system_tools
+from windows_operations_mcp.mcp_server import mcp
+from windows_operations_mcp.tools.help_tools import register_help_tools
+from windows_operations_mcp.tools.system_tools import register_system_tools
 
 
 class TestMCPIntegration(unittest.TestCase):
@@ -21,7 +19,7 @@ class TestMCPIntegration(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
 
         # Create a fresh MCP instance for testing
-        from src.windows_operations_mcp.mcp_server import FastMCP
+        from windows_operations_mcp.mcp_server import FastMCP
         self.mcp = FastMCP("test-integration-server")
 
         # Register tools

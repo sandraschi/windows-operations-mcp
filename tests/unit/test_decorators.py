@@ -6,9 +6,7 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.decorators import (
+from windows_operations_mcp.decorators import (
     tool,
     validate_inputs,
     rate_limited,
@@ -18,7 +16,7 @@ from src.windows_operations_mcp.decorators import (
     is_valid_port,
     is_safe_command
 )
-from src.windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.logging_config import get_logger
 
 
 class TestDecorators(unittest.TestCase):

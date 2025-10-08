@@ -6,10 +6,8 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.main import main
-from src.windows_operations_mcp.__init__ import __version__
+from windows_operations_mcp.main import main
+from windows_operations_mcp.__init__ import __version__
 
 
 class TestMain(unittest.TestCase):
@@ -40,14 +38,14 @@ class TestInitModule(unittest.TestCase):
 
     def test_init_imports(self):
         """Test that __init__ imports work correctly."""
-        from src.windows_operations_mcp import __init__ as init_module
+        from windows_operations_mcp import __init__ as init_module
 
         # Test that key attributes exist
         self.assertTrue(hasattr(init_module, '__version__'))
 
     def test_init_version_format(self):
         """Test version format in __init__."""
-        from src.windows_operations_mcp import __init__ as init_module
+        from windows_operations_mcp import __init__ as init_module
 
         version = init_module.__version__
         self.assertIsInstance(version, str)

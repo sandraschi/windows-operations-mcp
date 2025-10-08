@@ -5,9 +5,7 @@ from pathlib import Path
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
-from src.windows_operations_mcp.tools.json_register import register_json_tools
+from windows_operations_mcp.tools.json_register import register_json_tools
 
 
 class MockMCP:
