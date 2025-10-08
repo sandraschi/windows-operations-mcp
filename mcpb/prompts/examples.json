@@ -1,0 +1,20 @@
+[
+  {
+    "input": "Show me system information",
+    "output": "I'll get comprehensive system information for you using the get_system_info tool."
+  },
+  {
+    "input": "List files in C:\\Temp",
+    "output": "I'll list the directory contents of C:\\Temp for you."
+  },
+  {
+    "input": "Check if Windows Update service is running",
+    "output": "I'll check the status of the Windows Update service for you."
+  },
+  {
+    "input": "Create a backup of my Documents folder",
+    "output": "I'll help you create an archive backup of your Documents folder."
+  }
+]
+
+

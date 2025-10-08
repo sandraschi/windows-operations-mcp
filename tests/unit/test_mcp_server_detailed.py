@@ -38,19 +38,19 @@ class TestMCPServerDetailed(unittest.TestCase):
 
     def test_mcp_server_tool_registration(self):
         """Test tool registration functionality."""
-        initial_tool_count = len(self.mcp.list_tools())
+        initial_tool_count = len(self.mcp.get_tools())
 
         # Register additional tools
         register_help_tools(self.mcp)
         register_system_tools(self.mcp)
 
         # Should have more tools now
-        final_tool_count = len(self.mcp.list_tools())
+        final_tool_count = len(self.mcp.get_tools())
         self.assertGreater(final_tool_count, initial_tool_count)
 
     def test_mcp_server_tool_discovery(self):
         """Test tool discovery."""
-        tools = self.mcp.list_tools()
+        tools = self.mcp.get_tools()
 
         self.assertIsInstance(tools, list)
         self.assertGreater(len(tools), 0)
@@ -64,7 +64,7 @@ class TestMCPServerDetailed(unittest.TestCase):
     def test_mcp_server_tool_validation(self):
         """Test tool input validation."""
         # This is a basic test - in reality we'd test specific tool calls
-        tools = self.mcp.list_tools()
+        tools = self.mcp.get_tools()
 
         # All tools should have valid schemas
         for tool in tools:
@@ -93,7 +93,7 @@ class TestMCPServerDetailed(unittest.TestCase):
 
     def test_mcp_server_tool_metadata(self):
         """Test tool metadata."""
-        tools = self.mcp.list_tools()
+        tools = self.mcp.get_tools()
 
         for tool in tools:
             # Check required metadata
@@ -111,7 +111,7 @@ class TestMCPServerDetailed(unittest.TestCase):
 
     def test_mcp_server_schema_validation(self):
         """Test schema validation."""
-        tools = self.mcp.list_tools()
+        tools = self.mcp.get_tools()
 
         for tool in tools:
             schema = tool.get('inputSchema', {})
@@ -129,7 +129,7 @@ class TestMCPServerDetailed(unittest.TestCase):
         """Test MCP server error handling."""
         # Test that server handles errors gracefully
         try:
-            tools = self.mcp.list_tools()
+            tools = self.mcp.get_tools()
             # Should not raise exceptions
             self.assertIsInstance(tools, list)
         except Exception as e:

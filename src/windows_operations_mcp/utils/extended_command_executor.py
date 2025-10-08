@@ -66,6 +66,12 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
     """Extended command executor with advanced features."""
     
     @staticmethod
+    def execute_cmd(command: str, **kwargs) -> Dict[str, Any]:
+        """Static wrapper for execute_cmd from base class."""
+        result = BaseCommandExecutor.execute_cmd(command, **kwargs)
+        return result.to_dict() if hasattr(result, 'to_dict') else result
+    
+    @staticmethod
     async def execute_async(
         command: Union[str, List[str]],
         working_directory: Optional[str] = None,

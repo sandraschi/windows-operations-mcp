@@ -1,0 +1,60 @@
+{
+  "manifest_version": "0.2",
+  "name": "windows-operations-mcp",
+  "version": "0.1.0",
+  "description": "Comprehensive Windows system operations MCP server with PowerShell, file operations, system monitoring, and Windows-specific tools",
+  "author": {
+    "name": "Sandra Schi",
+    "email": "sandra@sandraschi.dev"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "python",
+    "entry_point": "src/windows_operations_mcp/server.py",
+    "mcp_config": {
+      "command": "python",
+      "args": ["-m", "windows_operations_mcp.server"],
+      "env": {
+        "PYTHONPATH": "src",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  },
+  "user_config": {
+    "working_directory": {
+      "type": "directory",
+      "title": "Working Directory",
+      "description": "Default directory for file operations and scripts",
+      "required": false,
+      "default": "${HOME}/Documents/WindowsOps"
+    },
+    "log_level": {
+      "type": "string",
+      "title": "Log Level",
+      "description": "Logging level for the MCP server",
+      "required": false,
+      "default": "INFO"
+    },
+    "enable_performance_monitoring": {
+      "type": "boolean",
+      "title": "Enable Performance Monitoring",
+      "description": "Enable detailed performance monitoring and metrics collection",
+      "required": false,
+      "default": true
+    }
+  },
+  "prompts": [
+    {
+      "name": "system",
+      "text": "prompts/system.md"
+    },
+    {
+      "name": "user", 
+      "text": "prompts/user.md"
+    },
+    {
+      "name": "examples",
+      "text": "prompts/examples.json"
+    }
+  ]
+}

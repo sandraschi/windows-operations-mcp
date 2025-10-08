@@ -39,16 +39,16 @@ class TestFileOperationsBase(unittest.TestCase):
     def test_validate_file_path(self):
         """Test file path validation."""
         # Test valid file
-        result = validate_file_path(self.test_file)
-        self.assertTrue(result['valid'])
+        is_valid, error_msg = validate_file_path(self.test_file)
+        self.assertTrue(is_valid)
 
         # Test invalid file
-        result = validate_file_path("/nonexistent/file.txt")
-        self.assertFalse(result['valid'])
+        is_valid, error_msg = validate_file_path("/nonexistent/file.txt")
+        self.assertFalse(is_valid)
 
         # Test directory as file
-        result = validate_file_path(self.test_dir)
-        self.assertFalse(result['valid'])
+        is_valid, error_msg = validate_file_path(self.test_dir)
+        self.assertFalse(is_valid)
 
     def test_normalize_path(self):
         """Test path normalization."""
@@ -100,8 +100,8 @@ class TestFileOperationsBase(unittest.TestCase):
             f.write(unicode_content)
 
         # Test path validation with Unicode filename
-        result = validate_file_path(unicode_file)
-        self.assertTrue(result['valid'])
+        is_valid, error_msg = validate_file_path(unicode_file)
+        self.assertTrue(is_valid)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+{
+  "name": "windows-operations-mcp",
+  "version": "0.1.0",
+  "description": "Comprehensive Windows system operations MCP server with PowerShell, file operations, system monitoring, and Windows-specific tools",
+  "author": "Sandra Schi <sandra@sandraschi.dev>",
+  "license": "MIT",
+  "outputDir": "dist",
+  "mcp": {
+    "version": "2.12.0",
+    "server": {
+      "command": "python",
+      "args": ["-m", "windows_operations_mcp.server"],
+      "transport": "stdio"
+    },
+    "capabilities": {
+      "tools": true,
+      "resources": true,
+      "prompts": true
+    }
+  },
+  "dependencies": {
+    "python": ">=3.9.0"
+  }
+}
+

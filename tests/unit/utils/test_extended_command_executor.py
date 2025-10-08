@@ -63,7 +63,7 @@ class TestExtendedCommandExecutor(unittest.TestCase):
         """Test command execution with max output size."""
         # Create a command that would produce a lot of output
         result = ExtendedCommandExecutor.execute_cmd(
-            "for i in {1..1000}; do echo $i; done",
+            "for ($i=1; $i -le 1000; $i++) { Write-Output $i }",
             max_output_size=1000  # 1KB limit
         )
 
@@ -97,7 +97,7 @@ class TestExtendedCommandExecutor(unittest.TestCase):
         env['TEST_VAR'] = 'test_value'
 
         result = ExtendedCommandExecutor.execute_cmd(
-            "echo %TEST_VAR%",
+            "powershell -Command \"Write-Output $env:TEST_VAR\"",
             environment=env
         )
 
@@ -118,7 +118,7 @@ class TestExtendedCommandExecutor(unittest.TestCase):
         """Test command execution with large output."""
         # Generate some output
         result = ExtendedCommandExecutor.execute_cmd(
-            "for i in {1..50}; do echo \"Line $i with some content\"; done"
+            "for ($i=1; $i -le 50; $i++) { Write-Output \"Line $i with some content\" }"
         )
 
         self.assertTrue(result['success'])

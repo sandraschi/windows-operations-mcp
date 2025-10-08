@@ -18,13 +18,15 @@ class MockMCP:
 
     def tool(self, func=None, **kwargs):
         if func is not None:
-            # Direct function registration: mcp.tool(function)
-            self.tools[func.__name__] = func
+            # Direct function registration: mcp.tool(function, name="custom_name")
+            tool_name = kwargs.get('name', func.__name__)
+            self.tools[tool_name] = func
             return func
         else:
             # Decorator pattern: @mcp.tool()
             def decorator(f):
-                self.tools[f.__name__] = f
+                tool_name = kwargs.get('name', f.__name__)
+                self.tools[tool_name] = f
                 return f
             return decorator
 
@@ -69,7 +71,7 @@ class TestFileOperationsTools(unittest.TestCase):
 
         result = read_file_func(path=self.test_file)
 
-        self.assertTrue(result['success'])
+        self.assertTrue(result['_metadata']['success'])
         self.assertIn('content', result)
         self.assertEqual(result['content'], "Test content")
 
@@ -80,7 +82,7 @@ class TestFileOperationsTools(unittest.TestCase):
 
         result = read_file_func(path=self.test_file, encoding="utf-8")
 
-        self.assertTrue(result['success'])
+        self.assertTrue(result['_metadata']['success'])
         self.assertIn('content', result)
 
     def test_write_file_basic(self):
@@ -94,7 +96,7 @@ class TestFileOperationsTools(unittest.TestCase):
             content="New file content"
         )
 
-        self.assertTrue(result['success'])
+        self.assertTrue(result['_metadata']['success'])
         self.assertTrue(os.path.exists(new_file))
 
     def test_write_file_with_overwrite(self):
@@ -108,7 +110,7 @@ class TestFileOperationsTools(unittest.TestCase):
             overwrite=True
         )
 
-        self.assertTrue(result['success'])
+        self.assertTrue(result['_metadata']['success'])
 
     def test_delete_file_basic(self):
         """Test basic file deletion."""
@@ -155,11 +157,11 @@ class TestFileOperationsTools(unittest.TestCase):
         register_file_operations(self.mcp)
         list_directory_func = self.mcp.tools['list_directory']
 
-        result = list_directory_func(path=self.test_dir)
+        result = list_directory_func(directory_path=self.test_dir)
 
         self.assertTrue(result['success'])
-        self.assertIn('files', result)
-        self.assertIn('directories', result)
+        self.assertIn('items', result)
+        self.assertIn('count', result)
 
     def test_list_directory_with_pattern(self):
         """Test directory listing with pattern."""
@@ -167,12 +169,12 @@ class TestFileOperationsTools(unittest.TestCase):
         list_directory_func = self.mcp.tools['list_directory']
 
         result = list_directory_func(
-            path=self.test_dir,
+            directory_path=self.test_dir,
             pattern="*.txt"
         )
 
         self.assertTrue(result['success'])
-        self.assertIn('files', result)
+        self.assertIn('items', result)
 
     def test_create_directory_basic(self):
         """Test basic directory creation."""
@@ -180,7 +182,7 @@ class TestFileOperationsTools(unittest.TestCase):
         create_directory_func = self.mcp.tools['create_directory']
 
         new_dir = os.path.join(self.test_dir, "new_directory")
-        result = create_directory_func(path=new_dir)
+        result = create_directory_func(directory_path=new_dir)
 
         self.assertTrue(result['success'])
         self.assertTrue(os.path.exists(new_dir))
@@ -192,8 +194,8 @@ class TestFileOperationsTools(unittest.TestCase):
 
         new_dir = os.path.join(self.test_dir, "parent", "child")
         result = create_directory_func(
-            path=new_dir,
-            parents=True
+            directory_path=new_dir,
+            create_parents=True
         )
 
         self.assertTrue(result['success'])
@@ -208,7 +210,7 @@ class TestFileOperationsTools(unittest.TestCase):
         dir_to_delete = os.path.join(self.test_dir, "dir_to_delete")
         os.makedirs(dir_to_delete)
 
-        result = delete_directory_func(path=dir_to_delete)
+        result = delete_directory_func(directory_path=dir_to_delete)
 
         self.assertTrue(result['success'])
         self.assertFalse(os.path.exists(dir_to_delete))
@@ -224,8 +226,8 @@ class TestFileOperationsTools(unittest.TestCase):
 
         new_location = os.path.join(self.test_dir, "moved_dir")
         result = move_directory_func(
-            source=dir_to_move,
-            destination=new_location
+            source_path=dir_to_move,
+            destination_path=new_location
         )
 
         self.assertTrue(result['success'])
@@ -245,8 +247,8 @@ class TestFileOperationsTools(unittest.TestCase):
 
         copy_location = os.path.join(self.test_dir, "copied_dir")
         result = copy_directory_func(
-            source=dir_to_copy,
-            destination=copy_location
+            source_path=dir_to_copy,
+            destination_path=copy_location
         )
 
         self.assertTrue(result['success'])

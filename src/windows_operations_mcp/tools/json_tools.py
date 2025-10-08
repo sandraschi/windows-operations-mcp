@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Union, TypeVar, Optional
 from datetime import datetime
 
+from ..decorators import tool
+
 T = TypeVar('T')
 
 def read_json_file(file_path: Union[str, Path]) -> Union[Dict, List]:
@@ -91,7 +93,15 @@ def write_json_file(
     except OSError as e:
         raise OSError(f"Error writing to file {file_path}: {str(e)}")
 
-def validate_json(json_str: str) -> bool:
+@tool(
+    name="validate_json",
+    description="Validate if a string is valid JSON",
+    parameters={
+        "json_str": {"type": "string", "description": "String to validate as JSON"}
+    },
+    returns={"type": "object", "properties": {"valid": {"type": "boolean"}}}
+)
+def validate_json(json_str: str) -> Dict[str, Any]:
     """
     Validate if a string is valid JSON.
     
@@ -99,13 +109,13 @@ def validate_json(json_str: str) -> bool:
         json_str: String to validate as JSON
         
     Returns:
-        bool: True if the string is valid JSON, False otherwise
+        Dict[str, Any]: Dictionary with validation result
     """
     try:
         json.loads(json_str)
-        return True
+        return {"valid": True, "success": True}
     except json.JSONDecodeError:
-        return False
+        return {"valid": False, "success": True}
 
 def merge_json(*json_objects: Dict) -> Dict:
     """
@@ -230,11 +240,21 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error: {str(e)}")
 
+@tool(
+    name="format_json_string",
+    description="Format a JSON string with proper indentation",
+    parameters={
+        "json_str": {"type": "string", "description": "JSON string to format"},
+        "indent": {"type": "integer", "description": "Number of spaces for indentation", "default": 2},
+        "sort_keys": {"type": "boolean", "description": "Whether to sort dictionary keys", "default": False}
+    },
+    returns={"type": "object", "properties": {"formatted": {"type": "string"}}}
+)
 def format_json_string(
     json_str: str, 
     indent: int = 2, 
     sort_keys: bool = False
-) -> str:
+) -> Dict[str, Any]:
     """
     Format a JSON string with proper indentation.
     
@@ -244,13 +264,14 @@ def format_json_string(
         sort_keys: Whether to sort dictionary keys
         
     Returns:
-        Formatted JSON string
-        
-    Raises:
-        json.JSONDecodeError: If the input is not valid JSON
+        Dict[str, Any]: Dictionary with formatted JSON
     """
-    parsed = json.loads(json_str)
-    return json.dumps(parsed, indent=indent, sort_keys=sort_keys, ensure_ascii=False)
+    try:
+        parsed = json.loads(json_str)
+        formatted = json.dumps(parsed, indent=indent, sort_keys=sort_keys, ensure_ascii=False)
+        return {"formatted": formatted, "success": True}
+    except json.JSONDecodeError as e:
+        return {"error": f"Invalid JSON: {str(e)}", "success": False}
 
 def convert_to_json(data: Any, indent: Optional[int] = None) -> str:
     """

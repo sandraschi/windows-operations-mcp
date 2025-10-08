@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Union, List, Tuple
 from datetime import datetime
 
+from ..decorators import tool
+
 class MediaMetadataError(Exception):
     """Base exception for media metadata operations."""
     pass
@@ -17,10 +19,16 @@ class MediaMetadataError(Exception):
 # Try to import optional dependencies
 try:
     from PIL import Image, ExifTags
-    from PIL.Exif import TAGS
+    # TAGS is available in ExifTags module in newer Pillow versions
+    if hasattr(ExifTags, 'TAGS'):
+        TAGS = ExifTags.TAGS
+    else:
+        # Fallback for older versions
+        from PIL.Exif import TAGS
     HAS_PILLOW = True
 except ImportError:
     HAS_PILLOW = False
+    TAGS = None
 
 try:
     import mutagen
@@ -38,6 +46,16 @@ def _ensure_dependencies():
         raise MediaMetadataError("Mutagen is required for audio metadata operations. Install with: pip install mutagen")
 
 # EXIF (Image) Metadata Functions
+@tool(
+    name="get_image_metadata",
+    description="Get EXIF metadata from an image file",
+    parameters={
+        "image_path": {
+            "type": "string",
+            "description": "Path to the image file"
+        }
+    }
+)
 def get_image_metadata(image_path: Union[str, Path]) -> Dict[str, Any]:
     """
     Get EXIF metadata from an image file.
@@ -59,13 +77,21 @@ def get_image_metadata(image_path: Union[str, Path]) -> Dict[str, Any]:
     
     try:
         with Image.open(image_path) as img:
+            exif_data = {}
             if hasattr(img, '_getexif') and img._getexif() is not None:
-                exif_data = {}
                 for tag, value in img._getexif().items():
                     if tag in TAGS:
                         exif_data[TAGS[tag]] = value
-                return exif_data
-            return {}
+            
+            return {
+                "success": True,
+                "metadata": exif_data,
+                "file_info": {
+                    "format": img.format,
+                    "mode": img.mode,
+                    "size": img.size
+                }
+            }
     except Exception as e:
         raise MediaMetadataError(f"Error reading image metadata: {e}")
 

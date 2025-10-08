@@ -25,8 +25,9 @@ class MockMCP:
                 return f
             return decorator
         else:
-            # Called as @mcp.tool
-            self.tools[func.__name__] = func
+            # Called as mcp.tool(function, name="...")
+            tool_name = name or func.__name__
+            self.tools[tool_name] = func
             return func
 
 
@@ -50,7 +51,10 @@ class TestJsonTools(unittest.TestCase):
         # Check that tools were registered
         self.assertIn('validate_json', self.mcp.tools)
         self.assertIn('format_json', self.mcp.tools)
-        self.assertIn('minify_json', self.mcp.tools)
+        self.assertIn('read_json_file', self.mcp.tools)
+        self.assertIn('write_json_file', self.mcp.tools)
+        self.assertIn('to_json', self.mcp.tools)
+        self.assertIn('extract_json', self.mcp.tools)
 
     def test_validate_json_tool(self):
         """Test validate_json tool functionality."""

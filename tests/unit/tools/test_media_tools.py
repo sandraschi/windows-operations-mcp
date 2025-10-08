@@ -42,8 +42,17 @@ class TestMediaTools(unittest.TestCase):
         self.test_mp3 = os.path.join(self.test_dir, "test.mp3")
         
         # Create minimal test files (not real media files, but sufficient for testing)
+        # Create a simple 1x1 pixel JPEG file
+        from PIL import Image as PILImage
+        import io
+        
+        # Create a tiny valid JPEG
+        img = PILImage.new('RGB', (1, 1), color='red')
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format='JPEG')
         with open(self.test_image, 'wb') as f:
-            f.write(b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00')
+            f.write(img_bytes.getvalue())
+            
         with open(self.test_mp3, 'wb') as f:
             f.write(b'ID3\x03\x00\x00\x00\x00\x00\x00')
 
@@ -68,7 +77,7 @@ class TestMediaTools(unittest.TestCase):
         register_media_tools(self.mcp)
         get_media_metadata_func = self.mcp.tools['get_media_metadata']
 
-        result = get_media_metadata_func(file_path=self.test_image)
+        result = get_media_metadata_func(image_path=self.test_image)
 
         self.assertIn('success', result)
         self.assertIn('metadata', result)
@@ -78,7 +87,7 @@ class TestMediaTools(unittest.TestCase):
         register_media_tools(self.mcp)
         get_media_metadata_func = self.mcp.tools['get_media_metadata']
 
-        result = get_media_metadata_func(file_path=self.test_mp3)
+        result = get_media_metadata_func(image_path=self.test_mp3)
 
         self.assertIn('success', result)
         self.assertIn('metadata', result)
@@ -88,7 +97,7 @@ class TestMediaTools(unittest.TestCase):
         register_media_tools(self.mcp)
         get_image_metadata_func = self.mcp.tools['get_image_metadata']
 
-        result = get_image_metadata_func(file_path=self.test_image)
+        result = get_image_metadata_func(image_path=self.test_image)
 
         self.assertIn('success', result)
         self.assertIn('metadata', result)
@@ -99,7 +108,7 @@ class TestMediaTools(unittest.TestCase):
         get_image_metadata_func = self.mcp.tools['get_image_metadata']
 
         result = get_image_metadata_func(
-            file_path=self.test_image,
+            image_path=self.test_image,
             detailed=True
         )
 
@@ -111,7 +120,7 @@ class TestMediaTools(unittest.TestCase):
         register_media_tools(self.mcp)
         get_mp3_metadata_func = self.mcp.tools['get_mp3_metadata']
 
-        result = get_mp3_metadata_func(file_path=self.test_mp3)
+        result = get_mp3_metadata_func(mp3_path=self.test_mp3)
 
         self.assertIn('success', result)
         self.assertIn('metadata', result)
@@ -122,7 +131,7 @@ class TestMediaTools(unittest.TestCase):
         get_mp3_metadata_func = self.mcp.tools['get_mp3_metadata']
 
         result = get_mp3_metadata_func(
-            file_path=self.test_mp3,
+            mp3_path=self.test_mp3,
             detailed=True
         )
 
@@ -135,7 +144,7 @@ class TestMediaTools(unittest.TestCase):
         update_media_metadata_func = self.mcp.tools['update_media_metadata']
 
         result = update_media_metadata_func(
-            file_path=self.test_image,
+            image_path=self.test_image,
             metadata={"title": "Test Image"}
         )
 
@@ -148,7 +157,7 @@ class TestMediaTools(unittest.TestCase):
         update_media_metadata_func = self.mcp.tools['update_media_metadata']
 
         result = update_media_metadata_func(
-            file_path=self.test_image,
+            image_path=self.test_image,
             metadata={"title": "Test Image"},
             save_as_copy=True,
             output_path=os.path.join(self.test_dir, "test_copy.jpg")
@@ -163,7 +172,7 @@ class TestMediaTools(unittest.TestCase):
         update_image_metadata_func = self.mcp.tools['update_image_metadata']
 
         result = update_image_metadata_func(
-            file_path=self.test_image,
+            image_path=self.test_image,
             metadata={"title": "Test Image"}
         )
 
@@ -176,7 +185,7 @@ class TestMediaTools(unittest.TestCase):
         update_image_metadata_func = self.mcp.tools['update_image_metadata']
 
         result = update_image_metadata_func(
-            file_path=self.test_image,
+            image_path=self.test_image,
             metadata={"title": "Test Image"},
             save_as_copy=True,
             output_path=os.path.join(self.test_dir, "test_copy.jpg")
@@ -191,7 +200,7 @@ class TestMediaTools(unittest.TestCase):
         update_mp3_metadata_func = self.mcp.tools['update_mp3_metadata']
 
         result = update_mp3_metadata_func(
-            file_path=self.test_mp3,
+            mp3_path=self.test_mp3,
             metadata={"title": "Test Song"}
         )
 
@@ -204,7 +213,7 @@ class TestMediaTools(unittest.TestCase):
         update_mp3_metadata_func = self.mcp.tools['update_mp3_metadata']
 
         result = update_mp3_metadata_func(
-            file_path=self.test_mp3,
+            mp3_path=self.test_mp3,
             metadata={"title": "Test Song"},
             save_as_copy=True,
             output_path=os.path.join(self.test_dir, "test_copy.mp3")
@@ -219,7 +228,7 @@ class TestMediaTools(unittest.TestCase):
         get_media_metadata_func = self.mcp.tools['get_media_metadata']
 
         # Test with nonexistent file
-        result = get_media_metadata_func(file_path="/nonexistent/file.jpg")
+        result = get_media_metadata_func(image_path="/nonexistent/file.jpg")
 
         self.assertFalse(result['success'])
         self.assertIn('error', result)
@@ -234,7 +243,7 @@ class TestMediaTools(unittest.TestCase):
         with open(text_file, 'w') as f:
             f.write("Not a media file")
 
-        result = get_media_metadata_func(file_path=text_file)
+        result = get_media_metadata_func(image_path=text_file)
 
         self.assertIn('success', result)
         self.assertIn('metadata', result)
@@ -245,7 +254,7 @@ class TestMediaTools(unittest.TestCase):
         update_media_metadata_func = self.mcp.tools['update_media_metadata']
 
         result = update_media_metadata_func(
-            file_path=self.test_image,
+            image_path=self.test_image,
             metadata="invalid_metadata_format"
         )
 
@@ -262,7 +271,7 @@ class TestMediaTools(unittest.TestCase):
         with open(unsupported_file, 'wb') as f:
             f.write(b'fake image data')
 
-        result = get_image_metadata_func(file_path=unsupported_file)
+        result = get_image_metadata_func(image_path=unsupported_file)
 
         self.assertIn('success', result)
         self.assertIn('metadata', result)
@@ -272,7 +281,7 @@ class TestMediaTools(unittest.TestCase):
         register_media_tools(self.mcp)
         get_mp3_metadata_func = self.mcp.tools['get_mp3_metadata']
 
-        result = get_mp3_metadata_func(file_path=self.test_image)
+        result = get_mp3_metadata_func(mp3_path=self.test_image)
 
         self.assertIn('success', result)
         self.assertIn('metadata', result)

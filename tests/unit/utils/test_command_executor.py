@@ -52,22 +52,18 @@ class TestCommandExecutor(unittest.TestCase):
 
     def test_command_executor_simple_command(self):
         """Test executing a simple command."""
-        executor = CommandExecutor()
+        result = CommandExecutor.execute_cmd("echo 'Hello, World!'")
 
-        result = executor.execute("echo 'Hello, World!'")
-
-        self.assertTrue(result.success)
-        self.assertIn("Hello, World!", result.stdout)
+        self.assertTrue(result['success'])
+        self.assertIn("Hello, World!", result['stdout'])
 
     def test_command_executor_error_handling(self):
         """Test error handling in command execution."""
-        executor = CommandExecutor()
-
         # Test with non-existent command
-        result = executor.execute("nonexistent_command")
+        result = CommandExecutor.execute_cmd("nonexistent_command")
 
-        self.assertFalse(result.success)
-        self.assertNotEqual(result.return_code, 0)
+        self.assertFalse(result['success'])
+        self.assertNotEqual(result['exit_code'], 0)
 
 
 if __name__ == "__main__":

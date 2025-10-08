@@ -108,7 +108,7 @@ class TestArchiveTools(unittest.TestCase):
 
         result = extract_archive(
             archive_path=archive_path,
-            extract_to=extract_dir
+            extract_dir=extract_dir
         )
 
         self.assertIn('success', result)
@@ -160,7 +160,7 @@ class TestArchiveTools(unittest.TestCase):
 
         result = extract_archive(
             archive_path="/nonexistent/archive.zip",
-            extract_to=extract_dir
+            extract_dir=extract_dir
         )
 
         self.assertIn('success', result)
