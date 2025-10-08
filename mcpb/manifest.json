@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.2",
   "name": "windows-operations-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Comprehensive Windows system operations MCP server with PowerShell, file operations, system monitoring, and Windows-specific tools",
   "author": {
     "name": "Sandra Schi",

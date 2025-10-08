@@ -367,7 +367,7 @@ MIT License - see LICENSE file for details.
 
 ## 📊 Project Status
 
-**Version**: 0.1.0 (0.2.0 coming soon with full MCPB release)  
+**Version**: 0.2.0 🎉 (MCPB Release)  
 **Status**: ✅ Production Ready  
 **Health Score**: 9.0/10  
 **Last Updated**: October 8, 2025

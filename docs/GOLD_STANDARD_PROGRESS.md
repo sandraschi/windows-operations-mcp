@@ -3,7 +3,7 @@
 ## Current Status (October 8, 2025)
 
 **Project**: Windows Operations MCP  
-**Version**: 0.1.0 (v0.2.0 MCPB release coming soon)  
+**Version**: 0.2.0 🎉 (MCPB Release)  
 **Glama.ai Listing**: https://glama.ai/mcp/servers/@sandraschi/windows-operations-mcp  
 **Glama.ai Status**: ✅ Operational (99.7% uptime)  
 **Repository Health**: 9.0/10 ⭐  

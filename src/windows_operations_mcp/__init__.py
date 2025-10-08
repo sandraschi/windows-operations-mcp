@@ -5,7 +5,7 @@ A comprehensive Windows system operations server for Claude Desktop.
 Provides reliable PowerShell, CMD, file operations, and system monitoring.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Sandra"
 __email__ = "sandra@example.com"
 

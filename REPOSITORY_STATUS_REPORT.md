@@ -10,7 +10,7 @@ The Windows Operations MCP repository has successfully migrated from DXT to MCPB
 
 ### Key Metrics
 - **Repository Size:** 10,596 files
-- **Current Version:** 0.1.0
+- **Current Version:** 0.2.0 🎉 (MCPB Release)
 - **FastMCP Version:** 2.12.3 (✅ Compliant)
 - **Package Status:** ✅ Built and Ready
 - **Migration Status:** ✅ DXT → MCPB Complete
