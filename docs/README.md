@@ -14,10 +14,15 @@ Documentation related to MCP server implementation and MCPB packaging:
 - **[Getting Started](mcp/GETTING_STARTED.md)** - Quick start guide
 - **[Examples](mcp/EXAMPLES.md)** - Usage examples
 
+### 🌐 [Glama.ai](glama/)
+Glama.ai listing, integration, and Gold Standard progress:
+- **[Glama.ai Integration](glama/README.md)** - Listing and integration guide
+- **[Gold Standard Plan](glama/GOLD_STANDARD_PLAN.md)** - 4-week roadmap to excellence
+- **[Gold Standard Progress](glama/GOLD_STANDARD_PROGRESS.md)** - Current progress tracking
+- **[Week 2 Progress Report](glama/WEEK_2_PROGRESS.md)** - Recent achievements and metrics
+
 ### 📊 [Project Status](project-status/)
-Project progress tracking and status reports:
-- **[Gold Standard Plan](project-status/GOLD_STANDARD_PLAN.md)** - 4-week roadmap to excellence
-- **[Gold Standard Progress](project-status/GOLD_STANDARD_PROGRESS.md)** - Current progress tracking
+Project status and development insights:
 - **[Systematic Project Updates](project-status/SYSTEMATIC_PROJECT_UPDATES.md)** - Update methodology
 - **[Development Pain Points](project-status/DEVELOPMENT_PAIN_POINTS.md)** - Known issues and challenges
 - **[Debugging Lessons Learned](project-status/DEBUGGING_LESSONS_LEARNED.md)** - Debugging insights
@@ -34,9 +39,6 @@ Development guides and architectural documentation:
 - **[Security Guide](development/SECURITY_GUIDE.md)** - Security best practices
 - **[PowerShell Pipe Fixes](development/POWERSHELL_PIPE_FIXES.md)** - PowerShell pipeline solutions
 
-### 🌐 [Glama.ai](glama/)
-Glama.ai listing and integration documentation:
-- **[Glama.ai README](glama/README.md)** - Glama.ai integration guide
 
 ## 🚀 Quick Links
 
@@ -51,8 +53,10 @@ Glama.ai listing and integration documentation:
 - Security: [Security Guide](development/SECURITY_GUIDE.md)
 
 ### For Contributors
-- Project status: [Gold Standard Progress](project-status/GOLD_STANDARD_PROGRESS.md)
-- Development plan: [Gold Standard Plan](project-status/GOLD_STANDARD_PLAN.md)
+- Glama.ai status: [Glama.ai Integration](glama/README.md)
+- Gold Standard plan: [Gold Standard Plan](glama/GOLD_STANDARD_PLAN.md)
+- Current progress: [Gold Standard Progress](glama/GOLD_STANDARD_PROGRESS.md)
+- Week 2 report: [Week 2 Progress](glama/WEEK_2_PROGRESS.md)
 
 ## 📝 Additional Resources
 
