@@ -187,3 +187,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Private documentation (internal dev notes, not for public)
+docs-private/
