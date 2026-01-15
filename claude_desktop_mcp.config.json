@@ -3,9 +3,8 @@
     "command": "python",
     "args": [
       "-m",
-      "windows_operations_mcp.mcp_server"
+      "windows_operations_mcp.__main__"
     ],
-    "cwd": "D:/Dev/repos/windows-operations-mcp",
     "env": {
       "PYTHONPATH": "D:/Dev/repos/windows-operations-mcp/src",
       "PYTHONUNBUFFERED": "1"

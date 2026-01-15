@@ -47,126 +47,40 @@ mcp = FastMCP(
 
 # Register all tools using explicit registration functions
 def register_all_tools() -> None:
-    """Register all tool modules with the FastMCP instance."""
+    """Register all portmanteau tool modules with the FastMCP instance."""
     try:
-        logger.info("Starting tool registration...")
-        
-        # Import and register PowerShell tools
-        try:
-            from .tools.powershell_tools import register_powershell_tools
-            register_powershell_tools(mcp)
-            logger.info("Registered PowerShell tools")
-        except Exception as e:
-            logger.error(f"Failed to register PowerShell tools: {e}")
-        
-        # Import and register File tools from file_operations package
-        try:
-            from .tools.file_operations import register_file_operations
-            register_file_operations(mcp)
-            logger.info("Registered File tools")
-        except Exception as e:
-            logger.error(f"Failed to register File tools: {e}")
-        
-        # Import and register Network tools  
-        try:
-            from .tools.network_tools import register_network_tools
-            register_network_tools(mcp)
-            logger.info("Registered Network tools")
-        except Exception as e:
-            logger.error(f"Failed to register Network tools: {e}")
-            
-        # Import and register System tools
-        try:
-            from .tools.system_tools import register_system_tools
-            register_system_tools(mcp)
-            logger.info("Registered System tools")
-        except Exception as e:
-            logger.error(f"Failed to register System tools: {e}")
-            
-        # Import and register Process tools
-        try:
-            from .tools.process_tools import register_process_tools
-            register_process_tools(mcp)
-            logger.info("Registered Process tools")
-        except Exception as e:
-            logger.error(f"Failed to register Process tools: {e}")
-        
-        # Import and register Git tools
-        try:
-            from .tools.git_tools import register_git_tools
-            register_git_tools(mcp)
-            logger.info("Registered Git tools")
-        except Exception as e:
-            logger.warning(f"Git tools not available or not converted: {e}")
-            
-        # Import and register JSON tools
-        try:
-            from .tools.json_register import register_json_tools
-            register_json_tools(mcp)
-            logger.info("Registered JSON tools")
-        except Exception as e:
-            logger.error(f"Failed to register JSON tools: {e}")
-            
-        # Import and register Media tools
-        try:
-            from .tools.media_register import register_media_tools
-            register_media_tools(mcp)
-            logger.info("Registered Media tools")
-        except Exception as e:
-            logger.error(f"Failed to register Media tools: {e}")
-            
-        # Import and register Help tools
-        try:
-            from .tools.help_tools import register_help_tools
-            register_help_tools(mcp)
-            logger.info("Registered Help tools")
-        except Exception as e:
-            logger.warning(f"Help tools not available or not converted: {e}")
-            
-        # Import and register Archive tools
-        try:
-            from .tools.archive_tools import register_archive_tools
-            register_archive_tools(mcp)
-            logger.info("Registered Archive tools")
-        except Exception as e:
-            logger.warning(f"Archive tools not available or not converted: {e}")
+        logger.info("Starting portmanteau tool registration...")
 
-        # Import and register Windows Services tools
-        try:
-            from .tools.windows_services import register_windows_services_tools
-            register_windows_services_tools(mcp)
-            logger.info("Registered Windows Services tools")
-        except Exception as e:
-            logger.warning(f"Windows Services tools not available: {e}")
+        # Register Portmanteau Tools - Core Windows Operations (9 tools)
+        portmanteau_tools = [
+            ("command_execution", "windows_operations_mcp.tools.portmanteau.command_execution", "register_command_execution"),
+            ("file_operations", "windows_operations_mcp.tools.portmanteau.file_operations", "register_file_operations"),
+            ("directory_operations", "windows_operations_mcp.tools.portmanteau.directory_operations", "register_directory_operations"),
+            ("archive_management", "windows_operations_mcp.tools.portmanteau.archive_management", "register_archive_management"),
+            ("json_operations", "windows_operations_mcp.tools.portmanteau.json_operations", "register_json_operations"),
+            ("git_operations", "windows_operations_mcp.tools.portmanteau.git_operations", "register_git_operations"),
+            ("process_management", "windows_operations_mcp.tools.portmanteau.process_management", "register_process_management"),
+            ("windows_services", "windows_operations_mcp.tools.portmanteau.windows_services", "register_windows_services"),
+            ("system_management", "windows_operations_mcp.tools.portmanteau.system_management", "register_system_management"),
+        ]
 
-        # Import and register Windows Event Log tools
-        try:
-            from .tools.windows_event_logs import register_windows_event_log_tools
-            register_windows_event_log_tools(mcp)
-            logger.info("Registered Windows Event Log tools")
-        except Exception as e:
-            logger.warning(f"Windows Event Log tools not available: {e}")
+        registered_count = 0
 
-        # Import and register Windows Performance tools
-        try:
-            from .tools.windows_performance import register_windows_performance_tools
-            register_windows_performance_tools(mcp)
-            logger.info("Registered Windows Performance tools")
-        except Exception as e:
-            logger.warning(f"Windows Performance tools not available: {e}")
+        for tool_name, module_path, register_func_name in portmanteau_tools:
+            try:
+                # Dynamic import of portmanteau tool
+                module = __import__(module_path, fromlist=[register_func_name])
+                register_func = getattr(module, register_func_name)
+                register_func(mcp)
+                logger.info(f"Registered portmanteau tool: {tool_name}")
+                registered_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to register portmanteau tool '{tool_name}': {e}")
 
-        # Import and register Windows Permissions tools
-        try:
-            from .tools.windows_permissions import register_windows_permissions_tools
-            register_windows_permissions_tools(mcp)
-            logger.info("Registered Windows Permissions tools")
-        except Exception as e:
-            logger.warning(f"Windows Permissions tools not available: {e}")
-        
-        logger.info("Tool registration completed")
-        
+        logger.info(f"Portmanteau tool registration completed. Registered {registered_count} tools.")
+
     except Exception as e:
-        logger.critical("Error during tool registration", error=str(e))
+        logger.critical("Error during portmanteau tool registration", error=str(e))
         raise
 
 # Main entry point

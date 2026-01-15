@@ -1,0 +1,10 @@
+id = "windows-operations-mcp"
+name = "WindowsSystemOperations"
+version = "0.1.0"
+schema_version = 1
+authors = ["Sandra <sandraschipal@hotmail.com>"]
+description = "Windows-specific system and automation tools"
+repository = "https://github.com/sandraschi/windows-operations-mcp"
+
+[context_servers.windows-operations-mcp]
+name = "Windows Operations Tools"

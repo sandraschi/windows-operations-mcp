@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "windows-operations-mcp": {
+      "command": "python",
+      "args": [
+        "-m",
+        "windows_operations_mcp.__main__"
+      ],
+      "env": {
+        "PYTHONPATH": "D:/Dev/repos/windows-operations-mcp/src",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

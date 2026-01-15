@@ -1,0 +1,42 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "maintainers": ["sandraschi"],
+  "name": "windows-operations-mcp",
+  "description": "Comprehensive Windows system administration toolkit with file operations, process management, performance monitoring, and enterprise-grade operations.",
+  "type": "mcp_server",
+  "status": "beta",
+  "framework": "FastMCP 2.13+",
+  "tools": 20,
+  "transport": ["stdio"],
+  "keywords": [
+    "windows",
+    "system-administration",
+    "file-operations",
+    "process-management",
+    "performance",
+    "permissions",
+    "event-logs",
+    "git",
+    "services",
+    "enterprise",
+    "fastmcp"
+  ],
+  "features": {
+    "file_operations": {
+      "enabled": true,
+      "capabilities": ["read", "write", "edit", "attributes", "permissions"]
+    },
+    "system_management": {
+      "enabled": true,
+      "areas": ["processes", "services", "performance", "event-logs"]
+    },
+    "development_tools": {
+      "enabled": true,
+      "tools": ["git", "powershell", "command-execution"]
+    },
+    "media_handling": {
+      "enabled": true,
+      "capabilities": ["metadata", "archives", "json-operations"]
+    }
+  }
+}

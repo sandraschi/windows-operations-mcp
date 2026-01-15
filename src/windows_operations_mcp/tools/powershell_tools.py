@@ -547,41 +547,7 @@ def register_powershell_tools(mcp):
     cmd_executor = CMDExecutor()
     
     # Register PowerShell tool
-    @mcp.tool(
-        name="run_powershell_tool",
-        description="Execute PowerShell commands with reliable output capture and security checks",
-        parameters={
-            "command": {
-                "type": "string",
-                "description": "PowerShell command to execute"
-            },
-            "working_directory": {
-                "type": "string",
-                "description": "Working directory for command execution"
-            },
-            "timeout_seconds": {
-                "type": "integer",
-                "description": "Command timeout in seconds (1-300)",
-                "default": 30
-            },
-            "max_output_size": {
-                "type": "integer",
-                "description": "Maximum output size in characters",
-                "default": 10000
-            }
-        },
-        required=["command"],
-        returns={
-            "type": "object",
-            "properties": {
-                "success": {"type": "boolean"},
-                "stdout": {"type": "string"},
-                "stderr": {"type": "string"},
-                "exit_code": {"type": "integer"},
-                "execution_time": {"type": "number"}
-            }
-        }
-    )
+    @mcp.tool()
     def run_powershell_tool(
         command: str,
         working_directory: Optional[str] = None,
@@ -597,41 +563,7 @@ def register_powershell_tools(mcp):
         )
     
     # Register CMD tool
-    @mcp.tool(
-        name="run_cmd_tool",
-        description="Execute CMD commands with reliable output capture and security checks",
-        parameters={
-            "command": {
-                "type": "string",
-                "description": "CMD command to execute"
-            },
-            "working_directory": {
-                "type": "string",
-                "description": "Working directory for command execution"
-            },
-            "timeout_seconds": {
-                "type": "integer",
-                "description": "Command timeout in seconds (1-300)",
-                "default": 30
-            },
-            "max_output_size": {
-                "type": "integer",
-                "description": "Maximum output size in characters",
-                "default": 10000
-            }
-        },
-        required=["command"],
-        returns={
-            "type": "object",
-            "properties": {
-                "success": {"type": "boolean"},
-                "stdout": {"type": "string"},
-                "stderr": {"type": "string"},
-                "exit_code": {"type": "integer"},
-                "execution_time": {"type": "number"}
-            }
-        }
-    )
+    @mcp.tool()
     def run_cmd_tool(
         command: str,
         working_directory: Optional[str] = None,

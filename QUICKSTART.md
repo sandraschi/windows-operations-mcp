@@ -47,11 +47,17 @@ That's it! All tools are now available in Claude Desktop.
 
 ## 🎯 Try It Out - 3 Simple Examples
 
+**Note:** This MCP server uses portmanteau tools with action-based interfaces. Instead of individual tools like `get_system_info`, you now use consolidated tools like `system_management` with specific actions.
+
+**Architecture Note:** Some tools (filesystem operations, git operations) may duplicate functionality from dedicated MCP repositories. These may be consolidated or removed in future updates for better ecosystem consistency.
+
+**Version 0.3.0 Update:** All tools now use proper triple double quotes (`"""`) and follow FastMCP 2.14.1+ comprehensive documentation standards.
+
 ### Example 1: System Information
 In Claude Desktop, try asking:
 > "Get my system information"
 
-Claude will use the `get_system_info` tool to show:
+Claude will use the `system_management` tool with the `info` action to show:
 - Platform and Python version
 - CPU and memory details
 - Disk usage information
@@ -60,41 +66,60 @@ Claude will use the `get_system_info` tool to show:
 Ask Claude:
 > "Create a ZIP archive of my Documents folder at C:\Users\YourName\Documents and save it as backup.zip"
 
-Claude will use the `create_archive` tool with smart exclusions (no .git, __pycache__, etc.)
+Claude will use the `archive_management` tool with the `create` action and smart exclusions (no .git, __pycache__, etc.)
 
 ### Example 3: Run PowerShell Command
 Ask Claude:
 > "Run a PowerShell command to show the 5 processes using the most memory"
 
-Claude will use the `run_powershell` tool safely and show you the results.
+Claude will use the `command_execution` tool with the `powershell` action safely and show you the results.
 
-## 📚 Available Tool Categories
+## 📚 Available Portmanteau Tools
 
-### ✅ PowerShell & Command Execution
-- `run_powershell` - Execute PowerShell commands
-- `run_cmd` - Execute CMD commands
+### ✅ Command Execution (`command_execution`)
+**Actions:** `powershell`, `cmd`
+- Execute PowerShell and CMD commands with reliable output capture
+- The main value proposition - reliable stdout/stderr handling
 
-### ✅ File Operations
-- `create_file`, `delete_file`, `move_file`, `copy_file`
-- `get_file_info`, `get_file_dates`, `get_file_attributes`
-- `edit_file_content` - Edit text files with backup
+### ✅ File Operations (`file_operations`)
+**Actions:** `read`, `write`, `delete`, `move`, `copy`, `list`, `info`, `exists`
+- Core file operations with comprehensive error handling
+- Includes directory listing and file information
 
-### ✅ System Tools
-- `get_system_info` - Comprehensive system information
-- `health_check` - Server diagnostics
+### ✅ Directory Operations (`directory_operations`)
+**Actions:** `create`, `delete`, `move`, `copy`, `list`
+- Directory-specific operations separate from file operations
+- Advanced directory management with safety checks
 
-### ✅ Network Tools
-- `test_port` - Test TCP/UDP connectivity
-- `resolve_dns` - DNS resolution
+### ✅ Archive Management (`archive_management`)
+**Actions:** `create`, `extract`, `list`
+- ZIP and TAR archive handling
+- Smart exclusions and format detection
 
-### ✅ Archive Management
-- `create_archive` - Create ZIP/TAR archives
-- `extract_archive` - Extract archives
-- `list_archive` - List archive contents
+### ✅ JSON Operations (`json_operations`)
+**Actions:** `read`, `write`, `validate`, `format`, `convert`, `extract`
+- Complete JSON file processing toolkit
+- Validation, formatting, and extraction
 
-### ✅ Git Integration
-- `git_status` - Repository status
-- `git_add` - Stage changes
+### ✅ Git Operations (`git_operations`)
+**Actions:** `add`, `commit`, `push`, `status`
+- Git repository management
+- Safe operations with error handling
+
+### ✅ Process Management (`process_management`)
+**Actions:** `list`, `info`, `resources`
+- Process monitoring and system resources
+- Real-time process information
+
+### ✅ Windows Services (`windows_services`)
+**Actions:** `list`, `start`, `stop`, `restart`
+- Windows service management
+- Safe service control with status monitoring
+
+### ✅ System Management (`system_management`)
+**Actions:** `info`, `health`, `test_port`, `help`
+- System information, health checks, network testing
+- Comprehensive system diagnostics
 - `git_commit` - Create commits
 - `git_push` - Push to remote
 

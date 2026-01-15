@@ -9,16 +9,21 @@ logger = get_logger(__name__)
 
 # Tool categories for organization
 TOOL_CATEGORIES = {
-    "powershell": "PowerShell and CMD command execution",
-    "git": "Git version control operations", 
-    "file": "Basic file operations (read, write, copy, move, delete)",
-    "edit": "Advanced file editing with atomic writes and formatting",
-    "system": "System information and management",
-    "network": "Network-related operations",
-    "process": "Process management",
-    "archive": "Archive and compression operations",
-    "media": "Media file metadata operations (images, audio)",
-    "help": "Help system"
+    "command": "Command execution (PowerShell/CMD)",
+    "file": "File operations (read, write, copy, move, delete, info, exists)",
+    "directory": "Directory operations (create, delete, move, copy, list)",
+    "attributes": "File attributes and dates",
+    "editing": "File editing (edit, fix_markdown)",
+    "archive": "Archive management (create, extract, list)",
+    "json": "JSON operations (read, write, validate, format, convert, extract)",
+    "media": "Media metadata (images, MP3)",
+    "git": "Git operations (add, commit, push, status)",
+    "process": "Process management (list, info, resources)",
+    "services": "Windows Services (list, start, stop, restart)",
+    "event_logs": "Windows Event Logs (query, export, clear, monitor)",
+    "performance": "Windows Performance monitoring",
+    "permissions": "Windows Permissions management",
+    "system": "System management (info, health, test_port, help)"
 }
 
 @tool(
@@ -83,75 +88,90 @@ def register_help_tools(mcp):
     logger.info("help_tools_registered", tools=["get_help"])
 
 def _get_command_help(command: str, detail: int) -> Dict[str, Any]:
-    """Get detailed help for a specific command."""
-    # This would normally query the tool registry, but for now return basic info
+    """Get detailed help for a specific portmanteau tool."""
+    # Portmanteau tools (15 total, replacing ~57 individual tools)
     known_commands = {
-        "run_powershell_tool": {
-            "description": "Execute PowerShell commands with reliable output capture and security checks.",
-            "category": "powershell"
+        "command_execution": {
+            "description": "Comprehensive command execution portmanteau tool with reliable stdout/stderr capture. Main value proposition: solves Claude Desktop PowerShell tool stdout/stderr capture issues. Actions: powershell, cmd",
+            "category": "command",
+            "actions": ["powershell", "cmd"]
         },
-        "run_cmd_tool": {
-            "description": "Execute CMD commands with reliable output capture and security checks.", 
-            "category": "powershell"
+        "file_operations": {
+            "description": "Comprehensive file operations portmanteau tool. Actions: read, write, delete, move, copy, info, exists",
+            "category": "file",
+            "actions": ["read", "write", "delete", "move", "copy", "info", "exists"]
         },
-        "get_system_info": {
-            "description": "Get comprehensive system information including OS, hardware, and performance metrics.",
-            "category": "system"
+        "directory_operations": {
+            "description": "Comprehensive directory operations portmanteau tool. Actions: create, delete, move, copy, list",
+            "category": "directory",
+            "actions": ["create", "delete", "move", "copy", "list"]
         },
-        "health_check": {
-            "description": "Check the health status and diagnostics of the Windows Operations MCP server.",
-            "category": "system"
+        "file_attributes": {
+            "description": "Comprehensive file attributes and dates portmanteau tool. Actions: get_attributes, set_attributes, get_dates, set_dates",
+            "category": "attributes",
+            "actions": ["get_attributes", "set_attributes", "get_dates", "set_dates"]
         },
-        "test_port": {
-            "description": "Test network port accessibility with detailed diagnostics.",
-            "category": "network"
+        "file_editing": {
+            "description": "Comprehensive file editing portmanteau tool. Actions: edit, fix_markdown",
+            "category": "editing",
+            "actions": ["edit", "fix_markdown"]
         },
-        "get_process_list": {
-            "description": "Get list of running processes with filtering options.",
-            "category": "process"
+        "archive_management": {
+            "description": "Comprehensive archive management portmanteau tool. Actions: create, extract, list",
+            "category": "archive",
+            "actions": ["create", "extract", "list"]
         },
-        "get_process_info": {
-            "description": "Get detailed information about a specific process.",
-            "category": "process"
+        "json_operations": {
+            "description": "Comprehensive JSON operations portmanteau tool. Actions: read, write, validate, format, convert, extract",
+            "category": "json",
+            "actions": ["read", "write", "validate", "format", "convert", "extract"]
         },
-        "get_system_resources": {
-            "description": "Get comprehensive system resource usage information.",
-            "category": "process"
+        "media_metadata": {
+            "description": "Comprehensive media metadata portmanteau tool. Actions: get_media, update_media, get_image, update_image, get_mp3, update_mp3",
+            "category": "media",
+            "actions": ["get_media", "update_media", "get_image", "update_image", "get_mp3", "update_mp3"]
         },
-        "get_media_metadata": {
-            "description": "Get metadata from media files (images and MP3s). Supports automatic file type detection.",
-            "category": "media"
+        "git_operations": {
+            "description": "Comprehensive Git operations portmanteau tool. Actions: add, commit, push, status",
+            "category": "git",
+            "actions": ["add", "commit", "push", "status"]
         },
-        "update_media_metadata": {
-            "description": "Update metadata for media files (images and MP3s). Supports saving as copy.",
-            "category": "media"
+        "process_management": {
+            "description": "Comprehensive process management portmanteau tool. Actions: list, info, resources",
+            "category": "process",
+            "actions": ["list", "info", "resources"]
         },
-        "get_image_metadata": {
-            "description": "Get EXIF metadata from image files (JPEG, PNG, TIFF, WebP).",
-            "category": "media"
+        "windows_services": {
+            "description": "Comprehensive Windows Services portmanteau tool. Actions: list, start, stop, restart",
+            "category": "services",
+            "actions": ["list", "start", "stop", "restart"]
         },
-        "update_image_metadata": {
-            "description": "Update EXIF metadata for image files. Supports saving as copy.",
-            "category": "media"
+        "windows_event_logs": {
+            "description": "Comprehensive Windows Event Logs portmanteau tool. Actions: query, export, clear, monitor",
+            "category": "event_logs",
+            "actions": ["query", "export", "clear", "monitor"]
         },
-        "get_mp3_metadata": {
-            "description": "Get ID3 metadata from MP3 files.",
-            "category": "media"
+        "windows_performance": {
+            "description": "Comprehensive Windows Performance portmanteau tool. Actions: get_counters, monitor, get_system",
+            "category": "performance",
+            "actions": ["get_counters", "monitor", "get_system"]
         },
-        "update_mp3_metadata": {
-            "description": "Update ID3 tags for MP3 files. Supports saving as copy.",
-            "category": "media"
+        "windows_permissions": {
+            "description": "Comprehensive Windows Permissions portmanteau tool. Actions: get_file, set_file, analyze_directory, fix",
+            "category": "permissions",
+            "actions": ["get_file", "set_file", "analyze_directory", "fix"]
         },
-        "get_help": {
-            "description": "Get help about available commands and their usage.",
-            "category": "help"
+        "system_management": {
+            "description": "Comprehensive system management portmanteau tool. Actions: info, health, test_port, help",
+            "category": "system",
+            "actions": ["info", "health", "test_port", "help"]
         }
     }
     
     if command not in known_commands:
         return {
             "status": "error",
-            "message": f"Command '{command}' not found. Use 'get_help' to list available commands."
+            "message": f"Tool '{command}' not found. Use 'winops(command=\"help\")' to list all 15 portmanteau tools."
         }
     
     cmd_info = known_commands[command]
@@ -163,8 +183,8 @@ def _get_command_help(command: str, detail: int) -> Dict[str, Any]:
         }
     
     help_text = [
-        f"Command: {command}",
-        "=" * (8 + len(command)),
+        f"Tool: {command}",
+        "=" * (6 + len(command)),
         "",
         cmd_info['description'],
         "",
@@ -172,11 +192,25 @@ def _get_command_help(command: str, detail: int) -> Dict[str, Any]:
         ""
     ]
     
+    if 'actions' in cmd_info:
+        help_text.extend([
+            f"Available Actions: {', '.join(cmd_info['actions'])}",
+            "",
+            "Usage Pattern:",
+            f"  result = await {command}(action=\"<action_name>\", ...)",
+            ""
+        ])
+    
     if detail > 1:
         help_text.extend([
             "Usage Examples:",
-            f"  Use the '{command}' tool through the MCP interface",
-            f"  Check tool parameters for specific options and requirements",
+            f"  # Basic usage - see tool docstring for full parameter details",
+            f"  result = await {command}(action=\"{cmd_info['actions'][0] if 'actions' in cmd_info else 'action_name'}\", ...)",
+            "",
+            "Note: All portmanteau tools follow the same pattern:",
+            "  - Use 'action' parameter to specify which operation to perform",
+            "  - Different actions require different parameters",
+            "  - Check tool docstring for complete parameter documentation",
             ""
         ])
     
@@ -186,17 +220,23 @@ def _get_command_help(command: str, detail: int) -> Dict[str, Any]:
     }
 
 def _list_commands(category: Optional[str], detail: int) -> Dict[str, Any]:
-    """List all available commands, optionally filtered by category."""
+    """List all available portmanteau tools, optionally filtered by category."""
     known_commands = {
-        "run_powershell_tool": {"description": "Execute PowerShell commands with reliable output capture and security checks.", "category": "powershell"},
-        "run_cmd_tool": {"description": "Execute CMD commands with reliable output capture and security checks.", "category": "powershell"},
-        "get_system_info": {"description": "Get comprehensive system information including OS, hardware, and performance metrics.", "category": "system"},
-        "health_check": {"description": "Check the health status and diagnostics of the Windows Operations MCP server.", "category": "system"},
-        "test_port": {"description": "Test network port accessibility with detailed diagnostics.", "category": "network"},
-        "get_process_list": {"description": "Get list of running processes with filtering options.", "category": "process"},
-        "get_process_info": {"description": "Get detailed information about a specific process.", "category": "process"},
-        "get_system_resources": {"description": "Get comprehensive system resource usage information.", "category": "process"},
-        "get_help": {"description": "Get help about available commands and their usage.", "category": "help"}
+        "command_execution": {"description": "Command execution (PowerShell/CMD) with reliable stdout/stderr capture", "category": "command", "actions": ["powershell", "cmd"]},
+        "file_operations": {"description": "File operations (read, write, delete, move, copy, info, exists)", "category": "file", "actions": ["read", "write", "delete", "move", "copy", "info", "exists"]},
+        "directory_operations": {"description": "Directory operations (create, delete, move, copy, list)", "category": "directory", "actions": ["create", "delete", "move", "copy", "list"]},
+        "file_attributes": {"description": "File attributes and dates (get/set attributes, get/set dates)", "category": "attributes", "actions": ["get_attributes", "set_attributes", "get_dates", "set_dates"]},
+        "file_editing": {"description": "File editing (edit, fix_markdown)", "category": "editing", "actions": ["edit", "fix_markdown"]},
+        "archive_management": {"description": "Archive management (create, extract, list)", "category": "archive", "actions": ["create", "extract", "list"]},
+        "json_operations": {"description": "JSON operations (read, write, validate, format, convert, extract)", "category": "json", "actions": ["read", "write", "validate", "format", "convert", "extract"]},
+        "media_metadata": {"description": "Media metadata (get/update for media, images, MP3)", "category": "media", "actions": ["get_media", "update_media", "get_image", "update_image", "get_mp3", "update_mp3"]},
+        "git_operations": {"description": "Git operations (add, commit, push, status)", "category": "git", "actions": ["add", "commit", "push", "status"]},
+        "process_management": {"description": "Process management (list, info, resources)", "category": "process", "actions": ["list", "info", "resources"]},
+        "windows_services": {"description": "Windows Services (list, start, stop, restart)", "category": "services", "actions": ["list", "start", "stop", "restart"]},
+        "windows_event_logs": {"description": "Windows Event Logs (query, export, clear, monitor)", "category": "event_logs", "actions": ["query", "export", "clear", "monitor"]},
+        "windows_performance": {"description": "Windows Performance monitoring (counters, monitor, system)", "category": "performance", "actions": ["get_counters", "monitor", "get_system"]},
+        "windows_permissions": {"description": "Windows Permissions (get/set file, analyze directory, fix)", "category": "permissions", "actions": ["get_file", "set_file", "analyze_directory", "fix"]},
+        "system_management": {"description": "System management (info, health, test_port, help)", "category": "system", "actions": ["info", "health", "test_port", "help"]}
     }
     
     # Categorize commands
@@ -231,15 +271,19 @@ def _list_commands(category: Optional[str], detail: int) -> Dict[str, Any]:
         
         if detail > 0:
             result.append("")
-            result.append("Use 'get_help command=\"<command>\"' for more information about a specific command.")
+            result.append("For detailed help about a specific tool:")
+            result.append("  winops(command='help', tool_name='<tool_name>', detail=2)")
     else:
         # Show all categories
         if category:
             result.append(f"Unknown category: {category}")
             result.append("")
             
-        result.append("WINDOWS OPERATIONS MCP - AVAILABLE COMMANDS")
-        result.append("=========================================")
+        result.append("WINDOWS OPERATIONS MCP - PORTMANTEAU TOOLS")
+        result.append("==========================================")
+        result.append("")
+        result.append("15 portmanteau tools (replacing ~57 individual tools)")
+        result.append("All tools use the 'action' parameter to specify operations")
         result.append("")
         
         for cat in sorted(categorized.keys()):
@@ -257,14 +301,28 @@ def _list_commands(category: Optional[str], detail: int) -> Dict[str, Any]:
                     result.append(f"  {tool_info['name']}")
                     if detail > 0 and tool_info['description']:
                         result.append(f"    {tool_info['description']}")
+                    if detail > 0 and 'actions' in tool_info:
+                        actions_str = ', '.join(tool_info['actions'])
+                        result.append(f"    Actions: {actions_str}")
                     result.append("")
             
             result.append("")
         
         if detail > 0:
-            result.append("Use 'get_help command=\"<command>\"' for more information about a specific command.")
-            result.append("Use 'get_help category=\"<category>\"' to list commands in a specific category.")
-            result.append("Use 'get_help detail=2' for more detailed help.")
+            result.append("Usage:")
+            result.append("  Use 'winops' tool for easy access to help")
+            result.append("  Example: winops(command='help', tool_name='file_operations', detail=2)")
+            result.append("")
+            result.append("For detailed help about a specific tool:")
+            result.append("  winops(command='help', tool_name='<tool_name>', detail=2)")
+            result.append("")
+            result.append("To list tools by category:")
+            result.append("  winops(command='help', category='<category>', detail=1)")
+            result.append("")
+            result.append("Quick commands:")
+            result.append("  winops(command='help')        - List all tools")
+            result.append("  winops(command='list')        - List all tools (alias)")
+            result.append("  winops(command='tools')       - List all tools (alias)")
     
     return {
         "status": "success",

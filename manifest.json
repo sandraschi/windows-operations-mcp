@@ -1,54 +1,68 @@
 {
-  "dxt_version": "0.1",
   "name": "windows-operations-mcp",
-  "version": "0.1.0",
-  "description": "Windows Operations MCP - Comprehensive Windows system operations for Claude Desktop",
-  "author": {
-    "name": "Sandra",
-    "email": "sandra@example.com"
-  },
+  "version": "1.0.0",
+  "description": "Comprehensive Windows system operations MCP server - Services, event logs, performance monitoring, file operations, PowerShell execution, and Git integration with Austrian precision",
+  "author": "Sandra",
   "license": "MIT",
+  "homepage": "https://github.com/sandraschi/windows-operations-mcp",
   "repository": {
     "type": "git",
     "url": "https://github.com/sandraschi/windows-operations-mcp"
   },
-  "server": {
-    "type": "python",
-    "entry_point": "src/windows_operations_mcp/mcp_server.py",
-    "mcp_config": {
-      "command": "python",
-      "args": ["-m", "windows_operations_mcp.mcp_server"],
-      "env": {
-        "PYTHONPATH": "${PWD}"
-      }
+  "main": "server/server.py",
+  "mcp": {
+    "version": "1.0",
+    "capabilities": ["tools"],
+    "prompts": {
+      "system": "assets/prompts/system.md",
+      "service_management": "assets/prompts/service_management.md",
+      "event_logs": "assets/prompts/event_logs.md",
+      "performance_monitoring": "assets/prompts/performance_monitoring.md",
+      "file_operations": "assets/prompts/file_operations.md",
+      "powershell_automation": "assets/prompts/powershell_automation.md",
+      "troubleshooting": "assets/prompts/troubleshooting.md"
     }
   },
-  "user_config": {
-    "log_level": {
-      "type": "string",
-      "default": "INFO",
-      "title": "Log Level",
-      "description": "Logging verbosity level"
-    },
-    "temp_dir": {
-      "type": "string",
-      "default": "C:\\Temp\\windows_operations_mcp",
-      "title": "Temporary Directory",
-      "description": "Directory for temporary file operations"
-    }
+  "runtime": {
+    "python": ">=3.9"
   },
-  "prompts": [
-    {
-      "name": "system",
-      "text": "dxt/prompts/system.md"
-    },
-    {
-      "name": "user",
-      "text": "dxt/prompts/user.md"
-    },
-    {
-      "name": "examples",
-      "text": "dxt/prompts/examples.json"
-    }
+  "dependencies": {
+    "fastmcp": ">=2.12.3",
+    "pydantic": ">=2.0.0"
+  },
+  "features": [
+    "Windows Services management (start, stop, restart, query)",
+    "Event Log tools (query, export, monitor, clear)",
+    "Performance monitoring (counters, metrics, real-time)",
+    "File operations (read, write, permissions)",
+    "PowerShell execution (scripts, cmdlets, secure)",
+    "CMD execution (commands, batch files)",
+    "Git integration (add, commit, push, status)",
+    "Network tools (port testing, diagnostics)",
+    "System information (hardware, OS, health)",
+    "Archive operations (zip, extract, list)",
+    "JSON tools (validate, format, parse)",
+    "Media metadata (EXIF, image info)",
+    "Windows permissions (ACL, ownership)",
+    "Process monitoring (list, info, resources)",
+    "Austrian engineering quality"
+  ],
+  "requirements": {
+    "os": ["Windows 10/11", "Windows Server 2016+"],
+    "privileges": ["Administrator rights recommended for service/event log operations"],
+    "software": ["PowerShell 5.1+", "Git (for Git operations)"]
+  },
+  "keywords": [
+    "windows",
+    "system-operations",
+    "services",
+    "event-logs",
+    "performance",
+    "powershell",
+    "automation",
+    "git",
+    "fastmcp",
+    "mcpb",
+    "austria"
   ]
 }

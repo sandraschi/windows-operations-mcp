@@ -28,7 +28,7 @@ os.environ.setdefault('PYTHONPATH', str(PACKAGE_DIR))
 os.environ.setdefault('PYTHONUNBUFFERED', '1')
 
 # Import and run the server
-from .server import main
+from .mcp_server import main
 
 if __name__ == "__main__":
     main()
