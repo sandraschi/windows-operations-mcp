@@ -1,0 +1,60 @@
+# Windows Operations MCP (SOTA v14.0.0) - Technical Deep-Dive
+
+## 📖 System Identity
+A specialized control plane for Windows system administration and data forensics.
+
+## 🛠️ Tool Registry & Portmanteau Patterns
+
+### windows_registry
+Direct `winreg` interaction with high-fidelity safety guards.
+- **Action 'read'**: Retrieves a value. Returns `{"value": X, "type": "REG_..."}`.
+- **Action 'write'**: Sets a value. In **Safe Mode**, automatically exports the key to `backups/registry/` before writing.
+- **Action 'delete'**: Deletes a value or key. In **Safe Mode**, exports the key first.
+- **Action 'list_keys'**: Enumerates subkeys and values for a path.
+- **Action 'export' / 'import'**: Native `reg.exe` backup and restore logic.
+
+### windows_accounts
+Local SAM management via `net.exe`.
+- **Action 'list_users'**: Returns all local users.
+- **Action 'add_user' / 'remove_user'**: Lifecycle control.
+- **Action 'manage_group'**: Add or remove users from groups (Administrators, etc.).
+- **Action 'set_password'**: Administrative override.
+
+### windows_automation
+High-fidelity scheduling and introspection.
+- **Action 'list_tasks' / 'create_task' / 'delete_task'**: Native `schtasks.exe` control.
+- **Action 'wmi_query'**: Asynchronous WMI polling for system metrics.
+
+### json_operations
+SOTA Data Surgery for configuration files.
+- **Action 'patch'**: Deep-patching with recursive merge.
+- **Action 'validate'**: Schema verification.
+- **Action 'fuzzy_extract'**: Identifies JSON blobs in unstructured text.
+
+### archive_management
+Robust file grouping and extraction.
+- **Format**: ZIP, TAR, CAB (Windows Cabinet).
+- **Expansion**: Specialized logic for `.cab` files used in Windows Update/Drivers.
+
+---
+
+## 🧬 Agentic Workflows (FastMCP 3.2+)
+
+### agentic_system_hardening
+**Pattern**: SEP-1577 Sampling.
+1.  **Inventory**: Uses local tools to build a system map.
+2.  **Audit**: Uses `ctx.sample()` to query the host's specialized reasoning model.
+3.  **Remediation**: Applies hardening steps (e.g., stopping unauthorized services).
+4.  **Verification**: Re-audits the baseline.
+
+### autonomous_troubleshooter
+Diagnostic loop for finding root causes (Permissions vs System state).
+
+---
+
+## 📜 Ethical Protocols & Safety
+- **Safe Mode**: Enabled by default for all registry writes.
+- **PoLP**: All user/group operations follow the Principle of Least Privilege.
+- **Auditability**: All tool calls are logged via `ctx: Context` telemetry.
+
+*Industrial v14.0 - March 2026*

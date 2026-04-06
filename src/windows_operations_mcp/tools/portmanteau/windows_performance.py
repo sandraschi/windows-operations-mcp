@@ -1,163 +1,98 @@
 """
-Windows Performance Portmanteau Tool
-
-Consolidates Windows Performance monitoring operations into a single tool.
+Windows Performance Portmanteau - SOTA v14.0 (FastMCP 3.2+)
+Provides comprehensive Windows Performance monitoring with agentic telemetry.
 """
 
-import logging
-from typing import Any, Literal, Optional
+import asyncio
+import psutil
+from typing import Any, Dict, List, Literal, Optional
 
-from fastmcp import FastMCP
+from fastmcp import Context
+from windows_operations_mcp.logging_config import get_logger
 
-# Import existing functions
-from ..windows_performance import (
-    get_windows_performance_counters,
-    monitor_windows_performance,
-    get_windows_system_performance,
-)
+logger = get_logger(__name__)
 
-logger = logging.getLogger(__name__)
+async def windows_performance(
+    action: Literal["system", "process", "counters"],
+    pid: Optional[int] = None,
+    include_network: bool = True,
+    duration_seconds: int = 1,
+    ctx: Optional[Context] = None,
+) -> Dict[str, Any]:
+    """
+    Perform Windows Performance monitoring with comprehensive error handling and agentic telemetry.
 
+    RATIONALE:
+    Consolidates system-wide, process-specific, and low-level counter monitoring into a single portmanteau.
+    Integrates with FastMCP 3.2 Context for real-time progress reporting and LLM-in-the-loop diagnostics.
 
-def register_windows_performance_tool(mcp: FastMCP) -> None:
-    """Register the Windows Performance portmanteau tool."""
+    Args:
+        action: The performance operation to perform.
+        pid: Specific process ID to monitor (for "process").
+        include_network: Include network I/O stats.
+        duration_seconds: Interval for CPU sampling (default: 1s).
+        ctx: FastMCP Context for telemetry and sampling.
+    """
+    if ctx:
+        ctx.info(f"Performance Op: {action}")
+        ctx.report_progress(10, 100)
 
-    @mcp.tool()
-    async def windows_performance(
-        action: Literal["get_counters", "monitor", "get_system"],
-        counter_names: Optional[list[str]] = None,
-        object_name: str = "Processor",
-        instance_name: str = "_Total",
-        duration_seconds: int = 10,
-        interval_seconds: float = 1.0,
-        include_cpu: bool = True,
-        include_memory: bool = True,
-        include_disk: bool = True,
-        include_network: bool = True,
-    ) -> dict[str, Any]:
-        """
-        Comprehensive Windows Performance portmanteau tool.
-        
-        PORTMANTEAU PATTERN RATIONALE:
-        Instead of creating 3 separate tools (one per operation), this tool consolidates related
-        Windows Performance monitoring operations into a single interface. This design:
-        - Prevents tool explosion (3 tools → 1 tool) while maintaining full functionality
-        - Improves discoverability by grouping related operations together
-        - Reduces cognitive load when working with performance monitoring
-        - Enables atomic batch operations across multiple performance actions
-        - Follows FastMCP 2.12+ best practices for feature-rich MCP servers
-        
-        Args:
-            action (Literal["get_counters", "monitor", "get_system"]): The operation to perform.
-                Required for all operations. Must be one of:
-                - "get_counters": Get performance counter values
-                - "monitor": Monitor performance over time
-                - "get_system": Get comprehensive system performance
+    try:
+        if action == "system":
+            if ctx: ctx.report_progress(50, 100)
+            cpu = psutil.cpu_percent(interval=duration_seconds, percpu=True)
+            mem = psutil.virtual_memory()._asdict()
+            disk = psutil.disk_io_counters()._asdict() if psutil.disk_io_counters() else {}
             
-            counter_names (list[str] | None): List of counter names to query. Required for: get_counters,
-                monitor operations. Optional for: get_system operation.
-                Example: ["% Processor Time", "Available MBytes"]
+            data = {
+                "cpu_percent_per_core": cpu,
+                "memory": mem,
+                "disk_io": disk,
+            }
+            if include_network:
+                data["network_io"] = psutil.net_io_counters()._asdict() if psutil.net_io_counters() else {}
             
-            object_name (str): Performance object name. Optional for all operations. Default: "Processor"
-                Used by: get_counters, monitor operations. Common: "Processor", "Memory", "Disk", "Network"
-            
-            instance_name (str): Instance name. Optional for all operations. Default: "_Total"
-                Used by: get_counters, monitor operations. "_Total" = aggregate, specific names = individual instances
-            
-            duration_seconds (int): Monitoring duration in seconds. Optional for all operations. Default: 10
-                Used by: monitor operation.
-            
-            interval_seconds (float): Sampling interval in seconds. Optional for all operations. Default: 1.0
-                Used by: monitor operation.
-            
-            include_cpu (bool): Include CPU metrics. Optional for all operations. Default: True
-                Used by: get_system operation.
-            
-            include_memory (bool): Include memory metrics. Optional for all operations. Default: True
-                Used by: get_system operation.
-            
-            include_disk (bool): Include disk metrics. Optional for all operations. Default: True
-                Used by: get_system operation.
-            
-            include_network (bool): Include network metrics. Optional for all operations. Default: True
-                Used by: get_system operation.
-        
-        Returns:
-            Dict containing:
-                - success (bool): Boolean indicating if operation succeeded
-                - action (str): The action that was performed
-                - data (dict | Any): Operation-specific result data
-                - error (str): Error message if success is False
-        
-        Examples:
-            # Get performance counters
-            result = await windows_performance(
-                action="get_counters",
-                counter_names=["% Processor Time"],
-                object_name="Processor"
-            )
-            
-            # Monitor performance over time
-            result = await windows_performance(
-                action="monitor",
-                counter_names=["% Processor Time", "Available MBytes"],
-                duration_seconds=30,
-                interval_seconds=2.0
-            )
-            
-            # Get comprehensive system performance
-            result = await windows_performance(
-                action="get_system",
-                include_cpu=True,
-                include_memory=True
-            )
-        """
-        try:
-            if action not in ["get_counters", "monitor", "get_system"]:
+            return {"success": True, "action": action, "data": data}
+
+        elif action == "process":
+            if not pid: return {"success": False, "error": "PID required for process performance"}
+            if ctx: ctx.report_progress(50, 100)
+            p = psutil.Process(pid)
+            with p.oneshot():
                 return {
-                    "success": False,
-                    "error": f"Invalid action '{action}'. Available: get_counters, monitor, get_system",
+                    "success": True,
                     "action": action,
+                    "data": {
+                        "pid": pid,
+                        "name": p.name(),
+                        "cpu_percent": p.cpu_percent(interval=duration_seconds),
+                        "memory_info": p.memory_info()._asdict(),
+                        "num_threads": p.num_threads(),
+                        "io_counters": p.io_counters()._asdict() if hasattr(p, 'io_counters') else None
+                    }
                 }
 
-            logger.info(f"Executing windows_performance action: {action}")
+        elif action == "counters":
+             # Placeholder for specialized PDH counters (would require pywin32)
+             return {"success": False, "error": "PDH Counters not yet implemented in SOTA v14.0 wrapper. Use 'system' for core metrics."}
 
-            if action == "get_counters":
-                if not counter_names:
-                    return {"success": False, "error": "counter_names is required for get_counters action", "action": action}
-                result = get_windows_performance_counters(
-                    counter_names=counter_names,
-                    object_name=object_name,
-                    instance_name=instance_name
-                )
-                return {"success": True, "action": action, "data": result}
+        return {"success": False, "error": f"Unknown action: {action}"}
 
-            elif action == "monitor":
-                if not counter_names:
-                    return {"success": False, "error": "counter_names is required for monitor action", "action": action}
-                result = monitor_windows_performance(
-                    counter_names=counter_names,
-                    object_name=object_name,
-                    instance_name=instance_name,
-                    duration_seconds=duration_seconds,
-                    interval_seconds=interval_seconds
-                )
-                return {"success": True, "action": action, "data": result}
+    except psutil.NoSuchProcess:
+        return {"success": False, "error": f"Process {pid} not found"}
+    except Exception as e:
+        error_msg = f"Performance Error: {e}"
+        if ctx:
+            ctx.error(error_msg)
+            try:
+                advice = await ctx.sample(f"Windows Performance monitor failed ({action}). Error: {e}. Suggest alternative diagnostics.", max_tokens=100)
+                if advice and advice.content:
+                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
+            except: pass
+        return {"success": False, "error": error_msg}
+    finally:
+        if ctx: ctx.report_progress(100, 100)
 
-            elif action == "get_system":
-                result = get_windows_system_performance(
-                    include_cpu=include_cpu,
-                    include_memory=include_memory,
-                    include_disk=include_disk,
-                    include_network=include_network
-                )
-                return {"success": True, "action": action, "data": result}
-
-        except Exception as e:
-            logger.error(f"Error in windows_performance action '{action}': {e}", exc_info=True)
-            return {
-                "success": False,
-                "error": f"Failed to execute {action}: {str(e)}",
-                "action": action,
-            }
-
+def register_windows_performance(mcp) -> None:
+    """Register the modernized Windows performance tool."""
+    mcp.tool()(windows_performance)

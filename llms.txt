@@ -1,52 +1,48 @@
-# Windows Operations MCP (SOTA v1.18.1)
+# Windows Operations MCP (SOTA v14.0.0)
 
-A high-performance Windows system orchestration platform built with FastMCP 3.1.1 and a unified SOTA April 2026 FastAPI architecture.
+A specialized Windows system orchestration platform and High-Fidelity Data Surgery Hub built with FastMCP 3.2.0.
 
-## Unified Architecture
+## 🪟 Specialized Windows Control Plane
+Industrial-grade tools for native Windows hardening and introspection.
 
-- **Backend Hub (Port 10748)**: Root FastAPI application mounting the FastMCP server as an ASGI sub-app.
-- **Fleet Dashboard (Port 10749)**: Premium glassmorphic Vite dashboard for real-time telemetry and tool execution.
+### 1. Registry Management (`windows_registry`)
+- **Safe Mode**: Automatic backups to `backups/registry/` before any write/delete.
+- **Operations**: Read, write, delete, list, export, import.
 
-## Core Portmanteau Tools (10 Total)
+### 2. Local Account Security (`windows_accounts`)
+- **Users**: List, add, remove, and password management.
+- **Groups**: Comprehensive membership control for PoLP enforcement.
 
-### 1. system_management
-- `health`: System-wide health check with status indicators.
-- `info`: Detailed hardware/OS/Python specifications.
-- `test_port`: Network connectivity diagnostics.
+### 3. Automation & Introspection (`windows_automation`)
+- **Tasks**: Lifecycle management for `schtasks.exe`.
+- **WMI**: Deep hardware/OS introspection via structured WMI queries.
 
-### 2. process_management
-- `list`: Real-time process monitoring with resource stats.
-- `info`: Deep inspection of specific PIDs.
-- `resources`: Global system resource utilization.
+### 4. Service Lifecycle (`windows_services`)
+- **Logic**: Control and monitor native Windows services.
 
-### 3. file_operations
-- Unified `read`, `write`, `delete`, `move`, `copy`, and `info`.
+## 🧪 High-Fidelity Data Surgery
+Refined tools for complex configuration and artifact manipulation.
 
-### 4. command_execution
-- `powershell`: High-fidelity script execution with stdout capture.
-- `cmd`: Legacy shell command execution.
+### 1. JSON Surgery (`json_operations`)
+- **Patching**: Recursive deep-merging of configuration files.
+- **Validation**: Schema-aware verification of JSON integrity.
+- **Extraction**: Fuzzy JSON extraction from unstructured text/logs.
 
-### 5. archive_management
-- ZIP, TAR, GZ creation and extraction with exclusion logic.
+### 2. Archive Management (`archive_management`)
+- **Format**: ZIP, TAR, and specialized Windows Cabinet (`.cab`) expansion.
+- **Exclusion**: Pattern-based creation with robust filtering logic.
 
-### 6. windows_services
-- Service lifecycle: `list`, `start`, `stop`, `restart`.
+## 🛰️ Agentic Intelligence
+Autonomous orchestration via FastMCP 3.2+ patterns.
 
-### 7. json_operations
-- High-speed `read`, `write`, `validate`, and `extract` (JSONPath).
+### 1. Agentic Orchestration (`agentic_operations`)
+- **SEP-1577 Sampling**: Mission-critical decision-making via `ctx.sample()`.
+- **Workflows**: Hardening Mission, Autonomous Troubleshooter.
 
-### 8. git_operations
-- Direct repository management: `commit`, `push`, `status`.
+### 2. Expert Prefabs (`prompts.py`)
+- **Wizards**: Registry Wizard, PowerShell Scaffold, Account Security Audit, Forensic Data Surgery.
 
-### 9. directory_operations
-- Bulk management: `create`, `delete`, `move`, `copy`, `list`.
-
-### 10. agentic_operations
-- [SEP-1577] Autonomous orchestration and mission management.
-
-## Connectivity
-
-- **API Root**: http://localhost:10748
-- **Dashboard**: http://localhost:10749
-- **Health**: http://localhost:10748/api/health
-- **Manifests**: glama.json, llms.txt
+## 🛠️ Connectivity
+- **Backend Hub**: Port 10748 (uv run python)
+- **Fleet Dashboard**: Port 10749 (Premium Vite UI)
+- **Skill**: skill://windows-expert

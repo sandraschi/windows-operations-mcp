@@ -1,11 +1,11 @@
 {
   "name": "windows-operations-mcp",
-  "version": "1.18.1",
+  "version": "14.0.0",
   "type": "server",
   "runtime": "python",
-  "entry_point": "src/windows_operations_mcp/server.py",
+  "entry_point": "src/windows_operations_mcp/mcp_server.py",
   "dependencies": [
-    "fastmcp>=2.14.4,<3.0.0"
+    "fastmcp>=3.2.0"
   ],
   "build": {
     "include": [
@@ -14,7 +14,8 @@
       "LICENSE",
       "manifest.json",
       "assets/**/*",
-      "mcpb/**/*"
+      "mcpb/**/*",
+      "skills/**/*"
     ],
     "exclude": [
       "tests/",
@@ -35,7 +36,7 @@
     ]
   },
   "scripts": {
-    "build": "mcpb build",
+    "build": "python build_mcpb.py",
     "test": "python -m pytest",
     "lint": "ruff check .",
     "format": "ruff format ."

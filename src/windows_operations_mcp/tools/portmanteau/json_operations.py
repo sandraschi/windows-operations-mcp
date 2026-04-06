@@ -1,350 +1,155 @@
 """
-JSON Operations Portmanteau Tool for Windows Operations MCP.
-
-Consolidates JSON operations (read, write, validate, format, convert, extract) into a single portmanteau tool.
-Provides comprehensive JSON file handling and manipulation functionality.
+JSON Operations Portmanteau - SOTA v14.0 (FastMCP 3.2+)
+Provides specialized JSON data handling: Deep Patching, Text Extraction, and Validation.
 """
 
+import asyncio
 import json
 import re
 from pathlib import Path
-from typing import Dict, Any, Optional, Literal, List, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from ...logging_config import get_logger
+from fastmcp import Context
+from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
-def json_operations(
-    action: Literal["read", "write", "validate", "format", "convert", "extract"],
-    file_path: Optional[str] = None,
-    content: Optional[str] = None,
+async def json_operations(
+    action: Literal["read", "write", "validate", "patch", "extract_from_text", "format"],
+    path: Optional[str] = None,
     data: Optional[Any] = None,
+    text: Optional[str] = None,
     indent: int = 2,
-    ensure_ascii: bool = False,
-    sort_keys: bool = False,
-    encoding: str = "utf-8",
-    compact: bool = False
+    ctx: Optional[Context] = None,
 ) -> Dict[str, Any]:
     """
-    Perform JSON operations with comprehensive error handling and formatting.
+    Perform specialized JSON data operations with agentic telemetry.
+
+    RATIONALE:
+    Agents often need to "patch" existing configs or extract JSON from unstructured logs.
+    This portmanteau provides the specialized logic required for high-level data surgery.
 
     Args:
-        action: The JSON operation to perform. Must be one of: "read", "write", "validate", "format", "convert", "extract"
-        file_path: Path to JSON file (required for read/write/validate when content not provided)
-        content: Raw JSON string content (required for validate/format/extract when file_path not provided)
-        data: Python data structure to write as JSON (required for write action)
-        indent: Indentation spaces for formatted output (default: 2)
-        ensure_ascii: Escape non-ASCII characters (default: False)
-        sort_keys: Sort dictionary keys alphabetically (default: False)
-        encoding: File encoding for read/write operations (default: "utf-8")
-        compact: Use compact formatting (default: False)
-
-    Returns:
-        Dict containing success status and operation results
+        action: The JSON operation to perform.
+        path: File path for read/write/patch operations.
+        data: Data to write or merge (for "write"/"patch").
+        text: Raw text to extract JSON from (for "extract_from_text").
+        indent: Indentation for formatting.
+        ctx: FastMCP Context for telemetry and sampling.
     """
-    logger.info("json_operations_started", action=action, file_path=file_path)
+    if ctx:
+        ctx.info(f"JSON Op: {action}")
+        ctx.report_progress(10, 100)
 
     try:
-        # Route to appropriate action
         if action == "read":
-            if not file_path:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": "file_path is required for read action"
-                }
-            return _read_json_file(file_path, encoding)
+            if not path:
+                return {"success": False, "error": "Path required for read"}
+            content = await asyncio.to_thread(_read_json, path)
+            return {"success": True, "action": action, "data": content}
 
-        elif action == "write":
-            if data is None:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": "data is required for write action"
-                }
-            if not file_path:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": "file_path is required for write action"
-                }
-            return _write_json_file(file_path, data, indent, ensure_ascii, sort_keys, compact, encoding)
+        if action == "write":
+            if not path or data is None:
+                return {"success": False, "error": "Path and data required for write"}
+            await asyncio.to_thread(_write_json, path, data, indent)
+            return {"success": True, "action": action, "data": {"status": "Written"}}
 
-        elif action == "validate":
-            if not file_path and not content:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": "Either file_path or content is required for validate action"
-                }
-            return _validate_json(file_path, content, encoding)
+        if action == "validate":
+            if text is None:
+                return {"success": False, "error": "Text required for validate"}
+            valid, error = _validate_json(text)
+            return {"success": True, "action": action, "data": {"valid": valid, "error": error}}
 
-        elif action == "format":
-            if not content:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": "content is required for format action"
-                }
-            return _format_json(content, indent, ensure_ascii, sort_keys, compact)
+        if action == "patch":
+            if not path or data is None:
+                return {"success": False, "error": "Path and data required for patch"}
+            updated = await asyncio.to_thread(_patch_json, path, data, indent)
+            return {"success": True, "action": action, "data": {"status": "Patched", "updated_keys": list(updated.keys())}}
 
-        elif action == "convert":
-            # For now, just format JSON (could be extended to other formats)
-            if not content:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": "content is required for convert action"
-                }
-            return _format_json(content, indent, ensure_ascii, sort_keys, compact)
+        if action == "extract_from_text":
+            if text is None:
+                return {"success": False, "error": "Text required for extract"}
+            results = _extract_json(text)
+            return {"success": True, "action": action, "data": {"found": len(results), "items": results}}
 
-        elif action == "extract":
-            if not content:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": "content is required for extract action"
-                }
-            return _extract_json_objects(content)
-
-        else:
-            return {
-                "success": False,
-                "action": action,
-                "error": f"Unknown action: {action}"
-            }
-
-    except Exception as e:
-        error_msg = f"JSON operation failed: {str(e)}"
-        logger.error("json_operations_error", action=action, file_path=file_path, error=error_msg, exc_info=True)
-        return {
-            "success": False,
-            "action": action,
-            "error": error_msg
-        }
-
-
-def _read_json_file(file_path: str, encoding: str) -> Dict[str, Any]:
-    """Read and parse JSON from file."""
-    try:
-        file_obj = Path(file_path)
-        if not file_obj.exists():
-            return {
-                "success": False,
-                "action": "read",
-                "error": f"File does not exist: {file_path}"
-            }
-
-        with open(file_obj, 'r', encoding=encoding) as f:
-            content = f.read()
-
-        try:
-            data = json.loads(content)
-            return {
-                "success": True,
-                "action": "read",
-                "data": {
-                    "content": data,
-                    "file_path": str(file_obj),
-                    "size": len(content),
-                    "encoding": encoding
-                }
-            }
-        except json.JSONDecodeError as e:
-            return {
-                "success": False,
-                "action": "read",
-                "error": f"Invalid JSON in file: {str(e)}"
-            }
-
-    except UnicodeDecodeError:
-        return {
-            "success": False,
-            "action": "read",
-            "error": f"File cannot be read with encoding {encoding}: {file_path}"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "action": "read",
-            "error": f"Failed to read JSON file: {str(e)}"
-        }
-
-
-def _write_json_file(file_path: str, data: Any, indent: int, ensure_ascii: bool,
-                    sort_keys: bool, compact: bool, encoding: str) -> Dict[str, Any]:
-    """Write data to JSON file."""
-    try:
-        file_obj = Path(file_path)
-
-        # Create parent directories if needed
-        file_obj.parent.mkdir(parents=True, exist_ok=True)
-
-        # Determine formatting options
-        if compact:
-            indent = None
-
-        with open(file_obj, 'w', encoding=encoding) as f:
-            json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys)
-
-        # Get file size
-        size = file_obj.stat().st_size
-
-        return {
-            "success": True,
-            "action": "write",
-            "data": {
-                "file_path": str(file_obj),
-                "size": size,
-                "encoding": encoding,
-                "indent": indent,
-                "ensure_ascii": ensure_ascii,
-                "sort_keys": sort_keys,
-                "compact": compact
-            }
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "action": "write",
-            "error": f"Failed to write JSON file: {str(e)}"
-        }
-
-
-def _validate_json(file_path: Optional[str], content: Optional[str], encoding: str) -> Dict[str, Any]:
-    """Validate JSON string or file."""
-    try:
-        if file_path:
-            file_obj = Path(file_path)
-            if not file_obj.exists():
-                return {
-                    "success": False,
-                    "action": "validate",
-                    "error": f"File does not exist: {file_path}"
-                }
-
-            with open(file_obj, 'r', encoding=encoding) as f:
-                json_str = f.read()
-        else:
-            json_str = content
-
-        try:
-            parsed = json.loads(json_str)
-            return {
-                "success": True,
-                "action": "validate",
-                "data": {
-                    "valid": True,
-                    "file_path": file_path,
-                    "size": len(json_str) if json_str else 0,
-                    "encoding": encoding if file_path else None,
-                    "type": type(parsed).__name__
-                }
-            }
-        except json.JSONDecodeError as e:
-            return {
-                "success": False,
-                "action": "validate",
-                "error": f"Invalid JSON: {str(e)}",
-                "data": {
-                    "valid": False,
-                    "error_position": e.pos if hasattr(e, 'pos') else None,
-                    "error_line": getattr(e, 'lineno', None),
-                    "error_column": getattr(e, 'colno', None)
-                }
-            }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "action": "validate",
-            "error": f"Failed to validate JSON: {str(e)}"
-        }
-
-
-def _format_json(content: str, indent: int, ensure_ascii: bool,
-                sort_keys: bool, compact: bool) -> Dict[str, Any]:
-    """Format/beautify JSON string."""
-    try:
-        # Parse the JSON
-        parsed = json.loads(content)
-
-        # Format it back
-        if compact:
-            formatted = json.dumps(parsed, ensure_ascii=ensure_ascii, sort_keys=sort_keys, separators=(',', ':'))
-        else:
-            formatted = json.dumps(parsed, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys)
-
-        return {
-            "success": True,
-            "action": "format",
-            "data": {
-                "formatted_json": formatted,
-                "original_size": len(content),
-                "formatted_size": len(formatted),
-                "indent": indent,
-                "ensure_ascii": ensure_ascii,
-                "sort_keys": sort_keys,
-                "compact": compact
-            }
-        }
-
-    except json.JSONDecodeError as e:
-        return {
-            "success": False,
-            "action": "format",
-            "error": f"Invalid JSON: {str(e)}"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "action": "format",
-            "error": f"Failed to format JSON: {str(e)}"
-        }
-
-
-def _extract_json_objects(content: str) -> Dict[str, Any]:
-    """Extract JSON objects from mixed text."""
-    try:
-        # Find JSON-like structures using regex
-        # Pattern matches objects {...} and arrays [...] with balanced braces/brackets
-        json_pattern = r'\{[^{}]*\}|\[[^\[\]]*\]'
-        matches = re.findall(json_pattern, content)
-
-        extracted_objects = []
-        for match in matches:
+        if action == "format":
+            if text is None:
+                return {"success": False, "error": "Text required for format"}
+            # Parse logic: if text is a string, load it. If it's already an object, use it directly.
             try:
-                parsed = json.loads(match)
-                extracted_objects.append({
-                    "json": parsed,
-                    "raw": match,
-                    "size": len(match),
-                    "type": type(parsed).__name__
-                })
-            except json.JSONDecodeError:
-                # Skip invalid JSON matches
-                continue
+                obj = json.loads(text)
+            except Exception:
+                return {"success": False, "error": "Invalid JSON text provided for format"}
+            formatted = json.dumps(obj, indent=indent, ensure_ascii=False)
+            return {"success": True, "action": action, "data": {"formatted": formatted}}
 
-        return {
-            "success": True,
-            "action": "extract",
-            "data": {
-                "objects": extracted_objects,
-                "count": len(extracted_objects),
-                "total_text_size": len(content)
-            }
-        }
+        return {"success": False, "error": f"Unknown action: {action}"}
 
     except Exception as e:
-        return {
-            "success": False,
-            "action": "extract",
-            "error": f"Failed to extract JSON objects: {str(e)}"
-        }
+        error_msg = f"JSON Error: {e}"
+        if ctx:
+            ctx.error(error_msg)
+            try:
+                advice = await ctx.sample(f"JSON operation '{action}' failed. Error: {e}. Suggest repair or alternative.", max_tokens=100)
+                if advice and advice.content:
+                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
+            except Exception:
+                pass
+        return {"success": False, "error": error_msg}
+    finally:
+        if ctx:
+            ctx.report_progress(100, 100)
 
+def _read_json(path: str) -> Any:
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
-def register_json_operations(mcp):
-    """Register the JSON operations portmanteau tool with FastMCP."""
-    mcp.tool(json_operations)
+def _write_json(path: str, data: Any, indent: int) -> None:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=indent, ensure_ascii=False)
+
+def _validate_json(text: str) -> Tuple[bool, Optional[str]]:
+    try:
+        json.loads(text)
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+def _patch_json(path: str, patch_data: Dict, indent: int) -> Dict:
+    if not Path(path).exists():
+        existing = {}
+    else:
+        with open(path, 'r', encoding='utf-8') as f:
+            existing = json.load(f)
+    
+    if not isinstance(existing, dict) or not isinstance(patch_data, dict):
+        updated = patch_data
+    else:
+        updated = _deep_merge(existing.copy(), patch_data)
+    
+    _write_json(path, updated, indent)
+    return updated
+
+def _deep_merge(base: Dict, patch: Dict) -> Dict:
+    for key, value in patch.items():
+        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+def _extract_json(text: str) -> List[Any]:
+    results = []
+    # Heuristic for finding JSON blobs in unstructured text
+    potential_blobs = re.findall(r'(\{.*?\}|\[.*?\])', text, re.DOTALL)
+    for blob in potential_blobs:
+        try:
+            results.append(json.loads(blob))
+        except Exception:
+            continue
+    return results
+
+def register_json_operations(mcp) -> None:
+    """Register the modernized JSON operations tool."""
+    mcp.tool()(json_operations)

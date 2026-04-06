@@ -1,329 +1,131 @@
 """
-Windows Services Portmanteau Tool for Windows Operations MCP.
-
-Consolidates Windows service operations (list, start, stop, restart) into a single portmanteau tool.
-Provides comprehensive Windows service management functionality.
+Windows Services Portmanteau - SOTA v14.0 (FastMCP 3.2+)
+Provides comprehensive Windows service management with agentic telemetry.
 """
 
 import time
-from typing import Dict, Any, Optional, Literal, List
+import asyncio
+from typing import Any, Dict, List, Literal, Optional
 
-from ...logging_config import get_logger
+from fastmcp import Context
+from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
-def windows_services(
-    action: Literal["list", "start", "stop", "restart"],
+async def windows_services(
+    action: Literal["list", "start", "stop", "restart", "status"],
     service_name: Optional[str] = None,
     filter_status: Optional[str] = None,
     include_system_services: bool = True,
-    wait_timeout: int = 30
+    wait_timeout: int = 30,
+    ctx: Optional[Context] = None,
 ) -> Dict[str, Any]:
     """
-    Perform Windows service operations with comprehensive error handling.
+    Perform Windows service operations with comprehensive error handling and agentic telemetry.
 
-    FEATURES:
-    - Complete Windows service lifecycle management
-    - Service status monitoring and filtering
-    - Safe start/stop operations with timeout handling
-    - Automatic restart capability (stop then start)
-    - System service visibility control
-    - Service dependency awareness
-    - Administrative privilege handling
+    RATIONALE:
+    Consolidates lifecycle management (Start, Stop, Restart) into a single async portmanteau.
+    Uses asyncio.to_thread for blocking pywin32 calls to maintain MCP responsiveness.
 
     Args:
-        action: The service operation to perform. Must be one of:
-            - "list": List Windows services with status filtering and system service control
-            - "start": Start a stopped Windows service with status verification
-            - "stop": Stop a running Windows service gracefully
-            - "restart": Restart service by stopping then starting (atomic operation)
-        service_name: Service name for control operations (required for start/stop/restart)
-        filter_status: Filter services by status ("running", "stopped", "all", default: None)
-        include_system_services: Include system services in listings (default: True)
-        wait_timeout: Maximum seconds to wait for service state changes (1-300, default: 30)
-
-    Returns:
-        FastMCP 2.14.1+ enhanced response with:
-            - success: bool - Whether the service operation succeeded
-            - action: str - The action that was performed
-            - data: dict - Action-specific result data (varies by operation)
-            - error: str - Error message (only present if success is False)
-
-    Examples:
-        # List all running services
-        result = await windows_services(
-            action="list",
-            filter_status="running",
-            include_system_services=False
-        )
-
-        # Start a specific service
-        result = await windows_services(
-            action="start",
-            service_name="wuauserv",  # Windows Update
-            wait_timeout=60
-        )
-
-        # Stop a service
-        result = await windows_services(
-            action="stop",
-            service_name="Spooler"  # Print Spooler
-        )
-
-        # Restart a service
-        result = await windows_services(
-            action="restart",
-            service_name="http",  # HTTP Service
-            wait_timeout=45
-        )
-
-        # List services with custom filtering
-        result = await windows_services(
-            action="list",
-            filter_status="stopped",
-            include_system_services=True
-        )
-
-    Notes:
-        - Service operations require administrative privileges
-        - Timeout handling prevents hanging operations
-        - Restart is atomic (stop succeeds before start begins)
-        - System services can be filtered out for cleaner listings
-        - Service status verification ensures operations complete successfully
-        - Dependencies are handled automatically by Windows
-        - Failed operations provide detailed error messages
+        action: The service operation to perform.
+        service_name: Name of the target service (required for control ops).
+        filter_status: Filter by status ("running", "stopped", "all").
+        include_system_services: Include Windows/System/Microsoft services in listings.
+        wait_timeout: Timeout for state transitions (default 30s).
+        ctx: FastMCP Context for telemetry and sampling.
     """
-    logger.info("windows_services_started", action=action, service_name=service_name)
+    if ctx:
+        ctx.info(f"Service Op: {action} on {service_name or 'ALL'}")
+        ctx.report_progress(10, 100)
 
     try:
-        # Validate timeout
-        if not (1 <= wait_timeout <= 300):
-            wait_timeout = 30
-
-        # Route to appropriate action
-        if action == "list":
-            return _list_services(filter_status, include_system_services)
-
-        elif action in ["start", "stop", "restart"]:
-            if not service_name:
-                return {
-                    "success": False,
-                    "action": action,
-                    "error": f"service_name is required for {action} action"
-                }
-            return _manage_service(action, service_name, wait_timeout)
-
-        else:
-            return {
-                "success": False,
-                "action": action,
-                "error": f"Unknown action: {action}"
-            }
-
-    except Exception as e:
-        error_msg = f"Windows service operation failed: {str(e)}"
-        logger.error("windows_services_error", action=action, service_name=service_name, error=error_msg, exc_info=True)
-        return {
-            "success": False,
-            "action": action,
-            "error": error_msg
-        }
-
-
-def _list_services(filter_status: Optional[str], include_system_services: bool) -> Dict[str, Any]:
-    """List Windows services with filtering."""
-    try:
-        import win32serviceutil
         import win32service
-
-        services = []
-        accessSCM = win32service.SC_MANAGER_ENUMERATE_SERVICE
-
-        try:
-            hscm = win32service.OpenSCManager(None, None, accessSCM)
-        except Exception as e:
-            return {
-                "success": False,
-                "action": "list",
-                "error": f"Failed to access service manager: {str(e)}"
-            }
-
-        try:
-            typeFilter = win32service.SERVICE_WIN32
-            stateFilter = win32service.SERVICE_STATE_ALL
-
-            status = win32service.EnumServicesStatus(hscm, typeFilter, stateFilter)
-
-            for svc in status:
-                service_name = svc[0]
-                display_name = svc[1]
-                service_status = svc[2]
-
-                # Skip system services if not requested
-                if not include_system_services and service_name.startswith(('Win', 'Microsoft', 'System')):
-                    continue
-
-                # Apply status filter
-                current_status = _get_service_status_string(service_status[1])
-                if filter_status and filter_status != "all" and current_status != filter_status:
-                    continue
-
-                services.append({
-                    "name": service_name,
-                    "display_name": display_name,
-                    "status": current_status,
-                    "start_type": _get_service_start_type_string(service_status[0]),
-                    "pid": service_status[3] if len(service_status) > 3 else None
-                })
-
-        finally:
-            win32service.CloseServiceHandle(hscm)
-
-        return {
-            "success": True,
-            "action": "list",
-            "data": {
-                "services": services,
-                "count": len(services),
-                "filter_status": filter_status,
-                "include_system_services": include_system_services
-            }
-        }
-
-    except ImportError:
-        return {
-            "success": False,
-            "action": "list",
-            "error": "pywin32 not available for service management"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "action": "list",
-            "error": f"Failed to list services: {str(e)}"
-        }
-
-
-def _manage_service(action: str, service_name: str, timeout: int) -> Dict[str, Any]:
-    """Manage a Windows service (start, stop, restart)."""
-    try:
         import win32serviceutil
+
+        if action == "list":
+            return await asyncio.to_thread(_list_services, filter_status, include_system_services, ctx)
+
+        if not service_name:
+             return {"success": False, "error": f"service_name required for {action}"}
+
+        if action == "status":
+            status = await asyncio.to_thread(win32serviceutil.QueryServiceStatus, service_name)
+            return {"success": True, "action": action, "data": {"name": service_name, "status": _get_status_str(status[1])}}
 
         if action == "start":
-            win32serviceutil.StartService(service_name)
-            return _wait_for_service_status(service_name, "running", timeout)
+            if ctx: ctx.info(f"Starting {service_name}...")
+            await asyncio.to_thread(win32serviceutil.StartService, service_name)
+            return await _wait_for_status(service_name, "running", wait_timeout, ctx)
 
-        elif action == "stop":
-            win32serviceutil.StopService(service_name)
-            return _wait_for_service_status(service_name, "stopped", timeout)
+        if action == "stop":
+            if ctx: ctx.info(f"Stopping {service_name}...")
+            await asyncio.to_thread(win32serviceutil.StopService, service_name)
+            return await _wait_for_status(service_name, "stopped", wait_timeout, ctx)
 
-        elif action == "restart":
-            # Stop service
-            try:
-                win32serviceutil.StopService(service_name)
-                stop_result = _wait_for_service_status(service_name, "stopped", timeout)
-                if not stop_result["success"]:
-                    return stop_result
-            except Exception as e:
-                return {
-                    "success": False,
-                    "action": "restart",
-                    "error": f"Failed to stop service for restart: {str(e)}"
-                }
+        if action == "restart":
+            if ctx: ctx.info(f"Restarting {service_name}...")
+            await asyncio.to_thread(win32serviceutil.RestartService, service_name)
+            return await _wait_for_status(service_name, "running", wait_timeout, ctx)
 
-            # Start service
-            try:
-                win32serviceutil.StartService(service_name)
-                return _wait_for_service_status(service_name, "running", timeout)
-            except Exception as e:
-                return {
-                    "success": False,
-                    "action": "restart",
-                    "error": f"Failed to start service after stop: {str(e)}"
-                }
+        return {"success": False, "error": f"Unknown action: {action}"}
 
     except ImportError:
-        return {
-            "success": False,
-            "action": action,
-            "error": "pywin32 not available for service management"
-        }
+        return {"success": False, "error": "pywin32 not installed on this system"}
     except Exception as e:
-        return {
-            "success": False,
-            "action": action,
-            "error": f"Failed to {action} service '{service_name}': {str(e)}"
-        }
+        error_msg = f"Service Error: {e}"
+        if ctx:
+            ctx.error(error_msg)
+            try:
+                advice = await ctx.sample(f"Windows service '{service_name}' failed {action}. Error: {e}. Analyze and suggest fix.", max_tokens=100)
+                if advice and advice.content:
+                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
+            except: pass
+        return {"success": False, "error": error_msg}
+    finally:
+        if ctx: ctx.report_progress(100, 100)
 
-
-def _wait_for_service_status(service_name: str, target_status: str, timeout: int) -> Dict[str, Any]:
-    """Wait for a service to reach a specific status."""
+def _list_services(filter_status, include_system_services, ctx):
+    """Blocking list implementation."""
     import win32service
+    hscm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+    try:
+        status = win32service.EnumServicesStatus(hscm, win32service.SERVICE_WIN32, win32service.SERVICE_STATE_ALL)
+        services = []
+        for svc in status:
+            s_name, d_name, s_stat = svc
+            cur_stat = _get_status_str(s_stat[1])
+            if not include_system_services and s_name.lower().startswith(("win", "microsoft", "sys")):
+                continue
+            if filter_status and filter_status != "all" and cur_stat != filter_status:
+                continue
+            services.append({"name": s_name, "display_name": d_name, "status": cur_stat})
+        return {"success": True, "action": "list", "data": {"services": services, "count": len(services)}}
+    finally:
+        win32service.CloseServiceHandle(hscm)
 
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        try:
-            status = win32serviceutil.QueryServiceStatus(service_name)
-            current_status = _get_service_status_string(status[1])
+async def _wait_for_status(name, target, timeout, ctx):
+    """Async wait for status transition."""
+    import win32serviceutil
+    start = time.time()
+    while time.time() - start < timeout:
+        status = await asyncio.to_thread(win32serviceutil.QueryServiceStatus, name)
+        cur = _get_status_str(status[1])
+        if cur == target:
+            return {"success": True, "action": "wait", "data": {"name": name, "status": cur}}
+        await asyncio.sleep(1)
+    return {"success": False, "error": f"Timeout waiting for {target}"}
 
-            if current_status == target_status:
-                return {
-                    "success": True,
-                    "action": "wait_for_status",
-                    "data": {
-                        "service_name": service_name,
-                        "status": current_status,
-                        "wait_time": round(time.time() - start_time, 2)
-                    }
-                }
-
-            time.sleep(0.5)  # Wait 500ms before checking again
-
-        except Exception as e:
-            return {
-                "success": False,
-                "action": "wait_for_status",
-                "error": f"Failed to check service status: {str(e)}"
-            }
-
-    return {
-        "success": False,
-        "action": "wait_for_status",
-        "error": f"Timeout waiting for service '{service_name}' to reach status '{target_status}'"
-    }
-
-
-def _get_service_status_string(status_code: int) -> str:
-    """Convert Windows service status code to string."""
+def _get_status_str(code):
     import win32service
-
-    status_map = {
+    m = {
         win32service.SERVICE_STOPPED: "stopped",
         win32service.SERVICE_START_PENDING: "starting",
         win32service.SERVICE_STOP_PENDING: "stopping",
         win32service.SERVICE_RUNNING: "running",
-        win32service.SERVICE_CONTINUE_PENDING: "continuing",
-        win32service.SERVICE_PAUSE_PENDING: "pausing",
-        win32service.SERVICE_PAUSED: "paused"
     }
-    return status_map.get(status_code, "unknown")
+    return m.get(code, "other")
 
-
-def _get_service_start_type_string(start_type: int) -> str:
-    """Convert Windows service start type to string."""
-    import win32service
-
-    start_map = {
-        win32service.SERVICE_BOOT_START: "boot",
-        win32service.SERVICE_SYSTEM_START: "system",
-        win32service.SERVICE_AUTO_START: "automatic",
-        win32service.SERVICE_DEMAND_START: "manual",
-        win32service.SERVICE_DISABLED: "disabled"
-    }
-    return start_map.get(start_type, "unknown")
-
-
-def register_windows_services(mcp):
-    """Register the Windows services portmanteau tool with FastMCP."""
-    mcp.tool(windows_services)
+def register_windows_services(mcp) -> None:
+    """Register the modernized Windows services tool."""
+    mcp.tool()(windows_services)

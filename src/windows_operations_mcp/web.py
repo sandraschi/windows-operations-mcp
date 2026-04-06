@@ -18,7 +18,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
         return {
             "status": "healthy",
             "service": "windows-operations-mcp",
-            "version": "1.18.1",
+            "version": "2.0.0",
             "platform": platform.system()
         }
 
