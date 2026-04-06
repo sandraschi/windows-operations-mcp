@@ -13,3 +13,8 @@ pytest-asyncio>=0.21.0
 
 # Security
 bandit>=1.7.0
+
+# Build and Packaging (Official Anthropic CLI)
+# Install via: npm install -g @anthropic-ai/mcpb
+# Note: Required for producing .mcpb bundles
+mcpb>=2.1.2

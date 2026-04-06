@@ -1,68 +1,135 @@
 {
+  "manifest_version": "0.2",
   "name": "windows-operations-mcp",
-  "version": "1.0.0",
+  "version": "1.18.1",
   "description": "Comprehensive Windows system operations MCP server - Services, event logs, performance monitoring, file operations, PowerShell execution, and Git integration with Austrian precision",
-  "author": "Sandra",
+  "author": {
+    "name": "Sandra",
+    "email": "sandra@example.com"
+  },
   "license": "MIT",
-  "homepage": "https://github.com/sandraschi/windows-operations-mcp",
   "repository": {
     "type": "git",
     "url": "https://github.com/sandraschi/windows-operations-mcp"
   },
-  "main": "server/server.py",
-  "mcp": {
-    "version": "1.0",
-    "capabilities": ["tools"],
-    "prompts": {
-      "system": "assets/prompts/system.md",
-      "service_management": "assets/prompts/service_management.md",
-      "event_logs": "assets/prompts/event_logs.md",
-      "performance_monitoring": "assets/prompts/performance_monitoring.md",
-      "file_operations": "assets/prompts/file_operations.md",
-      "powershell_automation": "assets/prompts/powershell_automation.md",
-      "troubleshooting": "assets/prompts/troubleshooting.md"
+  "prompts": [
+    {
+      "name": "system",
+      "text": "mcpb/prompts/system.md"
+    },
+    {
+      "name": "user",
+      "text": "mcpb/prompts/user.md"
+    },
+    {
+      "name": "examples",
+      "text": "mcpb/prompts/examples.json"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "entry_point": "src/windows_operations_mcp/server.py",
+    "mcp_config": {
+      "command": "python",
+      "args": [
+        "src/windows_operations_mcp/server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "${__dirname}/src",
+        "PYTHONUNBUFFERED": "1"
+      }
     }
   },
-  "runtime": {
-    "python": ">=3.9"
-  },
-  "dependencies": {
-    "fastmcp": ">=2.12.3",
-    "pydantic": ">=2.0.0"
-  },
-  "features": [
-    "Windows Services management (start, stop, restart, query)",
-    "Event Log tools (query, export, monitor, clear)",
-    "Performance monitoring (counters, metrics, real-time)",
-    "File operations (read, write, permissions)",
-    "PowerShell execution (scripts, cmdlets, secure)",
-    "CMD execution (commands, batch files)",
-    "Git integration (add, commit, push, status)",
-    "Network tools (port testing, diagnostics)",
-    "System information (hardware, OS, health)",
-    "Archive operations (zip, extract, list)",
-    "JSON tools (validate, format, parse)",
-    "Media metadata (EXIF, image info)",
-    "Windows permissions (ACL, ownership)",
-    "Process monitoring (list, info, resources)",
-    "Austrian engineering quality"
-  ],
-  "requirements": {
-    "os": ["Windows 10/11", "Windows Server 2016+"],
-    "privileges": ["Administrator rights recommended for service/event log operations"],
-    "software": ["PowerShell 5.1+", "Git (for Git operations)"]
-  },
-  "keywords": [
-    "windows",
-    "system-operations",
-    "services",
-    "event-logs",
-    "performance",
-    "powershell",
-    "automation",
-    "git",
-    "fastmcp",
-    "mcpb",
-    "austria"
-  ]
+  "user_config": {
+    "enable_archive_operations": {
+      "type": "boolean",
+      "default": true,
+      "title": "Enable Archive Operations",
+      "description": "Enable archive operations (ZIP, RAR, TAR, TAR.GZ)"
+    },
+    "max_archive_size_mb": {
+      "type": "number",
+      "default": 1024,
+      "title": "Maximum Archive Size (MB)",
+      "description": "Maximum archive size in MB for extraction"
+    },
+    "allowed_archive_extensions": {
+      "type": "string",
+      "default": ".zip,.rar,.tar,.tar.gz,.tgz",
+      "title": "Allowed Archive Extensions",
+      "description": "Comma-separated list of allowed archive file extensions"
+    },
+    "log_level": {
+      "type": "string",
+      "default": "INFO",
+      "title": "Log Level",
+      "description": "Logging verbosity level"
+    },
+    "max_workers": {
+      "type": "number",
+      "default": 5,
+      "title": "Maximum Worker Threads",
+      "description": "Maximum number of worker threads"
+    },
+    "temp_dir": {
+      "type": "string",
+      "default": "C:\\Temp\\windows_operations_mcp",
+      "title": "Temporary Directory",
+      "description": "Directory for temporary file operations"
+    },
+    "enable_file_operations": {
+      "type": "boolean",
+      "default": true,
+      "title": "Enable File Operations",
+      "description": "Enable basic file system operations"
+    },
+    "enable_process_operations": {
+      "type": "boolean",
+      "default": true,
+      "title": "Enable Process Operations",
+      "description": "Enable process management operations"
+    },
+    "enable_network_operations": {
+      "type": "boolean",
+      "default": true,
+      "title": "Enable Network Operations",
+      "description": "Enable network-related operations"
+    },
+    "enable_system_info": {
+      "type": "boolean",
+      "default": true,
+      "title": "Enable System Information",
+      "description": "Enable system information gathering"
+    },
+    "api_timeout": {
+      "type": "number",
+      "default": 30,
+      "title": "API Timeout (seconds)",
+      "description": "Default timeout for API operations in seconds"
+    },
+    "max_file_size_mb": {
+      "type": "number",
+      "default": 100,
+      "title": "Maximum File Size (MB)",
+      "description": "Maximum file size in MB for file operations"
+    },
+    "allowed_file_extensions": {
+      "type": "string",
+      "default": ".txt,.log,.json,.yaml,.yml,.csv,.xml,.ini,.cfg,.conf",
+      "title": "Allowed File Extensions",
+      "description": "Comma-separated list of allowed file extensions"
+    },
+    "enable_auto_updates": {
+      "type": "boolean",
+      "default": true,
+      "title": "Enable Auto Updates",
+      "description": "Enable automatic updates for the MCP package"
+    },
+    "update_check_interval_hours": {
+      "type": "number",
+      "default": 24,
+      "title": "Update Check Interval (hours)",
+      "description": "Interval in hours to check for updates"
+    }
+  }
 }

@@ -4,23 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "windows-operations-mcp"
-version = "0.3.0"
+version = "1.18.1"
 description = "Windows Operations MCP - Comprehensive Windows system operations for Claude Desktop with MCPB packaging"
 readme = "README.md"
 authors = [
     { name = "Sandra Schi", email = "sandra@sandraschi.dev" },
 ]
 license = { text = "MIT" }
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = [
-    "fastmcp>=2.12.3,<3.0.0",
+    "fastmcp>=3.1.0,<4",
     "psutil>=5.9.0",
     "structlog>=23.0.0",
     "fastapi>=0.95.0",
     "uvicorn>=0.22.0",
     "pydantic>=1.10.0",
     "python-dotenv>=1.0.0",
-    "pywin32>=305; sys_platform == 'win32'"
+    "pywin32>=305; sys_platform == 'win32'",
+    "ruff>=0.15.2",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -68,3 +69,15 @@ namespaces = false
 
 [tool.setuptools.package-data]
 "*" = ["*.txt", "*.md", "*.json", "*.yaml", "*.yml"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S", "UP", "RUF"]
+ignore = ["S101", "B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 240 10% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 240 10% 4.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 263.4 70% 50.4%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+        --accent: 263.4 70% 50.4%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 263.4 70% 50.4%;
+        --radius: 0.75rem;
+    }
+
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground antialiased selection:bg-primary/30;
+        background-color: #020205;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(263, 70%, 50%, 0.15) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(280, 70%, 50%, 0.15) 0px, transparent 50%);
+        background-attachment: fixed;
+    }
+}
+
+@layer components {
+    .glass {
+        @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+    }
+
+    .glass-card {
+        @apply bg-card/40 backdrop-blur-md border border-white/5 shadow-lg transition-all duration-300 hover:bg-card/60 hover:border-white/10;
+    }
+
+    .vibrant-gradient {
+        @apply bg-gradient-to-br from-primary via-purple-500 to-pink-500;
+    }
+
+    .vibrant-text {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400 font-bold;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        @apply bg-muted/50 rounded-full hover:bg-muted transition-colors;
+    }
+}

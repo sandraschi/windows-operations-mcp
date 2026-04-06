@@ -1,13 +1,23 @@
-# Byte-compiled / optimized / DLL files
+# SOTA v13.1 Infrastructure Core .gitignore
+# Purpose: Prevent telemetry and dependency bloat while ensuring structural integrity.
+
+# [VCS/CORE]
+.git/
+.gitignore
+.gitattributes
+.gitkeep
+
+# [PYTHON]
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
 build/
 develop-eggs/
 dist/
@@ -25,24 +35,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
-# DXT packages
-*.dxt
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
 .coverage
 .coverage.*
 .cache
@@ -53,25 +45,74 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .mypy_cache/
+.pytype/
+.pyre/
+.eslintcache
+htmlcov/
+.tox/
+.nox/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Environment variables
-.env
-.venv
-env/
-venv/
-ENV/
+# [RUST]
+target/
+Cargo.lock
+# Cargo.lock is usually ignored for libraries, but kept for apps.
+# This is an MCP server project, which acts as an app.
+# However, usually we keep it for reproducibility.
 
-# IDE specific files
+# [NODE / JS / TS]
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.next/
+out/
+.pnp.*
+.yarn/
+.cache-loader
+
+# [IDE / OS]
 .idea/
 .vscode/
 *.swp
 *.swo
+*.iml
+*.code-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+.cursor/
+.history/
 
-# Local development
-local_settings.py
-db.sqlite3
+# [ENVIRONMENT / SECRETS]
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pub
+*-cert.pub
 
-# DXT specific
+# [LOGS / TEMP]
+*.log
+*.bak
+*.tmp
+*.temp
+out.txt
+err.txt
+temp/
+tmp/
+
+# [PROJECT SPECIFIC]
+.snapshots/
+_legacy_webapp/
+dxt/site-packages/
 dxt_package/
 !dxt_package/src/
 !dxt_package/manifest.json
@@ -81,112 +122,6 @@ dxt_package/
 !dxt_package/setup.cfg
 !dxt_package/setup.py
 !dxt_package/MANIFEST.in
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-.idea/
-*.iml
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# DXT build artifacts
+extension.wasm
 *.dxt
-build/
-dist/
-
-# Local development
-.env
-.env.*
-!.env.example
-
-# Private documentation (internal dev notes, not for public)
-docs-private/
+*.pdb

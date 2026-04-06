@@ -1,0 +1,527 @@
+"""
+Git Operations Portmanteau Tool for Windows Operations MCP.
+
+Full Git workflow: init, clone, add, commit, push, pull, fetch, status,
+log, diff, branch, remote, stash, tag, reset, revert, cherry-pick, rebase.
+"""
+
+import asyncio
+import subprocess
+import os
+from pathlib import Path
+from typing import Dict, Any, Optional, Literal, List
+
+from ...logging_config import get_logger
+
+logger = get_logger(__name__)
+
+ACTION_TYPE = Literal[
+    # Core workflow
+    "init", "clone", "add", "commit", "push", "pull", "fetch", "status",
+    # Inspection
+    "log", "diff", "show",
+    # Branching
+    "branch_list", "branch_create", "branch_switch", "branch_delete", "branch_merge", "rebase",
+    # Remotes
+    "remote_list", "remote_add", "remote_remove",
+    # Stash
+    "stash", "stash_pop", "stash_list", "stash_drop",
+    # Tags
+    "tag_list", "tag_create", "tag_delete",
+    # Undo
+    "reset", "revert", "cherry_pick",
+]
+
+
+def git_operations(
+    action: ACTION_TYPE,
+    repo_path: Optional[str] = None,
+    # Commit / add
+    message: Optional[str] = None,
+    files: Optional[List[str]] = None,
+    all_files: bool = False,
+    amend: bool = False,
+    # Push / pull / fetch
+    remote: str = "origin",
+    branch: Optional[str] = None,
+    force: bool = False,
+    set_upstream: bool = False,
+    # Clone
+    url: Optional[str] = None,
+    target_dir: Optional[str] = None,
+    # Log / diff / show
+    max_count: int = 20,
+    commit: Optional[str] = None,
+    commit2: Optional[str] = None,
+    oneline: bool = False,
+    # Branch ops
+    source_branch: Optional[str] = None,
+    # Stash
+    stash_message: Optional[str] = None,
+    stash_index: int = 0,
+    # Tag
+    tag_name: Optional[str] = None,
+    tag_message: Optional[str] = None,
+    # Reset
+    mode: str = "mixed",   # soft | mixed | hard
+    # Remote add
+    remote_url: Optional[str] = None,
+    remote_name: Optional[str] = None,
+    # Config (used for init)
+    initial_branch: str = "main",
+) -> Dict[str, Any]:
+    """
+    Perform Git repository operations — full workflow coverage.
+
+    ACTIONS (30 total):
+
+    Core workflow:
+      init          Initialise new repo (repo_path, initial_branch)
+      clone         Clone remote repo (url, target_dir, branch)
+      add           Stage files (files list, or all_files=True)
+      commit        Commit staged changes (message, amend, all_files)
+      push          Push to remote (remote, branch, force, set_upstream)
+      pull          Pull from remote (remote, branch)
+      fetch         Fetch from remote without merging (remote)
+      status        Porcelain status + current branch
+
+    Inspection:
+      log           Commit history (max_count, oneline, branch)
+      diff          Diff working tree or two commits (commit, commit2, files)
+      show          Show a specific commit (commit)
+
+    Branching:
+      branch_list   List all branches
+      branch_create Create branch (branch, source_branch)
+      branch_switch Switch to branch (branch)
+      branch_delete Delete branch (branch, force)
+      branch_merge  Merge branch into current (source_branch, message)
+      rebase        Rebase current onto branch (source_branch)
+
+    Remotes:
+      remote_list   List remotes with URLs
+      remote_add    Add remote (remote_name, remote_url)
+      remote_remove Remove remote (remote_name)
+
+    Stash:
+      stash         Stash current changes (stash_message)
+      stash_pop     Apply + drop top stash (stash_index)
+      stash_list    List stash entries
+      stash_drop    Drop stash entry (stash_index)
+
+    Tags:
+      tag_list      List tags
+      tag_create    Create tag (tag_name, tag_message, commit)
+      tag_delete    Delete tag (tag_name)
+
+    Undo:
+      reset         Reset HEAD (commit, mode: soft/mixed/hard)
+      revert        Revert a commit (commit)
+      cherry_pick   Cherry-pick a commit (commit)
+    """
+    logger.info("git_operations_started", action=action, repo_path=repo_path)
+
+    try:
+        repo_path_obj = Path(repo_path) if repo_path else Path.cwd()
+
+        # Actions that don't need an existing repo
+        if action == "init":
+            return _git_init(repo_path_obj, initial_branch)
+        if action == "clone":
+            return _git_clone(url, target_dir, branch)
+
+        # All other actions require a valid repo
+        if not (repo_path_obj / ".git").exists():
+            return {"success": False, "action": action,
+                    "error": f"Not a Git repository: {repo_path_obj}"}
+
+        # ── Core workflow ────────────────────────────────────────────────────
+        if action == "add":
+            return _git_add(repo_path_obj, files, all_files)
+        if action == "commit":
+            if not message and not amend:
+                return {"success": False, "action": action, "error": "message required"}
+            return _git_commit(repo_path_obj, message, all_files, amend)
+        if action == "push":
+            return _git_push(repo_path_obj, remote, branch, force, set_upstream)
+        if action == "pull":
+            return _git_simple(repo_path_obj, action, ["pull", remote] + ([branch] if branch else []))
+        if action == "fetch":
+            return _git_simple(repo_path_obj, action, ["fetch", remote])
+        if action == "status":
+            return _git_status(repo_path_obj)
+
+        # ── Inspection ───────────────────────────────────────────────────────
+        if action == "log":
+            return _git_log(repo_path_obj, max_count, oneline, branch)
+        if action == "diff":
+            return _git_diff(repo_path_obj, commit, commit2, files)
+        if action == "show":
+            return _git_simple(repo_path_obj, action, ["show", "--stat", commit or "HEAD"])
+
+        # ── Branching ────────────────────────────────────────────────────────
+        if action == "branch_list":
+            return _git_simple(repo_path_obj, action, ["branch", "-a", "-v"])
+        if action == "branch_create":
+            if not branch:
+                return {"success": False, "action": action, "error": "branch required"}
+            cmd = ["checkout", "-b", branch] + ([source_branch] if source_branch else [])
+            return _git_simple(repo_path_obj, action, cmd)
+        if action == "branch_switch":
+            if not branch:
+                return {"success": False, "action": action, "error": "branch required"}
+            return _git_simple(repo_path_obj, action, ["checkout", branch])
+        if action == "branch_delete":
+            if not branch:
+                return {"success": False, "action": action, "error": "branch required"}
+            flag = "-D" if force else "-d"
+            return _git_simple(repo_path_obj, action, ["branch", flag, branch])
+        if action == "branch_merge":
+            if not source_branch:
+                return {"success": False, "action": action, "error": "source_branch required"}
+            cmd = ["merge", source_branch] + (["-m", message] if message else [])
+            return _git_simple(repo_path_obj, action, cmd)
+        if action == "rebase":
+            if not source_branch:
+                return {"success": False, "action": action, "error": "source_branch required"}
+            return _git_simple(repo_path_obj, action, ["rebase", source_branch])
+
+        # ── Remotes ──────────────────────────────────────────────────────────
+        if action == "remote_list":
+            return _git_simple(repo_path_obj, action, ["remote", "-v"])
+        if action == "remote_add":
+            name = remote_name or remote
+            if not remote_url:
+                return {"success": False, "action": action, "error": "remote_url required"}
+            return _git_simple(repo_path_obj, action, ["remote", "add", name, remote_url])
+        if action == "remote_remove":
+            name = remote_name or remote
+            return _git_simple(repo_path_obj, action, ["remote", "remove", name])
+
+        # ── Stash ────────────────────────────────────────────────────────────
+        if action == "stash":
+            cmd = ["stash", "push"] + (["-m", stash_message] if stash_message else [])
+            return _git_simple(repo_path_obj, action, cmd)
+        if action == "stash_pop":
+            return _git_simple(repo_path_obj, action, ["stash", "pop", f"stash@{{{stash_index}}}"])
+        if action == "stash_list":
+            return _git_simple(repo_path_obj, action, ["stash", "list"])
+        if action == "stash_drop":
+            return _git_simple(repo_path_obj, action, ["stash", "drop", f"stash@{{{stash_index}}}"])
+
+        # ── Tags ─────────────────────────────────────────────────────────────
+        if action == "tag_list":
+            return _git_simple(repo_path_obj, action, ["tag", "-l", "-n1"])
+        if action == "tag_create":
+            if not tag_name:
+                return {"success": False, "action": action, "error": "tag_name required"}
+            cmd = ["tag"]
+            if tag_message:
+                cmd += ["-a", tag_name, "-m", tag_message]
+            else:
+                cmd.append(tag_name)
+            if commit:
+                cmd.append(commit)
+            return _git_simple(repo_path_obj, action, cmd)
+        if action == "tag_delete":
+            if not tag_name:
+                return {"success": False, "action": action, "error": "tag_name required"}
+            return _git_simple(repo_path_obj, action, ["tag", "-d", tag_name])
+
+        # ── Undo ─────────────────────────────────────────────────────────────
+        if action == "reset":
+            valid_modes = ("soft", "mixed", "hard")
+            if mode not in valid_modes:
+                return {"success": False, "action": action,
+                        "error": f"mode must be one of {valid_modes}"}
+            return _git_simple(repo_path_obj, action,
+                               ["reset", f"--{mode}", commit or "HEAD"])
+        if action == "revert":
+            if not commit:
+                return {"success": False, "action": action, "error": "commit required"}
+            return _git_simple(repo_path_obj, action,
+                               ["revert", "--no-edit", commit])
+        if action == "cherry_pick":
+            if not commit:
+                return {"success": False, "action": action, "error": "commit required"}
+            return _git_simple(repo_path_obj, action, ["cherry-pick", commit])
+
+        return {"success": False, "action": action, "error": f"Unknown action: {action}"}
+
+    except Exception as e:
+        error_msg = f"Git operation failed: {str(e)}"
+        logger.error("git_operations_error", action=action, error=error_msg, exc_info=True)
+        return {"success": False, "action": action, "error": error_msg}
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _run_git_command(repo_path: Path, command: List[str], timeout: int = 60) -> tuple[bool, str, str]:
+    """Run a Git command and return (success, stdout, stderr)."""
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
+
+    try:
+        result = subprocess.run(
+            ["git"] + command,
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
+        )
+        return result.returncode == 0, result.stdout, result.stderr
+    except subprocess.TimeoutExpired:
+        return False, "", f"Git command timed out after {timeout}s"
+    except FileNotFoundError:
+        return False, "", "git not found in PATH"
+    except Exception as e:
+        return False, "", str(e)
+
+
+def _git_simple(repo_path: Path, action: str, cmd: List[str]) -> Dict[str, Any]:
+    success, stdout, stderr = _run_git_command(repo_path, cmd)
+    if not success:
+        return {"success": False, "action": action, "error": stderr.strip() or f"{action} failed"}
+    return {"success": True, "action": action, "data": {"output": stdout.strip()}}
+
+
+def _git_init(repo_path: Path, initial_branch: str) -> Dict[str, Any]:
+    try:
+        repo_path.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        return {"success": False, "action": "init",
+                "error": f"Could not create directory {repo_path}: {e}"}
+    success, stdout, stderr = _run_git_command(repo_path, ["init", "-b", initial_branch])
+    if not success:
+        success, stdout, stderr = _run_git_command(repo_path, ["init"])
+    if not success:
+        return {"success": False, "action": "init", "error": stderr or "git init failed"}
+    return {"success": True, "action": "init",
+            "data": {"path": str(repo_path), "output": stdout.strip()}}
+
+
+def _git_clone(url: Optional[str], target_dir: Optional[str],
+               branch: Optional[str]) -> Dict[str, Any]:
+    if not url:
+        return {"success": False, "action": "clone", "error": "url required"}
+    cmd = ["clone"]
+    if branch:
+        cmd += ["-b", branch]
+    cmd.append(url)
+    if target_dir:
+        cmd.append(target_dir)
+    cwd = Path(target_dir).parent if target_dir else Path.cwd()
+    success, stdout, stderr = _run_git_command(cwd, cmd, timeout=120)
+    if not success:
+        return {"success": False, "action": "clone", "error": stderr.strip() or "clone failed"}
+    return {"success": True, "action": "clone",
+            "data": {"url": url, "target": target_dir, "output": (stdout + stderr).strip()}}
+
+
+def _git_add(repo_path: Path, files: Optional[List[str]], all_files: bool) -> Dict[str, Any]:
+    if all_files:
+        success, _, stderr = _run_git_command(repo_path, ["add", "."])
+        if not success:
+            return {"success": False, "action": "add", "error": stderr or "add failed"}
+        return {"success": True, "action": "add", "data": {"added": "all files"}}
+    if not files:
+        return {"success": False, "action": "add",
+                "error": "Provide files list or set all_files=True"}
+    success, _, stderr = _run_git_command(repo_path, ["add"] + files)
+    if not success:
+        return {"success": False, "action": "add", "error": stderr or f"add failed: {files}"}
+    return {"success": True, "action": "add",
+            "data": {"added_files": files, "count": len(files)}}
+
+
+def _git_commit(repo_path: Path, message: Optional[str], all_files: bool,
+                amend: bool) -> Dict[str, Any]:
+    cmd = ["commit"]
+    if amend:
+        cmd.append("--amend")
+        if not message:
+            cmd.append("--no-edit")
+    if message:
+        cmd += ["-m", message]
+    if all_files:
+        cmd.insert(1, "-a")
+    success, stdout, stderr = _run_git_command(repo_path, cmd)
+    if not success:
+        return {"success": False, "action": "commit", "error": stderr.strip() or "commit failed"}
+    return {"success": True, "action": "commit",
+            "data": {"message": message, "output": stdout.strip(), "amended": amend}}
+
+
+def _git_push(repo_path: Path, remote: str, branch: Optional[str],
+              force: bool, set_upstream: bool) -> Dict[str, Any]:
+    cmd = ["push"]
+    if force:
+        cmd.append("--force-with-lease")
+    if set_upstream:
+        cmd += ["-u", remote, branch or "HEAD"]
+    else:
+        cmd.append(remote)
+        if branch:
+            cmd.append(branch)
+    success, stdout, stderr = _run_git_command(repo_path, cmd, timeout=60)
+    if not success:
+        return {"success": False, "action": "push",
+                "error": stderr.strip() or stdout.strip() or "push failed"}
+    return {"success": True, "action": "push",
+            "data": {"remote": remote, "branch": branch, "forced": force,
+                     "output": (stdout + stderr).strip()}}
+
+
+def _git_log(repo_path: Path, max_count: int, oneline: bool,
+             branch: Optional[str]) -> Dict[str, Any]:
+    fmt = "--oneline" if oneline else "--pretty=format:%H|%an|%ae|%ad|%s"
+    cmd = ["log", f"-{max_count}", fmt, "--date=short"]
+    if branch:
+        cmd.append(branch)
+    success, stdout, stderr = _run_git_command(repo_path, cmd)
+    if not success:
+        return {"success": False, "action": "log", "error": stderr or "log failed"}
+    if oneline:
+        entries = [{"line": l} for l in stdout.strip().splitlines() if l]
+    else:
+        entries = []
+        for line in stdout.strip().splitlines():
+            if not line:
+                continue
+            parts = line.split("|", 4)
+            if len(parts) == 5:
+                entries.append({"hash": parts[0], "author": parts[1],
+                                 "email": parts[2], "date": parts[3], "subject": parts[4]})
+            else:
+                entries.append({"raw": line})
+    return {"success": True, "action": "log",
+            "data": {"count": len(entries), "entries": entries}}
+
+
+def _git_diff(repo_path: Path, commit: Optional[str], commit2: Optional[str],
+              files: Optional[List[str]]) -> Dict[str, Any]:
+    cmd = ["diff"]
+    if commit and commit2:
+        cmd += [commit, commit2]
+    elif commit:
+        cmd.append(commit)
+    if files:
+        cmd += ["--"] + files
+    success, stdout, stderr = _run_git_command(repo_path, cmd)
+    if not success:
+        return {"success": False, "action": "diff", "error": stderr or "diff failed"}
+    return {"success": True, "action": "diff",
+            "data": {"diff": stdout, "lines": len(stdout.splitlines())}}
+
+
+def _git_status(repo_path: Path) -> Dict[str, Any]:
+    success, stdout, stderr = _run_git_command(repo_path, ["status", "--porcelain"])
+    if not success:
+        return {"success": False, "action": "status", "error": stderr or "status failed"}
+
+    status_info: Dict[str, List[str]] = {
+        "modified": [], "added": [], "deleted": [], "renamed": [], "untracked": []}
+    for line in (stdout.strip().splitlines() if stdout.strip() else []):
+        if not line.strip() or len(line) < 3:
+            continue
+        code, filename = line[:2], line[3:].strip()
+        if code[0] == "M":
+            status_info["modified"].append(f"(staged) {filename}")
+        elif code[0] == "A":
+            status_info["added"].append(f"(staged) {filename}")
+        elif code[0] == "D":
+            status_info["deleted"].append(f"(staged) {filename}")
+        elif code[0] == "R":
+            status_info["renamed"].append(f"(staged) {filename}")
+        if code[1] == "M":
+            status_info["modified"].append(filename)
+        elif code[1] == "D":
+            status_info["deleted"].append(filename)
+        if code == "??":
+            status_info["untracked"].append(filename)
+    for key in status_info:
+        status_info[key] = list(dict.fromkeys(status_info[key]))
+
+    bs, branch_out, _ = _run_git_command(repo_path, ["branch", "--show-current"])
+    current_branch = branch_out.strip() if bs else "unknown"
+    return {"success": True, "action": "status",
+            "data": {"branch": current_branch, "changes": status_info,
+                     "has_changes": any(v for v in status_info.values())}}
+
+
+def register_git_operations(mcp) -> None:
+    """Register the Git operations portmanteau tool with FastMCP.
+
+    Wraps the sync git_operations() in an async handler so subprocess.run()
+    never blocks the MCP event loop.
+    """
+    @mcp.tool()
+    async def git_operations_async(
+        action: str,
+        repo_path: Optional[str] = None,
+        message: Optional[str] = None,
+        files: Optional[List[str]] = None,
+        all_files: bool = False,
+        amend: bool = False,
+        remote: str = "origin",
+        branch: Optional[str] = None,
+        force: bool = False,
+        set_upstream: bool = False,
+        url: Optional[str] = None,
+        target_dir: Optional[str] = None,
+        max_count: int = 20,
+        commit: Optional[str] = None,
+        commit2: Optional[str] = None,
+        oneline: bool = False,
+        source_branch: Optional[str] = None,
+        stash_message: Optional[str] = None,
+        stash_index: int = 0,
+        tag_name: Optional[str] = None,
+        tag_message: Optional[str] = None,
+        mode: str = "mixed",
+        remote_url: Optional[str] = None,
+        remote_name: Optional[str] = None,
+        initial_branch: str = "main",
+    ) -> Dict[str, Any]:
+        """
+        Perform Git repository operations — full workflow coverage.
+
+        ACTIONS: init, clone, add, commit, push, pull, fetch, status,
+                 log, diff, show, branch_list/create/switch/delete/merge,
+                 rebase, remote_list/add/remove, stash/pop/list/drop,
+                 tag_list/create/delete, reset, revert, cherry_pick.
+
+        Non-blocking: subprocess runs in thread pool, never freezes MCP server.
+        """
+        return await asyncio.to_thread(
+            git_operations,
+            action=action,
+            repo_path=repo_path,
+            message=message,
+            files=files,
+            all_files=all_files,
+            amend=amend,
+            remote=remote,
+            branch=branch,
+            force=force,
+            set_upstream=set_upstream,
+            url=url,
+            target_dir=target_dir,
+            max_count=max_count,
+            commit=commit,
+            commit2=commit2,
+            oneline=oneline,
+            source_branch=source_branch,
+            stash_message=stash_message,
+            stash_index=stash_index,
+            tag_name=tag_name,
+            tag_message=tag_message,
+            mode=mode,
+            remote_url=remote_url,
+            remote_name=remote_name,
+            initial_branch=initial_branch,
+        )

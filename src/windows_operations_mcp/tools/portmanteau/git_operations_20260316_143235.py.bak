@@ -1,0 +1,341 @@
+"""
+Git Operations Portmanteau Tool for Windows Operations MCP.
+
+Consolidates Git operations (add, commit, push, status) into a single portmanteau tool.
+Provides comprehensive Git repository management functionality.
+"""
+
+import subprocess
+import os
+from pathlib import Path
+from typing import Dict, Any, Optional, Literal, List
+
+from ...logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
+def git_operations(
+    action: Literal["add", "commit", "push", "status", "init"],
+    repo_path: Optional[str] = None,
+    message: Optional[str] = None,
+    files: Optional[List[str]] = None,
+    remote: str = "origin",
+    branch: Optional[str] = None,
+    force: bool = False,
+    all_files: bool = False
+) -> Dict[str, Any]:
+    """
+    Perform Git repository operations with comprehensive error handling.
+
+    FEATURES:
+    - Complete Git workflow support (add, commit, push, status)
+    - Repository validation and path resolution
+    - Safe operations with error checking
+    - Configurable remote and branch targeting
+    - Force push capability for advanced users
+    - Bulk file operations with pattern support
+    - Repository status analysis and reporting
+
+    Args:
+        action: The Git operation to perform. Must be one of:
+            - "add": Stage files for commit (supports individual files or all files)
+            - "commit": Create commit from staged changes with message
+            - "push": Push commits to remote repository
+            - "status": Get comprehensive repository status and changes
+        repo_path: Path to Git repository root (defaults to current directory if None)
+        message: Commit message (required for "commit" action, should be descriptive)
+        files: List of specific files to add (for "add" action, optional)
+        remote: Remote name to push to (default: "origin", for "push" action)
+        branch: Branch name to push (defaults to current branch, for "push" action)
+        force: Force push even if non-fast-forward (dangerous, use carefully)
+        all_files: Add all files including untracked ones (default: False, safer)
+
+    Returns:
+        FastMCP 2.14.1+ enhanced response with:
+            - success: bool - Whether the Git operation succeeded
+            - action: str - The action that was performed
+            - data: dict - Action-specific result data (varies by operation)
+            - error: str - Error message (only present if success is False)
+
+    Examples:
+        # Check repository status
+        result = await git_operations(action="status")
+        if result["success"]:
+            if result["data"]["has_changes"]:
+                print("Repository has uncommitted changes")
+
+        # Add specific files
+        result = await git_operations(
+            action="add",
+            files=["src/main.py", "tests/test_main.py"]
+        )
+
+        # Add all files (including untracked)
+        result = await git_operations(action="add", all_files=True)
+
+        # Commit changes
+        result = await git_operations(
+            action="commit",
+            message="feat: add user authentication system"
+        )
+
+        # Push to remote
+        result = await git_operations(
+            action="push",
+            remote="origin",
+            branch="main"
+        )
+
+        # Force push (use carefully!)
+        result = await git_operations(
+            action="push",
+            remote="origin",
+            branch="feature-branch",
+            force=True
+        )
+
+        # Work with specific repository
+        result = await git_operations(
+            action="status",
+            repo_path="/path/to/specific/repo"
+        )
+
+    Notes:
+        - Repository validation ensures .git directory exists
+        - Force push can overwrite remote history - use with caution
+        - All operations are synchronous and may take time for large repositories
+        - File paths are validated before operations
+        - Commit messages should follow conventional commit format
+        - Status operation provides detailed change analysis
+    """
+    logger.info("git_operations_started", action=action, repo_path=repo_path)
+
+    try:
+        # Determine repository path
+        if repo_path:
+            repo_path_obj = Path(repo_path)
+        else:
+            repo_path_obj = Path.cwd()
+
+        # For init, we don't need an existing .git dir
+        if action == "init":
+            return _git_init(repo_path_obj)
+
+        # Validate repository exists for all other actions
+        if not (repo_path_obj / ".git").exists():
+            return {
+                "success": False,
+                "action": action,
+                "error": f"Not a Git repository: {repo_path_obj}"
+            }
+
+        # Route to appropriate action
+        if action == "add":
+            return _git_add(repo_path_obj, files, all_files)
+
+        elif action == "commit":
+            if not message:
+                return {
+                    "success": False,
+                    "action": action,
+                    "error": "Commit message is required"
+                }
+            return _git_commit(repo_path_obj, message, all_files)
+
+        elif action == "push":
+            return _git_push(repo_path_obj, remote, branch, force)
+
+        elif action == "status":
+            return _git_status(repo_path_obj)
+
+        else:
+            return {
+                "success": False,
+                "action": action,
+                "error": f"Unknown action: {action}"
+            }
+
+    except Exception as e:
+        error_msg = f"Git operation failed: {str(e)}"
+        logger.error("git_operations_error", action=action, repo_path=str(repo_path_obj) if 'repo_path_obj' in locals() else None, error=error_msg, exc_info=True)
+        return {
+            "success": False,
+            "action": action,
+            "error": error_msg
+        }
+
+
+def _run_git_command(repo_path: Path, command: List[str]) -> tuple[bool, str, str]:
+    """Run a Git command and return (success, stdout, stderr)."""
+    try:
+        result = subprocess.run(
+            ["git"] + command,
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        return result.returncode == 0, result.stdout, result.stderr
+    except subprocess.TimeoutExpired:
+        return False, "", "Git command timed out"
+    except FileNotFoundError:
+        return False, "", "Git command not found"
+    except Exception as e:
+        return False, "", str(e)
+
+
+def _git_add(repo_path: Path, files: Optional[List[str]], all_files: bool) -> Dict[str, Any]:
+    """Add files to Git staging area."""
+    if all_files:
+        success, stdout, stderr = _run_git_command(repo_path, ["add", "."])
+        if not success:
+            return {
+                "success": False,
+                "action": "add",
+                "error": stderr or "Failed to add all files"
+            }
+        return {
+            "success": True,
+            "action": "add",
+            "data": {
+                "added": "all files",
+                "message": "All files added to staging area"
+            }
+        }
+
+    if not files:
+        return {
+            "success": False,
+            "action": "add",
+            "error": "No files specified and all_files=False"
+        }
+
+    # Add specified files
+    success, stdout, stderr = _run_git_command(repo_path, ["add"] + files)
+    if not success:
+        return {
+            "success": False,
+            "action": "add",
+            "error": stderr or f"Failed to add files: {files}"
+        }
+
+    return {
+        "success": True,
+        "action": "add",
+        "data": {
+            "added_files": files,
+            "message": f"Added {len(files)} file(s) to staging area"
+        }
+    }
+
+
+def _git_commit(repo_path: Path, message: str, all_files: bool) -> Dict[str, Any]:
+    """Commit staged changes."""
+    command = ["commit", "-m", message]
+    if all_files:
+        command.insert(1, "-a")
+
+    success, stdout, stderr = _run_git_command(repo_path, command)
+    if not success:
+        return {
+            "success": False,
+            "action": "commit",
+            "error": stderr or "Commit failed"
+        }
+
+    return {
+        "success": True,
+        "action": "commit",
+        "data": {
+            "message": message,
+            "output": stdout.strip()
+        }
+    }
+
+
+def _git_push(repo_path: Path, remote: str, branch: Optional[str], force: bool) -> Dict[str, Any]:
+    """Push commits to remote repository."""
+    command = ["push"]
+    if force:
+        command.append("--force")
+    command.append(remote)
+    if branch:
+        command.append(branch)
+
+    success, stdout, stderr = _run_git_command(repo_path, command)
+    if not success:
+        return {
+            "success": False,
+            "action": "push",
+            "error": stderr or f"Push to {remote} failed"
+        }
+
+    return {
+        "success": True,
+        "action": "push",
+        "data": {
+            "remote": remote,
+            "branch": branch,
+            "forced": force,
+            "output": stdout.strip()
+        }
+    }
+
+
+def _git_status(repo_path: Path) -> Dict[str, Any]:
+    """Get Git repository status."""
+    success, stdout, stderr = _run_git_command(repo_path, ["status", "--porcelain"])
+    if not success:
+        return {
+            "success": False,
+            "action": "status",
+            "error": stderr or "Failed to get repository status"
+        }
+
+    # Parse porcelain output
+    status_lines = stdout.strip().split('\n') if stdout.strip() else []
+    status_info = {
+        "modified": [],
+        "added": [],
+        "deleted": [],
+        "renamed": [],
+        "untracked": []
+    }
+
+    for line in status_lines:
+        if not line.strip():
+            continue
+        status_code = line[:2]
+        filename = line[3:]
+
+        if status_code[0] in 'MAD' or status_code[1] in 'MAD':
+            if 'M' in status_code:
+                status_info["modified"].append(filename)
+            if 'A' in status_code:
+                status_info["added"].append(filename)
+            if 'D' in status_code:
+                status_info["deleted"].append(filename)
+            if 'R' in status_code:
+                status_info["renamed"].append(filename)
+        else:
+            status_info["untracked"].append(filename)
+
+    # Get branch info
+    branch_success, branch_stdout, _ = _run_git_command(repo_path, ["branch", "--show-current"])
+    current_branch = branch_stdout.strip() if branch_success else "unknown"
+
+    return {
+        "success": True,
+        "action": "status",
+        "data": {
+            "branch": current_branch,
+            "changes": status_info,
+            "has_changes": any(len(files) > 0 for files in status_info.values())
+        }
+    }
+
+
+def register_git_operations(mcp):
+    """Register the Git operations portmanteau tool with FastMCP."""
+    mcp.tool(git_operations)

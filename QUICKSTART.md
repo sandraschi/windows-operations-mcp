@@ -41,7 +41,19 @@ pip install -e .
 }
 ```
 
-### 3. Restart Claude Desktop
+### 3. Start the Dashboard
+Instead of just running the server, use the standardized SOTA startup script:
+
+```powershell
+./start.bat
+```
+
+This will:
+1. Start the **Backend Bridge** (FastAPI) on port **10748**
+2. Start the **SOTA Dashboard** (Vite) on port **10749**
+3. Register the MCP server with Claude Desktop automatically
+
+### 4. Restart Claude Desktop
 
 That's it! All tools are now available in Claude Desktop.
 

@@ -5,8 +5,8 @@ include pyproject.toml
 include requirements*.txt
 include MANIFEST.in
 
-# Include DXT package files
-recursive-include dxt *
+# Include MCPB package files
+recursive-include mcpb *
 
 # Include package data
 recursive-include src/windows_operations_mcp *.py
@@ -45,5 +45,5 @@ recursive-include tests *
 global-exclude __pycache__
 global-exclude *.py[cod]
 
-# Include DXT specific files
-recursive-include dxt *
+# Include MCPB specific files
+recursive-include mcpb *

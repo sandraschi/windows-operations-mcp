@@ -540,11 +540,15 @@ def register_powershell_tools(mcp):
                 "exit_code": execution_time
             }
 
+# Module-level executor instances for import by portmanteau command_execution
+ps_executor = PowerShellExecutor()
+cmd_executor = CMDExecutor()
+
+
 def register_powershell_tools(mcp):
     """Register PowerShell and CMD execution tools with FastMCP."""
-    # Create executor instances
-    ps_executor = PowerShellExecutor()
-    cmd_executor = CMDExecutor()
+    # Use module-level executor instances
+    # (also available for import: from .powershell_tools import ps_executor, cmd_executor)
     
     # Register PowerShell tool
     @mcp.tool()
