@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.2",
   "name": "windows-operations-mcp",
-  "version": "14.0.0",
+  "version": "14.0.1",
   "description": "SOTA v14.0: Specialized Windows Control Plane & Data Surgery Hub for Agentic Hardening",
   "author": {
     "name": "Sandra",
@@ -15,11 +15,19 @@
   "prompts": [
     {
       "name": "registry_hardening_wizard",
-      "text": "src/windows_operations_mcp/prompts/registry_wizard.md"
+      "description": "Guide for identifying and fixing insecure registry keys and persistence points."
     },
     {
-      "name": "system_audit_blueprint",
-      "text": "src/windows_operations_mcp/prompts/audit_blueprint.md"
+      "name": "powershell_agent_scaffold",
+      "description": "Generate robust, error-tolerant PowerShell scripts for complex system tasks."
+    },
+    {
+      "name": "system_account_audit",
+      "description": "Evaluate local user accounts and group memberships for security alignment."
+    },
+    {
+      "name": "data_surgery_forensics",
+      "description": "Orchestrate JSON and Archive tools for system configuration analysis."
     }
   ],
   "server": {

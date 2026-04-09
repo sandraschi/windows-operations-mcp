@@ -86,4 +86,4 @@ def register_all_prompts(mcp: FastMCP) -> None:
         4.  **Deep Search**: Use json_operations action="fuzzy_extract" to identify secrets or misconfigurations in unstructured log artifacts.
         """
 
-def __all__ = ["register_all_prompts"]
+__all__ = ["register_all_prompts"]

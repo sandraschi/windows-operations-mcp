@@ -23,7 +23,8 @@ class AIRouter:
 
     async def get_tools_list(self) -> list[str]:
         """Get list of registered MCP tools."""
-        return [t.name for t in self.mcp._tools.values()]
+        tools = await self.mcp.list_tools()
+        return [t.name for t in tools]
 
     async def get_workflows_list(self) -> list[Dict[str, Any]]:
         """Get list of predefined Windows workflows."""

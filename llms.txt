@@ -1,6 +1,6 @@
-# Windows Operations MCP (SOTA v14.0.0)
+# Windows Operations MCP (SOTA v14.0.1) Gold Standard
 
-A specialized Windows system orchestration platform and High-Fidelity Data Surgery Hub built with FastMCP 3.2.0.
+A specialized Windows system orchestration platform and High-Fidelity Data Surgery Hub built with FastMCP 3.2.0. Stabilized for industrial use (April 2026).
 
 ## 🪟 Specialized Windows Control Plane
 Industrial-grade tools for native Windows hardening and introspection.

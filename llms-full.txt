@@ -1,4 +1,4 @@
-# Windows Operations MCP (SOTA v14.0.0) - Technical Deep-Dive
+# Windows Operations MCP (SOTA v14.0.1) - Technical Deep-Dive
 
 ## 📖 System Identity
 A specialized control plane for Windows system administration and data forensics.
@@ -57,4 +57,4 @@ Diagnostic loop for finding root causes (Permissions vs System state).
 - **PoLP**: All user/group operations follow the Principle of Least Privilege.
 - **Auditability**: All tool calls are logged via `ctx: Context` telemetry.
 
-*Industrial v14.0 - March 2026*
+*Industrial Gold Standard v14.0.1 - April 2026*

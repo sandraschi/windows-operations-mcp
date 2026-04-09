@@ -26,18 +26,21 @@ except ImportError as e:
 @asynccontextmanager
 async def lifespan(mcp: FastMCP) -> AsyncGenerator[None, None]:
     """Manage server lifecycle: startup and shutdown."""
-    logger.info("Initializing Windows Operations SOTA v14.0")
+    logger.info("Initializing Windows Operations SOTA v14.0.1 Gold Standard")
     try:
         yield
     finally:
-        logger.info("Shutting down Windows Operations SOTA v14.0")
+        logger.info("Shutting down Windows Operations SOTA v14.0.1 Gold Standard")
 
 # Initialize FastMCP 3.2 instance
 mcp = FastMCP(
     name="windows-operations-mcp",
-    version="14.0.0",
+    version="14.0.1",
     lifespan=lifespan,
-    description="SOTA v14.0: Specialized Windows Control Plane & Data Surgery Hub"
+    instructions="SOTA v14.0.1: Specialized Windows Control Plane & Data Surgery Hub",
+    strict_input_validation=True,
+    mask_error_details=True,
+    client_log_level="info",
 )
 
 def register_all_tools() -> None:
@@ -78,7 +81,9 @@ def register_all_tools() -> None:
 
         # Register Skills & Prompts (New in SOTA v14.0)
         from .prompts import register_all_prompts
+        from .resources import register_resources
         register_all_prompts(mcp)
+        register_resources(mcp)
 
         logger.info("Tool registration completed successfully.")
 

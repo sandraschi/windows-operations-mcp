@@ -4,6 +4,13 @@ All notable changes to the `windows-operations-mcp` project will be documented i
 
 ---
 
+## 🏆 [14.0.1] - 2026-04-09
+
+### 🛡️ Gold Standard Stabilization
+- **FastAPI Fix**: Resolved a critical 500 error in the `/api/tools` endpoint by refactoring `AIRouter` to use asynchronous `list_tools()` (FastMCP 3.2+ compatibility).
+- **Build Hardening**: Hardened `build_mcpb.py` against `UnicodeEncodeError` in Windows terminal environments by removing non-ASCII characters.
+- **Manifest Synchronization**: Reconciled `mcpb/manifest.json` with code-based prompts, ensuring high-fidelity discovery in MCPB runtimes.
+
 ## 🚀 [14.0.0] - 2026-04-06
 
 ### ✨ SOTA v14.0 Modernization

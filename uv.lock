@@ -921,6 +921,20 @@ wheels = [
 ]
 
 [[package]]
+name = "prefab-ui"
+version = "0.18.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cyclopts" },
+    { name = "pydantic" },
+    { name = "rich" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/39/3f/b0f01a7b0488724322abfaa1369e40f55b7d291b2357b0646a131528e79f/prefab_ui-0.18.5.tar.gz", hash = "sha256:66f4f0d33ddb0b370684f9a2792886d32942ec91d114bf8b35b3954f87014ccb", size = 4042301, upload-time = "2026-04-07T20:27:39.008Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/6b/c70b0d7ba3d2ec750b92686481d2952775d4123ff7973505229b513a89e6/prefab_ui-0.18.5-py3-none-any.whl", hash = "sha256:f4681a5ac464949dd26432df9594ef96066d03150cb3b9e595fb6999f9eb433c", size = 1843059, upload-time = "2026-04-07T20:27:37.106Z" },
+]
+
+[[package]]
 name = "psutil"
 version = "7.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1644,6 +1658,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "fastmcp" },
+    { name = "prefab-ui" },
     { name = "psutil" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -1671,6 +1686,7 @@ requires-dist = [
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "prefab-ui", specifier = ">=0.1.0" },
     { name = "psutil", specifier = ">=5.9.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },

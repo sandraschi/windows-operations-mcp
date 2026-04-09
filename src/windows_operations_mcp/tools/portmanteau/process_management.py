@@ -4,12 +4,19 @@ Provides comprehensive Windows process monitoring and control with agentic telem
 """
 
 import asyncio
+import json
 import psutil
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from fastmcp import Context
 from windows_operations_mcp.logging_config import get_logger
+
+try:
+    from prefab_ui import Table, BarChart, Text, Card
+    HAS_PREFAB = True
+except ImportError:
+    HAS_PREFAB = False
 
 logger = get_logger(__name__)
 
@@ -20,39 +27,27 @@ async def process_management(
     include_system: bool = False,
     max_processes: int = 50,
     ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+) -> Any:
     """
     Perform process management operations with comprehensive monitoring and agentic telemetry.
-
-    RATIONALE:
-    Consolidates process listing, resource analysis, and termination into a single portmanteau.
-    Integrates with FastMCP 3.2 Context for real-time progress reporting and LLM-in-the-loop diagnostics.
-
-    Args:
-        action: The process operation to perform.
-        pid: Process ID for detailed info or termination.
-        name_filter: Substring filter for process names.
-        include_system: Include system processes (SYSTEM, LOCAL SERVICE, etc.).
-        max_processes: Truncation limit for process listing (default: 50).
-        ctx: FastMCP Context for telemetry and sampling (injected).
-
-    Examples:
-        - process_management(action="list", name_filter="chrome")
-        - process_management(action="info", pid=1234)
+    Returns: Union[Dict, ToolResult] depending on action and availability of prefab-ui.
     """
     if ctx:
         ctx.info(f"Process Management: {action} (Target: {pid or name_filter or 'ALL'})")
         ctx.report_progress(10, 100)
 
     try:
+        data = {}
+        component = None
+
         if action == "list":
             if ctx: ctx.report_progress(30, 100)
             procs = []
             for p in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent']):
                 try:
-                    info = p.info
-                    name = info.get('name', '')
-                    user = info.get('username', '') or 'unknown'
+                    p_info = p.info
+                    name = p_info.get('name', '')
+                    user = p_info.get('username', '') or 'unknown'
                     
                     if not include_system and user.upper() in ['SYSTEM', 'LOCAL SERVICE', 'NETWORK SERVICE']:
                         continue
@@ -60,22 +55,28 @@ async def process_management(
                         continue
                         
                     procs.append({
-                        "pid": info['pid'],
+                        "pid": p_info['pid'],
                         "name": name,
                         "user": user,
-                        "cpu": info['cpu_percent'],
-                        "mem": info['memory_percent']
+                        "cpu": p_info['cpu_percent'],
+                        "mem": round(p_info['memory_percent'], 2)
                     })
                     if len(procs) >= max_processes: break
                 except (psutil.NoSuchProcess, psutil.AccessDenied): continue
             
-            return {"success": True, "action": action, "data": {"processes": procs, "count": len(procs)}}
+            data = {"processes": procs, "count": len(procs)}
+            if HAS_PREFAB and procs:
+                component = Table(
+                    title=f"Windows Processes ({len(procs)})",
+                    columns=["PID", "Name", "User", "CPU%", "Mem%"],
+                    rows=[[p["pid"], p["name"], p["user"], p["cpu"], p["mem"]] for p in procs]
+                )
 
         elif action == "info":
             if not pid: return {"success": False, "error": "PID required for info"}
             if ctx: ctx.report_progress(50, 100)
             p = psutil.Process(pid)
-            info = {
+            data = {
                 "pid": p.pid,
                 "name": p.name(),
                 "status": p.status(),
@@ -85,41 +86,56 @@ async def process_management(
                 "memory_info": p.memory_info()._asdict(),
                 "num_threads": p.num_threads(),
             }
-            return {"success": True, "action": action, "data": info}
+            if HAS_PREFAB:
+                component = Card(
+                    title=f"Process Info: {data['name']} ({pid})",
+                    content=[
+                        f"**Status**: {data['status']}",
+                        f"**Started**: {data['started']}",
+                        f"**CPU**: {data['cpu_percent']}%",
+                        f"**Threads**: {data['num_threads']}",
+                        f"**Command**: `{' '.join(data['cmdline'])}`"
+                    ]
+                )
 
         elif action == "resources":
             if ctx: ctx.report_progress(50, 100)
-            return {
-                "success": True,
-                "action": action,
-                "data": {
-                    "cpu_percent": psutil.cpu_percent(interval=None),
-                    "virtual_memory": psutil.virtual_memory()._asdict(),
-                    "swap_memory": psutil.swap_memory()._asdict(),
-                }
+            cpu = psutil.cpu_percent(interval=0.1)
+            mem = psutil.virtual_memory()
+            data = {
+                "cpu_percent": cpu,
+                "virtual_memory": mem._asdict(),
             }
+            if HAS_PREFAB:
+                component = BarChart(
+                    title="System Resource Utilization",
+                    data=[
+                        {"label": "CPU Usage", "value": cpu},
+                        {"label": "Memory Usage", "value": mem.percent}
+                    ],
+                    max_value=100,
+                    unit="%"
+                )
 
         elif action == "kill":
             if not pid: return {"success": False, "error": "PID required for kill"}
             if ctx: ctx.warning(f"TERMINATING PROCESS {pid}...")
             p = psutil.Process(pid)
             p.terminate()
-            return {"success": True, "action": action, "data": {"terminated_pid": pid}}
+            data = {"terminated_pid": pid}
+            if HAS_PREFAB:
+                component = Text(text=f"✅ Process {pid} terminated successfully.")
 
-        return {"success": False, "error": f"Unknown action: {action}"}
+        if HAS_PREFAB and component:
+            return [
+                Text(text=json.dumps({"success": True, "action": action, "data": data}, indent=2)),
+                component
+            ]
+
+        return {"success": True, "action": action, "data": data}
 
     except psutil.NoSuchProcess:
         return {"success": False, "error": f"Process {pid} not found"}
-    except psutil.AccessDenied:
-        error_msg = f"Access denied to process {pid}. Elevated privileges may be required."
-        if ctx:
-            ctx.error(error_msg)
-            try:
-                advice = await ctx.sample(f"Access denied to process {pid}. User: {psutil.Process().username()}. How to fix?", max_tokens=100)
-                if advice and advice.content:
-                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except: pass
-        return {"success": False, "error": error_msg}
     except Exception as e:
         error_msg = f"Process Error: {e}"
         if ctx: ctx.error(error_msg)

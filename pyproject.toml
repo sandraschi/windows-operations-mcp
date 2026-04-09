@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "windows-operations-mcp"
-version = "2.0.0"
+version = "14.0.1"
 description = "Windows Operations MCP - Comprehensive Windows system operations for Claude Desktop with MCPB packaging"
 readme = "README.md"
 authors = [
@@ -22,6 +22,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pywin32>=305; sys_platform == 'win32'",
     "ruff>=0.15.2",
+    "prefab-ui>=0.1.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

@@ -34,7 +34,7 @@ def create_mcpb_package():
     version = manifest.get('version', '14.0.0')
     output_file = dist_dir / f"{package_name}-{version}.mcpb"
 
-    print(f"📦 Packaging SOTA v14.0: {package_name}-{version}")
+    print(f"[BUILD] Packaging SOTA v14.0: {package_name}-{version}")
 
     # Create MCPB package
     with zipfile.ZipFile(output_file, 'w', zipfile.ZIP_DEFLATED) as zipf:

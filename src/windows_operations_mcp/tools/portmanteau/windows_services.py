@@ -1,14 +1,16 @@
-"""
-Windows Services Portmanteau - SOTA v14.0 (FastMCP 3.2+)
-Provides comprehensive Windows service management with agentic telemetry.
-"""
-
 import time
+import json
 import asyncio
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from fastmcp import Context
 from windows_operations_mcp.logging_config import get_logger
+
+try:
+    from prefab_ui import Table, Text, Card
+    HAS_PREFAB = True
+except ImportError:
+    HAS_PREFAB = False
 
 logger = get_logger(__name__)
 
@@ -19,21 +21,10 @@ async def windows_services(
     include_system_services: bool = True,
     wait_timeout: int = 30,
     ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+) -> Any:
     """
     Perform Windows service operations with comprehensive error handling and agentic telemetry.
-
-    RATIONALE:
-    Consolidates lifecycle management (Start, Stop, Restart) into a single async portmanteau.
-    Uses asyncio.to_thread for blocking pywin32 calls to maintain MCP responsiveness.
-
-    Args:
-        action: The service operation to perform.
-        service_name: Name of the target service (required for control ops).
-        filter_status: Filter by status ("running", "stopped", "all").
-        include_system_services: Include Windows/System/Microsoft services in listings.
-        wait_timeout: Timeout for state transitions (default 30s).
-        ctx: FastMCP Context for telemetry and sampling.
+    Returns: Union[Dict, ToolResult] depending on action and availability of prefab-ui.
     """
     if ctx:
         ctx.info(f"Service Op: {action} on {service_name or 'ALL'}")
@@ -43,44 +34,59 @@ async def windows_services(
         import win32service
         import win32serviceutil
 
-        if action == "list":
-            return await asyncio.to_thread(_list_services, filter_status, include_system_services, ctx)
+        data = {}
+        component = None
 
-        if not service_name:
+        if action == "list":
+            res = await asyncio.to_thread(_list_services, filter_status, include_system_services, ctx)
+            data = res["data"]
+            if HAS_PREFAB and data["services"]:
+                component = Table(
+                    title=f"Windows Services ({len(data['services'])})",
+                    columns=["Name", "Display Name", "Status"],
+                    rows=[[s["name"], s["display_name"], s["status"]] for s in data["services"]]
+                )
+
+        elif not service_name:
              return {"success": False, "error": f"service_name required for {action}"}
 
-        if action == "status":
+        elif action == "status":
             status = await asyncio.to_thread(win32serviceutil.QueryServiceStatus, service_name)
-            return {"success": True, "action": action, "data": {"name": service_name, "status": _get_status_str(status[1])}}
+            stat_str = _get_status_str(status[1])
+            data = {"name": service_name, "status": stat_str}
+            if HAS_PREFAB:
+                component = Card(
+                    title=f"Service Status: {service_name}",
+                    content=[f"**Current State**: {stat_str}"]
+                )
 
-        if action == "start":
-            if ctx: ctx.info(f"Starting {service_name}...")
-            await asyncio.to_thread(win32serviceutil.StartService, service_name)
-            return await _wait_for_status(service_name, "running", wait_timeout, ctx)
+        elif action in ["start", "stop", "restart"]:
+            if ctx: ctx.info(f"Executing {action} on {service_name}...")
+            if action == "start":
+                await asyncio.to_thread(win32serviceutil.StartService, service_name)
+            elif action == "stop":
+                await asyncio.to_thread(win32serviceutil.StopService, service_name)
+            elif action == "restart":
+                await asyncio.to_thread(win32serviceutil.RestartService, service_name)
+            
+            res = await _wait_for_status(service_name, "running" if action != "stop" else "stopped", wait_timeout, ctx)
+            data = res.get("data", {})
+            if HAS_PREFAB:
+                component = Text(text=f"✅ Service {service_name} {action}ed successfully.")
 
-        if action == "stop":
-            if ctx: ctx.info(f"Stopping {service_name}...")
-            await asyncio.to_thread(win32serviceutil.StopService, service_name)
-            return await _wait_for_status(service_name, "stopped", wait_timeout, ctx)
+        if HAS_PREFAB and component:
+            return [
+                Text(text=json.dumps({"success": True, "action": action, "data": data}, indent=2)),
+                component
+            ]
 
-        if action == "restart":
-            if ctx: ctx.info(f"Restarting {service_name}...")
-            await asyncio.to_thread(win32serviceutil.RestartService, service_name)
-            return await _wait_for_status(service_name, "running", wait_timeout, ctx)
-
-        return {"success": False, "error": f"Unknown action: {action}"}
+        return {"success": True, "action": action, "data": data}
 
     except ImportError:
         return {"success": False, "error": "pywin32 not installed on this system"}
     except Exception as e:
         error_msg = f"Service Error: {e}"
-        if ctx:
-            ctx.error(error_msg)
-            try:
-                advice = await ctx.sample(f"Windows service '{service_name}' failed {action}. Error: {e}. Analyze and suggest fix.", max_tokens=100)
-                if advice and advice.content:
-                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except: pass
+        if ctx: ctx.error(error_msg)
         return {"success": False, "error": error_msg}
     finally:
         if ctx: ctx.report_progress(100, 100)

@@ -1,4 +1,4 @@
-# 🪟 Windows Operations MCP — SOTA v14.0
+# 🪟 Windows Operations MCP — SOTA v14.0.1
 
 ### Native Windows Control Plane & Data Surgery for Agentic Ecosystems
 
