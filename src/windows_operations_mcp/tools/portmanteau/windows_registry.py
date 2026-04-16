@@ -7,9 +7,10 @@ import asyncio
 import winreg
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -22,16 +23,17 @@ HIVES = {
     "HKCR": winreg.HKEY_CLASSES_ROOT,
 }
 
+
 async def windows_registry(
     action: Literal["read", "write", "delete", "list_keys", "export", "import"],
     key_path: str,
     hive: Literal["HKLM", "HKCU", "HKU", "HKCR"] = "HKCU",
-    value_name: Optional[str] = None,
-    value_data: Optional[Any] = None,
+    value_name: str | None = None,
+    value_data: Any | None = None,
     value_type: Literal["REG_SZ", "REG_DWORD", "REG_BINARY", "REG_EXPAND_SZ", "REG_MULTI_SZ"] = "REG_SZ",
     safe_mode: bool = True,
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Perform Windows Registry operations with SOTA 'Safe Mode' auto-backups and telemetry.
 
@@ -84,11 +86,11 @@ async def windows_registry(
             return {"success": True, "action": action, "data": {"subkeys": subkeys, "values": values}}
 
         if action == "export":
-            path = await _run_reg(["export", f"{hive}\\{key_path}", value_data or "backup.reg"]) # value_data as path
+            path = await _run_reg(["export", f"{hive}\\{key_path}", value_data or "backup.reg"])  # value_data as path
             return {"success": True, "action": action, "data": {"export_path": path}}
 
         if action == "import":
-            await _run_reg(["import", key_path]) # key_path as file path for import
+            await _run_reg(["import", key_path])  # key_path as file path for import
             return {"success": True, "action": action, "data": {"status": "Imported"}}
 
         return {"success": False, "error": f"Unknown action: {action}"}
@@ -98,35 +100,37 @@ async def windows_registry(
         if ctx:
             ctx.error(error_msg)
             try:
-                advice = await ctx.sample(f"Windows Registry operation '{action}' failed on '{hive}\\{key_path}'. Error: {e}. Suggest repair.", max_tokens=100)
+                advice = await ctx.sample(
+                    f"Windows Registry operation '{action}' failed on '{hive}\\{key_path}'. Error: {e}. Suggest repair.",
+                    max_tokens=100,
+                )
                 if advice and advice.content:
                     return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
             except Exception:
                 pass
         return {"success": False, "error": error_msg}
     finally:
-        if ctx: ctx.report_progress(100, 100)
+        if ctx:
+            ctx.report_progress(100, 100)
 
-async def _auto_backup(hive: str, key_path: str, ctx: Optional[Context]) -> str:
+
+async def _auto_backup(hive: str, key_path: str, ctx: Context | None) -> str:
     """Perform auto-backup of a registry key before modification."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_dir = Path.cwd() / "backups" / "registry"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    
+
     sanitized_name = key_path.replace("\\", "_").replace("/", "_")[:128]
     backup_file = backup_dir / f"{timestamp}_{hive}_{sanitized_name}.reg"
-    
+
     await _run_reg(["export", f"{hive}\\{key_path}", str(backup_file), "/y"])
     return str(backup_file)
 
-async def _run_reg(args: List[str]) -> str:
+
+async def _run_reg(args: list[str]) -> str:
     """Run reg.exe command asynchronously."""
-    cmd = ["reg.exe"] + args
-    process = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
+    cmd = ["reg.exe", *args]
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await process.communicate()
     if process.returncode != 0:
         # Note: Exporting nested subkeys that don't exist yet might fail, which is okay for write ops.
@@ -135,9 +139,11 @@ async def _run_reg(args: List[str]) -> str:
         raise Exception(stderr.decode().strip() or stdout.decode().strip())
     return args[2] if len(args) > 2 else "Success"
 
+
 def _read_value(hive_key, path, name):
     with winreg.OpenKey(hive_key, path, 0, winreg.KEY_READ) as key:
         return winreg.QueryValueEx(key, name)
+
 
 def _write_value(hive_key, path, name, data, vtype):
     # Try to open, create if doesn't exist
@@ -145,9 +151,10 @@ def _write_value(hive_key, path, name, data, vtype):
         key = winreg.OpenKey(hive_key, path, 0, winreg.KEY_SET_VALUE)
     except FileNotFoundError:
         key = winreg.CreateKey(hive_key, path)
-    
+
     with key:
         winreg.SetValueEx(key, name, 0, vtype, data)
+
 
 def _delete_registry(hive_key, path, name=None):
     if name:
@@ -155,6 +162,7 @@ def _delete_registry(hive_key, path, name=None):
             winreg.DeleteValue(key, name)
     else:
         winreg.DeleteKey(hive_key, path)
+
 
 def _list_registry(hive_key, path):
     subkeys = []
@@ -168,7 +176,7 @@ def _list_registry(hive_key, path):
                 i += 1
         except OSError:
             pass
-        
+
         # Enumerate values
         try:
             i = 0
@@ -180,11 +188,13 @@ def _list_registry(hive_key, path):
             pass
     return subkeys, values
 
+
 def _vtype_name(vtype: int) -> str:
     for name in dir(winreg):
         if name.startswith("REG_") and getattr(winreg, name) == vtype:
             return name
     return str(vtype)
+
 
 def register_windows_registry(mcp) -> None:
     """Register the modernized Windows registry tool."""

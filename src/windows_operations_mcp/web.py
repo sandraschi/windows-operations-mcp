@@ -1,12 +1,16 @@
-import psutil
 import platform
-from fastapi import FastAPI, Body, Depends, HTTPException
+
+import psutil
+from fastapi import Body, Depends, FastAPI, HTTPException
 from fastmcp import FastMCP
+
 from .ai import AIRouter
+
 
 async def authenticate():
     """Simple standard authentication dependency placeholder."""
     return "sandra"
+
 
 def setup_webapp(app: FastAPI, mcp_app: FastMCP):
     """Setup standard SOTA web endpoints for Windows Operations Hub."""
@@ -19,7 +23,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
             "status": "healthy",
             "service": "windows-operations-mcp",
             "version": "2.0.0",
-            "platform": platform.system()
+            "platform": platform.system(),
         }
 
     @app.get("/api/status")
@@ -31,7 +35,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
             "platform": platform.system(),
             "release": platform.release(),
             "cpu_count": psutil.cpu_count(),
-            "memory_total": psutil.virtual_memory().total
+            "memory_total": psutil.virtual_memory().total,
         }
 
     @app.get("/api/system-stats")
@@ -59,7 +63,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
                 procs.append(info)
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 continue
-        
+
         # Sort by CPU usage and take top 10
         sorted_procs = sorted(procs, key=lambda x: x["cpu_percent"], reverse=True)[:10]
         return {"processes": sorted_procs}
@@ -75,9 +79,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
         return {"workflows": workflows}
 
     @app.post("/api/chat")
-    async def chat(
-        query: str = Body(..., embed=True), user: str = Depends(authenticate)
-    ):
+    async def chat(query: str = Body(..., embed=True), user: str = Depends(authenticate)):
         try:
             response = await ai_router.process_command(query)
             return response

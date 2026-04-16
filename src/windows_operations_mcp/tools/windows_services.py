@@ -5,13 +5,11 @@ This module provides comprehensive Windows services management functionality
 including listing, starting, stopping, configuring, and troubleshooting services.
 """
 
-import winreg
 import time
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+from typing import Any
 
-from ..logging_config import get_logger
 from ..decorators import tool
+from ..logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -29,6 +27,7 @@ SERVICE_AUTO_START = 2
 SERVICE_DEMAND_START = 3
 SERVICE_DISABLED = 4
 
+
 def _get_service_status_name(status_code: int) -> str:
     """Convert service status code to readable name."""
     status_map = {
@@ -38,18 +37,16 @@ def _get_service_status_name(status_code: int) -> str:
         SERVICE_RUNNING: "Running",
         SERVICE_CONTINUE_PENDING: "Continue Pending",
         SERVICE_PAUSE_PENDING: "Pause Pending",
-        SERVICE_PAUSED: "Paused"
+        SERVICE_PAUSED: "Paused",
     }
     return status_map.get(status_code, f"Unknown ({status_code})")
 
+
 def _get_startup_type_name(startup_type: int) -> str:
     """Convert startup type code to readable name."""
-    startup_map = {
-        SERVICE_AUTO_START: "Automatic",
-        SERVICE_DEMAND_START: "Manual",
-        SERVICE_DISABLED: "Disabled"
-    }
+    startup_map = {SERVICE_AUTO_START: "Automatic", SERVICE_DEMAND_START: "Manual", SERVICE_DISABLED: "Disabled"}
     return startup_map.get(startup_type, f"Unknown ({startup_type})")
+
 
 @tool(
     name="list_windows_services",
@@ -58,17 +55,14 @@ def _get_startup_type_name(startup_type: int) -> str:
         "filter_status": {
             "type": "string",
             "description": "Filter by service status (running, stopped, all)",
-            "default": "all"
+            "default": "all",
         },
-        "filter_name": {
-            "type": "string",
-            "description": "Filter by service name (partial match)"
-        },
+        "filter_name": {"type": "string", "description": "Filter by service name (partial match)"},
         "include_system_services": {
             "type": "boolean",
             "description": "Include system services in results",
-            "default": True
-        }
+            "default": True,
+        },
     },
     required=[],
     returns={
@@ -77,15 +71,13 @@ def _get_startup_type_name(startup_type: int) -> str:
             "success": {"type": "boolean"},
             "services": {"type": "array"},
             "total_count": {"type": "integer"},
-            "filtered_count": {"type": "integer"}
-        }
-    }
+            "filtered_count": {"type": "integer"},
+        },
+    },
 )
 def list_windows_services(
-    filter_status: str = "all",
-    filter_name: Optional[str] = None,
-    include_system_services: bool = True
-) -> Dict[str, Any]:
+    filter_status: str = "all", filter_name: str | None = None, include_system_services: bool = True
+) -> dict[str, Any]:
     """
     List Windows services with optional filtering.
 
@@ -112,7 +104,7 @@ def list_windows_services(
                 display_name = service[1]
 
                 # Skip system services if not requested
-                if not include_system_services and service_name.startswith(('Win', 'W32', 'Rpc', 'Net')):
+                if not include_system_services and service_name.startswith(("Win", "W32", "Rpc", "Net")):
                     continue
 
                 # Get service status
@@ -124,7 +116,11 @@ def list_windows_services(
                     status_name = "Unknown"
 
                 # Apply name filter first
-                if filter_name and filter_name.lower() not in service_name.lower() and filter_name.lower() not in display_name.lower():
+                if (
+                    filter_name
+                    and filter_name.lower() not in service_name.lower()
+                    and filter_name.lower() not in display_name.lower()
+                ):
                     continue
 
                 # Get additional service info
@@ -143,49 +139,38 @@ def list_windows_services(
                     elif filter_status == "stopped" and status != SERVICE_STOPPED:
                         continue
 
-                services.append({
-                    "name": service_name,
-                    "display_name": display_name,
-                    "status": status_name,
-                    "status_code": status,
-                    "startup_type": startup_name,
-                    "startup_code": startup_type
-                })
+                services.append(
+                    {
+                        "name": service_name,
+                        "display_name": display_name,
+                        "status": status_name,
+                        "status_code": status,
+                        "startup_type": startup_name,
+                        "startup_code": startup_type,
+                    }
+                )
 
         finally:
             win32service.CloseServiceHandle(manager)
 
-        return {
-            "success": True,
-            "services": services,
-            "total_count": len(services),
-            "filtered_count": len(services)
-        }
+        return {"success": True, "services": services, "total_count": len(services), "filtered_count": len(services)}
 
     except ImportError:
-        return {
-            "success": False,
-            "error": "pywin32 not available. Install with: pip install pywin32"
-        }
+        return {"success": False, "error": "pywin32 not available. Install with: pip install pywin32"}
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to list services: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to list services: {e!s}"}
+
 
 @tool(
     name="start_windows_service",
     description="Start a Windows service",
     parameters={
-        "service_name": {
-            "type": "string",
-            "description": "Name of the service to start"
-        },
+        "service_name": {"type": "string", "description": "Name of the service to start"},
         "wait_timeout": {
             "type": "integer",
             "description": "Maximum time to wait for service to start (seconds)",
-            "default": 30
-        }
+            "default": 30,
+        },
     },
     required=["service_name"],
     returns={
@@ -193,11 +178,11 @@ def list_windows_services(
         "properties": {
             "success": {"type": "boolean"},
             "message": {"type": "string"},
-            "final_status": {"type": "string"}
-        }
-    }
+            "final_status": {"type": "string"},
+        },
+    },
 )
-def start_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str, Any]:
+def start_windows_service(service_name: str, wait_timeout: int = 30) -> dict[str, Any]:
     """
     Start a Windows service.
 
@@ -223,7 +208,7 @@ def start_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str
                     return {
                         "success": True,
                         "message": f"Service '{service_name}' started successfully",
-                        "final_status": "Running"
+                        "final_status": "Running",
                     }
                 elif status == SERVICE_START_PENDING:
                     time.sleep(1)  # Wait 1 second before checking again
@@ -231,38 +216,27 @@ def start_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str
                     return {
                         "success": False,
                         "message": f"Service '{service_name}' failed to start (status: {_get_service_status_name(status)})",
-                        "final_status": _get_service_status_name(status)
+                        "final_status": _get_service_status_name(status),
                     }
             except Exception as e:
-                return {
-                    "success": False,
-                    "message": f"Error checking service status: {str(e)}"
-                }
+                return {"success": False, "message": f"Error checking service status: {e!s}"}
 
-        return {
-            "success": False,
-            "message": f"Service '{service_name}' start timed out after {wait_timeout} seconds"
-        }
+        return {"success": False, "message": f"Service '{service_name}' start timed out after {wait_timeout} seconds"}
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to start service '{service_name}': {str(e)}"
-        }
+        return {"success": False, "message": f"Failed to start service '{service_name}': {e!s}"}
+
 
 @tool(
     name="stop_windows_service",
     description="Stop a Windows service",
     parameters={
-        "service_name": {
-            "type": "string",
-            "description": "Name of the service to stop"
-        },
+        "service_name": {"type": "string", "description": "Name of the service to stop"},
         "wait_timeout": {
             "type": "integer",
             "description": "Maximum time to wait for service to stop (seconds)",
-            "default": 30
-        }
+            "default": 30,
+        },
     },
     required=["service_name"],
     returns={
@@ -270,11 +244,11 @@ def start_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str
         "properties": {
             "success": {"type": "boolean"},
             "message": {"type": "string"},
-            "final_status": {"type": "string"}
-        }
-    }
+            "final_status": {"type": "string"},
+        },
+    },
 )
-def stop_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str, Any]:
+def stop_windows_service(service_name: str, wait_timeout: int = 30) -> dict[str, Any]:
     """
     Stop a Windows service.
 
@@ -300,7 +274,7 @@ def stop_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str,
                     return {
                         "success": True,
                         "message": f"Service '{service_name}' stopped successfully",
-                        "final_status": "Stopped"
+                        "final_status": "Stopped",
                     }
                 elif status == SERVICE_STOP_PENDING:
                     time.sleep(1)  # Wait 1 second before checking again
@@ -308,43 +282,32 @@ def stop_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str,
                     return {
                         "success": False,
                         "message": f"Service '{service_name}' failed to stop (status: {_get_service_status_name(status)})",
-                        "final_status": _get_service_status_name(status)
+                        "final_status": _get_service_status_name(status),
                     }
             except Exception as e:
-                return {
-                    "success": False,
-                    "message": f"Error checking service status: {str(e)}"
-                }
+                return {"success": False, "message": f"Error checking service status: {e!s}"}
 
-        return {
-            "success": False,
-            "message": f"Service '{service_name}' stop timed out after {wait_timeout} seconds"
-        }
+        return {"success": False, "message": f"Service '{service_name}' stop timed out after {wait_timeout} seconds"}
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to stop service '{service_name}': {str(e)}"
-        }
+        return {"success": False, "message": f"Failed to stop service '{service_name}': {e!s}"}
+
 
 @tool(
     name="restart_windows_service",
     description="Restart a Windows service",
     parameters={
-        "service_name": {
-            "type": "string",
-            "description": "Name of the service to restart"
-        },
+        "service_name": {"type": "string", "description": "Name of the service to restart"},
         "stop_timeout": {
             "type": "integer",
             "description": "Maximum time to wait for service to stop (seconds)",
-            "default": 30
+            "default": 30,
         },
         "start_timeout": {
             "type": "integer",
             "description": "Maximum time to wait for service to start (seconds)",
-            "default": 30
-        }
+            "default": 30,
+        },
     },
     required=["service_name"],
     returns={
@@ -352,15 +315,11 @@ def stop_windows_service(service_name: str, wait_timeout: int = 30) -> Dict[str,
         "properties": {
             "success": {"type": "boolean"},
             "message": {"type": "string"},
-            "final_status": {"type": "string"}
-        }
-    }
+            "final_status": {"type": "string"},
+        },
+    },
 )
-def restart_windows_service(
-    service_name: str,
-    stop_timeout: int = 30,
-    start_timeout: int = 30
-) -> Dict[str, Any]:
+def restart_windows_service(service_name: str, stop_timeout: int = 30, start_timeout: int = 30) -> dict[str, Any]:
     """
     Restart a Windows service.
 
@@ -373,8 +332,6 @@ def restart_windows_service(
         Dictionary with operation result
     """
     try:
-        import win32serviceutil
-
         # Stop the service first
         stop_result = stop_windows_service(service_name, stop_timeout)
         if not stop_result["success"]:
@@ -388,10 +345,8 @@ def restart_windows_service(
         return start_result
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to restart service '{service_name}': {str(e)}"
-        }
+        return {"success": False, "message": f"Failed to restart service '{service_name}': {e!s}"}
+
 
 def register_windows_services_tools(mcp):
     """Register Windows services management tools with FastMCP."""
@@ -401,7 +356,7 @@ def register_windows_services_tools(mcp):
     mcp.tool(stop_windows_service)
     mcp.tool(restart_windows_service)
 
-    logger.info("windows_services_tools_registered", tools=[
-        "list_windows_services", "start_windows_service",
-        "stop_windows_service", "restart_windows_service"
-    ])
+    logger.info(
+        "windows_services_tools_registered",
+        tools=["list_windows_services", "start_windows_service", "stop_windows_service", "restart_windows_service"],
+    )

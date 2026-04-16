@@ -1,13 +1,11 @@
-import unittest
-import tempfile
-import os
 import shutil
-from pathlib import Path
-import sys
+import tempfile
+import unittest
+
+from windows_operations_mcp.__init__ import __version__
 
 # Add the project root to Python path
 from windows_operations_mcp.mcp_server import register_all_tools
-from windows_operations_mcp.__init__ import __version__
 
 
 class TestMCPServer(unittest.TestCase):
@@ -47,7 +45,9 @@ class TestMainModule(unittest.TestCase):
     def test_main_import(self):
         """Test main module can be imported."""
         try:
-            from windows_operations_mcp import main
+            import importlib
+
+            importlib.import_module("windows_operations_mcp.main")
             self.assertTrue(True)  # Import successful
         except ImportError:
             self.fail("Main module import failed")

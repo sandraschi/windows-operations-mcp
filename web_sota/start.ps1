@@ -20,7 +20,7 @@ Write-Host "Starting Python backend on port $BackendPort ..." -ForegroundColor C
 
 # Use TRIPLE backtick to ensure $env:PYTHONPATH reaches the REAL shell
 $srcPath = Join-Path $ProjectRoot "src"
-$backendCmd = "`$env:PYTHONPATH = '$srcPath;$PSScriptRoot'; Set-Location '$PSScriptRoot'; uv run uvicorn windows_operations_mcp.server:app --host 127.0.0.1 --port $BackendPort --log-level info"
+$backendCmd = "`$env:PYTHONPATH = '$srcPath;$ProjectRoot'; Set-Location '$ProjectRoot'; uv run uvicorn windows_operations_mcp.server:app --host 127.0.0.1 --port $BackendPort --log-level info"
 
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WindowStyle Normal
 

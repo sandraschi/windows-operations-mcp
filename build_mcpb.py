@@ -4,9 +4,10 @@ Build script for Windows Operations MCPB package - SOTA v14.0
 IMPORTANT: MCPB packages contain NO external dependencies - handled by MCPB runtime.
 This script packages all tools, prompts, and skills into the .mcpb bundle.
 """
+
 import json
-import zipfile
 import os
+import zipfile
 from pathlib import Path
 
 
@@ -27,17 +28,17 @@ def create_mcpb_package():
         print("[ERROR] MCPB manifest not found in mcpb/")
         return False
 
-    with open(manifest_path, 'r', encoding='utf-8') as f:
+    with open(manifest_path, encoding="utf-8") as f:
         manifest = json.load(f)
 
-    package_name = manifest.get('name', 'windows-operations-mcp')
-    version = manifest.get('version', '14.0.0')
+    package_name = manifest.get("name", "windows-operations-mcp")
+    version = manifest.get("version", "14.0.0")
     output_file = dist_dir / f"{package_name}-{version}.mcpb"
 
     print(f"[BUILD] Packaging SOTA v14.0: {package_name}-{version}")
 
     # Create MCPB package
-    with zipfile.ZipFile(output_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(output_file, "w", zipfile.ZIP_DEFLATED) as zipf:
         # 1. Write the manifest (to the root of the zip)
         zipf.writestr("manifest.json", json.dumps(manifest, indent=2))
 
@@ -45,7 +46,7 @@ def create_mcpb_package():
         if src_dir.exists():
             for root, _, files in os.walk(src_dir):
                 for file in files:
-                    if file.endswith('.py') or file.endswith('.md') or file.endswith('.json'):
+                    if file.endswith(".py") or file.endswith(".md") or file.endswith(".json"):
                         file_path = Path(root) / file
                         # Arcname should be relative to project_root to preserve src/ prefix
                         arcname = file_path.relative_to(project_root)
@@ -68,16 +69,16 @@ def create_mcpb_package():
             if doc_path.exists():
                 zipf.write(str(doc_path), doc)
 
-    print(f"\n[SUCCESS] MCPB package created successfully!")
+    print("\n[SUCCESS] MCPB package created successfully!")
     print(f"Package: {output_file}")
     print(f"Size: {os.path.getsize(output_file) / 1024:.2f} KB")
-    
+
     # List contents
     print("\nPackage contents (top level):")
-    with zipfile.ZipFile(output_file, 'r') as zipf:
+    with zipfile.ZipFile(output_file, "r") as zipf:
         top_level = set()
         for file in zipf.namelist():
-            parts = file.split('/')
+            parts = file.split("/")
             top_level.add(parts[0])
         for tl in sorted(list(top_level)):
             print(f"- {tl}")

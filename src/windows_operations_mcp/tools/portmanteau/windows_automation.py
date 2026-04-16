@@ -4,25 +4,27 @@ Provides Scheduled Task management and deep WMI system introspection for Windows
 """
 
 import asyncio
-import os
-import subprocess
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 async def windows_automation(
     action: Literal["list_tasks", "create_task", "delete_task", "run_task", "wmi_query"],
-    task_name: Optional[str] = None,
-    task_path: Optional[str] = None,
-    schedule: Literal["MINUTE", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "ONCE", "ONLOGON", "ONIDLE", "ONEVENT"] = "DAILY",
-    start_time: Optional[str] = "12:00",
-    wmi_class: Optional[str] = "Win32_OperatingSystem",
-    wmi_namespace: Optional[str] = "root\\cimv2",
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    task_name: str | None = None,
+    task_path: str | None = None,
+    schedule: Literal[
+        "MINUTE", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "ONCE", "ONLOGON", "ONIDLE", "ONEVENT"
+    ] = "DAILY",
+    start_time: str | None = "12:00",
+    wmi_class: str | None = "Win32_OperatingSystem",
+    wmi_namespace: str | None = "root\\cimv2",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Perform Windows Automation operations: Scheduled Tasks and WMI Queries.
 
@@ -46,38 +48,59 @@ async def windows_automation(
 
     try:
         if action == "list_tasks":
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             tasks = await _run_cmd(["schtasks.exe", "/query", "/fo", "LIST"])
             return {"success": True, "action": action, "data": {"raw_tasks": tasks}}
 
         if action == "create_task":
             if not task_name or not task_path:
                 return {"success": False, "error": "Task name and path required for create_task"}
-            if ctx: ctx.report_progress(50, 100)
-            await _run_cmd(["schtasks.exe", "/create", "/tn", task_name, "/tr", f'"{task_path}"', "/sc", schedule, "/st", start_time, "/f"])
+            if ctx:
+                ctx.report_progress(50, 100)
+            await _run_cmd(
+                [
+                    "schtasks.exe",
+                    "/create",
+                    "/tn",
+                    task_name,
+                    "/tr",
+                    f'"{task_path}"',
+                    "/sc",
+                    schedule,
+                    "/st",
+                    start_time,
+                    "/f",
+                ]
+            )
             return {"success": True, "action": action, "data": {"status": f"Task '{task_name}' created."}}
 
         if action == "delete_task":
             if not task_name:
                 return {"success": False, "error": "Task name required for delete_task"}
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             await _run_cmd(["schtasks.exe", "/delete", "/tn", task_name, "/f"])
             return {"success": True, "action": action, "data": {"status": f"Task '{task_name}' deleted."}}
 
         if action == "run_task":
             if not task_name:
                 return {"success": False, "error": "Task name required for run_task"}
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             await _run_cmd(["schtasks.exe", "/run", "/tn", task_name])
             return {"success": True, "action": action, "data": {"status": f"Task '{task_name}' triggered."}}
 
         if action == "wmi_query":
             if not wmi_class:
                 return {"success": False, "error": "WMI class required for wmi_query"}
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             # Using wmic.exe for broad compatibility, but PowerShell Get-CimInstance is more modern.
             # We'll stick to native wmic for SOTA v14.0 industrial reliability.
-            result = await _run_cmd(["wmic.exe", f"/namespace:{wmi_namespace}", "path", wmi_class, "get", "/format:list"])
+            result = await _run_cmd(
+                ["wmic.exe", f"/namespace:{wmi_namespace}", "path", wmi_class, "get", "/format:list"]
+            )
             return {"success": True, "action": action, "data": {"wmi_result": result}}
 
         return {"success": False, "error": f"Unknown action: {action}"}
@@ -87,26 +110,28 @@ async def windows_automation(
         if ctx:
             ctx.error(error_msg)
             try:
-                advice = await ctx.sample(f"Windows Automation operation '{action}' failed. Error: {e}. Suggest fix.", max_tokens=100)
+                advice = await ctx.sample(
+                    f"Windows Automation operation '{action}' failed. Error: {e}. Suggest fix.", max_tokens=100
+                )
                 if advice and advice.content:
                     return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except: pass
+            except:
+                pass
         return {"success": False, "error": error_msg}
     finally:
-        if ctx: ctx.report_progress(100, 100)
+        if ctx:
+            ctx.report_progress(100, 100)
 
-async def _run_cmd(cmd: List[str]) -> str:
+
+async def _run_cmd(cmd: list[str]) -> str:
     """Run a system command asynchronously."""
     # Ensure command string parts are properly handled
-    process = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await process.communicate()
     if process.returncode != 0:
         raise Exception(stderr.decode().strip() or stdout.decode().strip())
     return stdout.decode().strip()
+
 
 def register_windows_automation(mcp) -> None:
     """Register the modernized Windows automation tool."""

@@ -5,21 +5,23 @@ Provides comprehensive Windows CLI operations with agentic sampling and telemetr
 
 import asyncio
 import time
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal
 
-from fastmcp import Context, FastMCP
+from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 async def command_execution(
     action: Literal["powershell", "cmd"],
     command: str,
-    working_directory: Optional[str] = None,
+    working_directory: str | None = None,
     timeout_seconds: int = 30,
     max_output_size: int = 10000,
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Execute Windows commands with reliable output capture and agentic sampling.
 
@@ -63,17 +65,25 @@ async def command_execution(
         # Run in thread pool to prevent blocking
         if ctx:
             ctx.report_progress(30, 100)
-            
-        result = await asyncio.to_thread(
-            executor.execute,
-            command=command,
-            working_directory=working_directory if action == "cmd" else None,
-            working_dir=working_directory if action == "powershell" else None,
-            timeout=timeout_seconds,
-        )
+
+        # CMDExecutor uses 'working_directory', PowerShellExecutor uses 'working_dir'
+        if action == "cmd":
+            result = await asyncio.to_thread(
+                executor.execute,
+                command=command,
+                working_directory=working_directory,
+                timeout=timeout_seconds,
+            )
+        else:
+            result = await asyncio.to_thread(
+                executor.execute,
+                command=command,
+                working_dir=working_directory,
+                timeout=timeout_seconds,
+            )
 
         execution_time = time.perf_counter() - start_time
-        
+
         response = {
             "success": result.get("success", False),
             "action": action,
@@ -113,6 +123,7 @@ async def command_execution(
         if ctx:
             ctx.error(error_msg)
         return {"success": False, "error": error_msg, "execution_time": time.perf_counter() - start_time}
+
 
 def register_command_execution(mcp) -> None:
     """Register the modernized command execution tool."""

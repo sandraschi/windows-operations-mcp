@@ -1,4 +1,4 @@
-# Windows Operations MCP (SOTA v14.0.1) Gold Standard
+# Windows Operations MCP (SOTA v14.1.0) Gold Standard
 
 A specialized Windows system orchestration platform and High-Fidelity Data Surgery Hub built with FastMCP 3.2.0. Stabilized for industrial use (April 2026).
 
@@ -12,6 +12,18 @@ Industrial-grade tools for native Windows hardening and introspection.
 ### 2. Local Account Security (`windows_accounts`)
 - **Users**: List, add, remove, and password management.
 - **Groups**: Comprehensive membership control for PoLP enforcement.
+- **Audit**: Group membership enumeration for security introspection.
+
+### 4. Networking & Perimeter (`windows_network`)
+- **Firewall**: Native rules management (`netsh advfirewall`).
+- **Diag**: DNS flushing and native IP/adapter introspection.
+
+### 5. Environment Surgery (`windows_environment`)
+- **Persistence**: Permanent User/System variable management.
+- **Broadcast**: System-wide synchronization via `WM_SETTINGCHANGE`.
+
+### 6. App & Package Management (`windows_apps`)
+- **Bloatware**: Listing and removal of AppX/Store packages.
 
 ### 3. Automation & Introspection (`windows_automation`)
 - **Tasks**: Lifecycle management for `schtasks.exe`.

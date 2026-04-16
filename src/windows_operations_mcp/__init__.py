@@ -1,44 +1,40 @@
 """
-Windows Operations MCP - FastMCP 2.12.3 Implementation
+Windows Operations MCP - FastMCP 3.2 SOTA Implementation
 
-A comprehensive Windows system operations server for Claude Desktop.
-Provides reliable PowerShell, CMD, file operations, and system monitoring.
+Comprehensive Windows system operations server for Claude Desktop.
+Full FastMCP 3.2 conformance: sampling, skills, prompts, prefab UI,
+agentic workflows, SkillsDirectoryProvider.
 """
 
-__version__ = "0.2.0"
-__author__ = "Sandra"
-__email__ = "sandra@example.com"
+__version__ = "14.2.0"
+__author__ = "Sandra Schipal"
+__email__ = "sandra@schipal.at"
 
 import os
 import sys
 from pathlib import Path
 
-# Add the package directory to the Python path
 PACKAGE_DIR = Path(__file__).parent.absolute()
 if str(PACKAGE_DIR) not in sys.path:
     sys.path.insert(0, str(PACKAGE_DIR))
 
-# Import core components
-from .mcp_server import mcp, register_all_tools
-from .logging_config import setup_logging, get_logger
+from .logging_config import get_logger, setup_logging  # noqa: E402
+from .mcp_server import mcp, register_all_tools  # noqa: E402
 
-# Initialize logging with default configuration
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 setup_logging(level=log_level)
 logger = get_logger(__name__)
 
-# Export public API
 __all__ = [
+    "get_logger",
+    "logger",
     "mcp",
     "register_all_tools",
-    "get_logger",
-    "logger"
 ]
 
-# Log package initialization
 logger.info(
     f"Windows Operations MCP v{__version__} initialized",
     log_level=log_level,
     python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-    platform=sys.platform
+    platform=sys.platform,
 )

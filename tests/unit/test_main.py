@@ -1,13 +1,9 @@
 import unittest
-import tempfile
-import os
-import shutil
-from pathlib import Path
-import sys
+
+from windows_operations_mcp.__init__ import __version__
 
 # Add the project root to Python path
 from windows_operations_mcp.main import main
-from windows_operations_mcp.__init__ import __version__
 
 
 class TestMain(unittest.TestCase):
@@ -20,6 +16,7 @@ class TestMain(unittest.TestCase):
     def test_main_function_signature(self):
         """Test main function signature."""
         import inspect
+
         sig = inspect.signature(main)
         # Main function exists and is callable
         self.assertTrue(callable(main))
@@ -30,7 +27,7 @@ class TestMain(unittest.TestCase):
         self.assertIsNotNone(__version__)
         self.assertIsInstance(__version__, str)
         # Should follow semantic versioning
-        self.assertTrue(len(__version__.split('.')) >= 2)
+        self.assertTrue(len(__version__.split(".")) >= 2)
 
 
 class TestInitModule(unittest.TestCase):
@@ -41,7 +38,7 @@ class TestInitModule(unittest.TestCase):
         from windows_operations_mcp import __init__ as init_module
 
         # Test that key attributes exist
-        self.assertTrue(hasattr(init_module, '__version__'))
+        self.assertTrue(hasattr(init_module, "__version__"))
 
     def test_init_version_format(self):
         """Test version format in __init__."""
@@ -50,7 +47,7 @@ class TestInitModule(unittest.TestCase):
         version = init_module.__version__
         self.assertIsInstance(version, str)
         # Should be semantic version format
-        parts = version.split('.')
+        parts = version.split(".")
         self.assertTrue(len(parts) >= 2)
         for part in parts:
             self.assertTrue(part.isdigit())

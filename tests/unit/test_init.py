@@ -1,14 +1,8 @@
-import unittest
 import tempfile
-import os
-from pathlib import Path
-import sys
+import unittest
 
 # Add the project root to Python path
-from windows_operations_mcp import (
-    mcp,
-    register_all_tools
-)
+from windows_operations_mcp import mcp, register_all_tools
 
 
 class TestInitModule(unittest.TestCase):
@@ -21,13 +15,14 @@ class TestInitModule(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_mcp_import(self):
         """Test mcp import."""
         self.assertIsNotNone(mcp)
         # FastMCP instance should be available
-        self.assertTrue(hasattr(mcp, 'tool'))
+        self.assertTrue(hasattr(mcp, "tool"))
 
     def test_register_all_tools_import(self):
         """Test register_all_tools import."""

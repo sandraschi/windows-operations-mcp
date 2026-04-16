@@ -4,6 +4,40 @@ All notable changes to the `windows-operations-mcp` project will be documented i
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **`mcp_server.py`**: Lifespan typing uses `collections.abc.AsyncGenerator`; registration comments aligned with **FastMCP 3.2+** (prompts, skills, prefab).
+
+---
+
+## [14.2.0] - 2026-04-09
+
+### FastMCP 3.2 Full Conformance
+- **SkillsDirectoryProvider**: Skills now served via proper `skill://windows-expert/SKILL.md` URI (FastMCP 3.1+ skills provider) — replaces manual `resource://` workaround.
+- **Prefab UI tools** (`system_health_card`, `process_list_card`): New `tools/prefab/` module with `@mcp.tool(app=True)` + `ToolResult` + `PrefabApp` — rich in-chat cards for system health and process data. Guarded by `WINOPS_PREFAB_APPS` env var; install with `uv sync --extra apps`.
+- **`prefab-ui` made optional**: Moved from core deps to `[project.optional-dependencies] apps`. Core server no longer fails if prefab-ui absent.
+- **Prompts hardened**: Added `name=`, `description=`, `tags=` to all four `@mcp.prompt()` decorators — required for proper MCP prompt discovery/listing.
+- **`server.py`**: `mcp.http_app()` → `mcp.asgi()` (former removed in FastMCP 3.2); switched from FastAPI to Starlette root (fleet standard).
+- **`autonomous_troubleshooter`**: Was a 4-line stub (implementation honesty violation). Replaced with real 3-phase implementation: Event Log scan → process list → SEP-1577 root cause sampling.
+- **`resources.py`**: Added `llms-full.txt` resource; kept legacy `resource://windows/expert-skill` for back-compat.
+- **`command_execution.py`** (bug fix): Executor called with both `working_directory=` and `working_dir=` simultaneously regardless of action type — caused `PowerShellExecutor.execute() got an unexpected keyword argument 'working_directory'`. Fixed by splitting into action-specific branches.
+- **`__init__.py`**: Version synced to 14.2.0; stale FastMCP 2.12.3 reference removed.
+
+---
+
+## 🏆 [14.1.0] - 2026-04-09
+
+### 🌐 Windows Expansion (Networking & Environment)
+- **Networking**: New `windows_network` portmanteau for native firewall orchestration (`netsh`) and adapter diagnostics.
+- **Environment Surgery**: New `windows_environment` tool for persistent variable management with system-wide change broadcasting.
+- **App Management**: New `windows_apps` tool for AppX/Store package management and automated bloatware removal.
+
+### 🛡️ Tool Hardening & Extensions
+- **Event Log Completion**: Implemented the previously placeholder `export` action and added `list` for channel discovery.
+- **Group Auditing**: Added `get_group_members` to `windows_accounts` for deeper security introspection.
+- **Registration Stabilization**: Expanded the core registry to include all 18 portmanteau tool modules for full SOTA compliance.
+
 ## 🏆 [14.0.1] - 2026-04-09
 
 ### 🛡️ Gold Standard Stabilization

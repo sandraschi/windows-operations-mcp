@@ -1,7 +1,7 @@
-'''MCP server entry point for Windows Operations MCP.
+"""MCP server entry point for Windows Operations MCP.
 
 This is the MCPB-compliant server wrapper.
-'''
+"""
 
 import sys
 from pathlib import Path
@@ -14,6 +14,5 @@ try:
 except ImportError:
     from windows_operations_mcp.server import main
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

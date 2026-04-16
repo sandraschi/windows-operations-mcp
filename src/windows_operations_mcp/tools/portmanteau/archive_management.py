@@ -8,21 +8,23 @@ import os
 import tarfile
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 async def archive_management(
     action: Literal["list", "extract", "create", "add_file", "expand_cab"],
     path: str,
-    target_dir: Optional[str] = None,
-    source_files: Optional[List[str]] = None,
+    target_dir: str | None = None,
+    source_files: list[str] | None = None,
     archive_type: Literal["zip", "tar", "gztar"] = "zip",
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Perform Windows archive management operations with agentic telemetry.
 
@@ -88,7 +90,10 @@ async def archive_management(
         if ctx:
             ctx.error(error_msg)
             try:
-                advice = await ctx.sample(f"Archive operation '{action}' failed on '{path}'. Error: {e}. Suggest alternative method.", max_tokens=100)
+                advice = await ctx.sample(
+                    f"Archive operation '{action}' failed on '{path}'. Error: {e}. Suggest alternative method.",
+                    max_tokens=100,
+                )
                 if advice and advice.content:
                     return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
             except Exception:
@@ -98,29 +103,32 @@ async def archive_management(
         if ctx:
             ctx.report_progress(100, 100)
 
-def _list_archive(path: str) -> List[str]:
+
+def _list_archive(path: str) -> list[str]:
     if zipfile.is_zipfile(path):
-        with zipfile.ZipFile(path, 'r') as z:
+        with zipfile.ZipFile(path, "r") as z:
             return sorted(z.namelist())
     if tarfile.is_tarfile(path):
-        with tarfile.open(path, 'r:*') as t:
+        with tarfile.open(path, "r:*") as t:
             return sorted(t.getnames())
     raise ValueError("File is not a supported ZIP or TAR archive.")
+
 
 def _extract_archive(path: str, target_dir: str) -> None:
     Path(target_dir).mkdir(parents=True, exist_ok=True)
     if zipfile.is_zipfile(path):
-        with zipfile.ZipFile(path, 'r') as z:
+        with zipfile.ZipFile(path, "r") as z:
             z.extractall(target_dir)
     elif tarfile.is_tarfile(path):
-        with tarfile.open(path, 'r:*') as t:
+        with tarfile.open(path, "r:*") as t:
             t.extractall(target_dir)
     else:
         raise ValueError("File is not a supported ZIP or TAR archive.")
 
-def _create_archive(path: str, source_files: List[str], archive_type: str) -> None:
+
+def _create_archive(path: str, source_files: list[str], archive_type: str) -> None:
     if archive_type == "zip":
-        with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
             for f in source_files:
                 f_path = Path(f)
                 if f_path.is_file():
@@ -135,26 +143,25 @@ def _create_archive(path: str, source_files: List[str], archive_type: str) -> No
             for f in source_files:
                 t.add(f, arcname=os.path.basename(f))
 
-def _add_to_archive(path: str, source_files: List[str]) -> None:
+
+def _add_to_archive(path: str, source_files: list[str]) -> None:
     if zipfile.is_zipfile(path):
-        with zipfile.ZipFile(path, 'a') as z:
+        with zipfile.ZipFile(path, "a") as z:
             for f in source_files:
                 z.write(f, os.path.basename(f))
     else:
         raise ValueError("Action 'add_file' is only supported for ZIP archives currently.")
 
+
 async def _run_expand(cab_path: str, target_dir: str) -> None:
     """Expand a CAB file using Windows native expand.exe."""
     Path(target_dir).mkdir(parents=True, exist_ok=True)
     cmd = ["expand.exe", cab_path, "-F:*", target_dir]
-    process = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await process.communicate()
     if process.returncode != 0:
         raise Exception(stderr.decode().strip() or stdout.decode().strip())
+
 
 def register_archive_management(mcp) -> None:
     """Register the modernized archive management tool."""

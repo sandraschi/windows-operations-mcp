@@ -23,6 +23,15 @@ This skill provides the operational logic and safe-mode patterns for managing Wi
 ### 2. Local Account Management (`windows_accounts`)
 - **Pattern**: List users before adding or modifying passwords.
 - **Groups**: Use `manage_group` to enforce the Principle of Least Privilege (PoLP).
+- **Audit**: Run `get_group_members` on the "Administrators" group to identify SID-based privilege creep.
+
+### 3. Networking & Perimeter (`windows_network`)
+- **Firewall**: Use `firewall_list` before adding new rules.
+- **Diagnostics**: Always `flush_dns` as a first step in network-related agentic troubleshooting.
+
+### 4. Environment Surgery (`windows_environment`)
+- **Persistence**: Distinguish between `User` and `System` scopes.
+- **Synchronization**: Always trigger a `broadcast` after modifications to ensure running processes adopt the new environment map.
 
 ---
 
@@ -48,4 +57,4 @@ Tools in this server use `ctx: Context` for deep telemetry. You can view progres
 ---
 
 *Author: Sandra Schipal (Vienna, AT)*  
-*Industrial Grade v14.0.1 Gold Standard Compliance*
+*Industrial Grade v14.1.0 Gold Standard Compliance*

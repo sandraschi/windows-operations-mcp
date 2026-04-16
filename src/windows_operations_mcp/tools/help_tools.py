@@ -1,10 +1,9 @@
 """Enhanced help system for the Windows Operations MCP."""
 
-from typing import Dict, List, Optional, Any
-from textwrap import dedent
+from typing import Any
 
-from ..logging_config import get_logger
 from ..decorators import tool
+from ..logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -50,9 +49,7 @@ TOOL_CATEGORIES = {
         "properties": {"status": {"type": "string"}, "message": {"type": "string"}},
     },
 )
-def get_help(
-    command: Optional[str] = None, category: Optional[str] = None, detail: int = 1
-) -> Dict[str, Any]:
+def get_help(command: str | None = None, category: str | None = None, detail: int = 1) -> dict[str, Any]:
     """
     Get help about available commands and their usage.
 
@@ -73,7 +70,7 @@ def get_help(
         return _list_commands(category, detail)
     except Exception as e:
         logger.error(f"Help system error: {e}")
-        return {"status": "error", "message": f"Help system error: {str(e)}"}
+        return {"status": "error", "message": f"Help system error: {e!s}"}
 
 
 def register_help_tools(mcp):
@@ -84,7 +81,7 @@ def register_help_tools(mcp):
     logger.info("help_tools_registered", tools=["get_help"])
 
 
-def _get_command_help(command: str, detail: int) -> Dict[str, Any]:
+def _get_command_help(command: str, detail: int) -> dict[str, Any]:
     """Get detailed help for a specific portmanteau tool."""
     # Portmanteau tools (15 total, replacing ~57 individual tools)
     known_commands = {
@@ -216,7 +213,7 @@ def _get_command_help(command: str, detail: int) -> Dict[str, Any]:
         help_text.extend(
             [
                 "Usage Examples:",
-                f"  # Basic usage - see tool docstring for full parameter details",
+                "  # Basic usage - see tool docstring for full parameter details",
                 f'  result = await {command}(action="{cmd_info["actions"][0] if "actions" in cmd_info else "action_name"}", ...)',
                 "",
                 "Note: All portmanteau tools follow the same pattern:",
@@ -245,7 +242,7 @@ def _get_command_help(command: str, detail: int) -> Dict[str, Any]:
     return {"status": "success", "message": "\n".join(help_text).strip()}
 
 
-def _list_commands(category: Optional[str], detail: int) -> Dict[str, Any]:
+def _list_commands(category: str | None, detail: int) -> dict[str, Any]:
     """List all available portmanteau tools, optionally filtered by category."""
     known_commands = {
         "command_execution": {
@@ -343,9 +340,7 @@ def _list_commands(category: Optional[str], detail: int) -> Dict[str, Any]:
         cat = cmd_info["category"]
         if cat not in categorized:
             categorized[cat] = []
-        categorized[cat].append(
-            {"name": cmd_name, "description": cmd_info["description"]}
-        )
+        categorized[cat].append({"name": cmd_name, "description": cmd_info["description"]})
 
     result = []
 
@@ -408,9 +403,7 @@ def _list_commands(category: Optional[str], detail: int) -> Dict[str, Any]:
         if detail > 0:
             result.append("Usage:")
             result.append("  Use 'winops' tool for easy access to help")
-            result.append(
-                "  Example: winops(command='help', tool_name='file_operations', detail=2)"
-            )
+            result.append("  Example: winops(command='help', tool_name='file_operations', detail=2)")
             result.append("")
             result.append("For detailed help about a specific tool:")
             result.append("  winops(command='help', tool_name='<tool_name>', detail=2)")

@@ -7,12 +7,13 @@ including real-time metrics, performance counters, and system resource monitorin
 
 import time
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from ..logging_config import get_logger
 from ..decorators import tool
+from ..logging_config import get_logger
 
 logger = get_logger(__name__)
+
 
 @tool(
     name="get_windows_performance_counters",
@@ -21,34 +22,28 @@ logger = get_logger(__name__)
         "counter_names": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "List of performance counter names to query"
+            "description": "List of performance counter names to query",
         },
         "object_name": {
             "type": "string",
             "description": "Performance object name (Processor, Memory, Disk, Network, etc.)",
-            "default": "Processor"
+            "default": "Processor",
         },
         "instance_name": {
             "type": "string",
             "description": "Specific instance name (_Total, 0, etc.)",
-            "default": "_Total"
-        }
+            "default": "_Total",
+        },
     },
     required=["counter_names"],
     returns={
         "type": "object",
-        "properties": {
-            "success": {"type": "boolean"},
-            "counters": {"type": "object"},
-            "timestamp": {"type": "string"}
-        }
-    }
+        "properties": {"success": {"type": "boolean"}, "counters": {"type": "object"}, "timestamp": {"type": "string"}},
+    },
 )
 def get_windows_performance_counters(
-    counter_names: List[str],
-    object_name: str = "Processor",
-    instance_name: str = "_Total"
-) -> Dict[str, Any]:
+    counter_names: list[str], object_name: str = "Processor", instance_name: str = "_Total"
+) -> dict[str, Any]:
     """
     Get Windows performance counter values.
 
@@ -79,33 +74,20 @@ def get_windows_performance_counters(
                     "value": value,
                     "object": object_name,
                     "instance": instance_name,
-                    "counter_path": counter_path
+                    "counter_path": counter_path,
                 }
 
             except Exception as e:
-                counters[counter_name] = {
-                    "error": str(e),
-                    "object": object_name,
-                    "instance": instance_name
-                }
+                counters[counter_name] = {"error": str(e), "object": object_name, "instance": instance_name}
                 logger.warning(f"Failed to get counter {counter_name}: {e}")
 
-        return {
-            "success": True,
-            "counters": counters,
-            "timestamp": timestamp
-        }
+        return {"success": True, "counters": counters, "timestamp": timestamp}
 
     except ImportError:
-        return {
-            "success": False,
-            "error": "win32pdh not available. Install with: pip install pywin32"
-        }
+        return {"success": False, "error": "win32pdh not available. Install with: pip install pywin32"}
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to get performance counters: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to get performance counters: {e!s}"}
+
 
 @tool(
     name="monitor_windows_performance",
@@ -114,28 +96,12 @@ def get_windows_performance_counters(
         "counter_names": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "List of performance counter names to monitor"
+            "description": "List of performance counter names to monitor",
         },
-        "object_name": {
-            "type": "string",
-            "description": "Performance object name",
-            "default": "Processor"
-        },
-        "instance_name": {
-            "type": "string",
-            "description": "Specific instance name",
-            "default": "_Total"
-        },
-        "duration_seconds": {
-            "type": "integer",
-            "description": "How long to monitor (seconds)",
-            "default": 60
-        },
-        "sample_interval": {
-            "type": "integer",
-            "description": "Sampling interval in seconds",
-            "default": 5
-        }
+        "object_name": {"type": "string", "description": "Performance object name", "default": "Processor"},
+        "instance_name": {"type": "string", "description": "Specific instance name", "default": "_Total"},
+        "duration_seconds": {"type": "integer", "description": "How long to monitor (seconds)", "default": 60},
+        "sample_interval": {"type": "integer", "description": "Sampling interval in seconds", "default": 5},
     },
     required=["counter_names"],
     returns={
@@ -144,17 +110,17 @@ def get_windows_performance_counters(
             "success": {"type": "boolean"},
             "samples": {"type": "array"},
             "summary": {"type": "object"},
-            "duration": {"type": "number"}
-        }
-    }
+            "duration": {"type": "number"},
+        },
+    },
 )
 def monitor_windows_performance(
-    counter_names: List[str],
+    counter_names: list[str],
     object_name: str = "Processor",
     instance_name: str = "_Total",
     duration_seconds: int = 60,
-    sample_interval: int = 5
-) -> Dict[str, Any]:
+    sample_interval: int = 5,
+) -> dict[str, Any]:
     """
     Monitor Windows performance metrics over time.
 
@@ -193,10 +159,7 @@ def monitor_windows_performance(
                         sample_data[counter_name] = None
                         logger.warning(f"Failed to get counter {counter_name}: {e}")
 
-                samples.append({
-                    "timestamp": datetime.now().isoformat(),
-                    "values": sample_data
-                })
+                samples.append({"timestamp": datetime.now().isoformat(), "values": sample_data})
 
                 next_sample_time = current_time + sample_interval
 
@@ -205,57 +168,35 @@ def monitor_windows_performance(
         # Calculate summary statistics
         summary = {}
         for counter_name in counter_names:
-            values = [sample["values"].get(counter_name) for sample in samples if sample["values"].get(counter_name) is not None]
+            values = [
+                sample["values"].get(counter_name)
+                for sample in samples
+                if sample["values"].get(counter_name) is not None
+            ]
             if values:
                 summary[counter_name] = {
                     "average": sum(values) / len(values),
                     "min": min(values),
                     "max": max(values),
-                    "samples": len(values)
+                    "samples": len(values),
                 }
 
-        return {
-            "success": True,
-            "samples": samples,
-            "summary": summary,
-            "duration": time.time() - start_time
-        }
+        return {"success": True, "samples": samples, "summary": summary, "duration": time.time() - start_time}
 
     except ImportError:
-        return {
-            "success": False,
-            "error": "win32pdh not available. Install with: pip install pywin32"
-        }
+        return {"success": False, "error": "win32pdh not available. Install with: pip install pywin32"}
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to monitor performance: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to monitor performance: {e!s}"}
+
 
 @tool(
     name="get_windows_system_performance",
     description="Get comprehensive Windows system performance metrics",
     parameters={
-        "include_cpu": {
-            "type": "boolean",
-            "description": "Include CPU performance metrics",
-            "default": True
-        },
-        "include_memory": {
-            "type": "boolean",
-            "description": "Include memory performance metrics",
-            "default": True
-        },
-        "include_disk": {
-            "type": "boolean",
-            "description": "Include disk performance metrics",
-            "default": True
-        },
-        "include_network": {
-            "type": "boolean",
-            "description": "Include network performance metrics",
-            "default": True
-        }
+        "include_cpu": {"type": "boolean", "description": "Include CPU performance metrics", "default": True},
+        "include_memory": {"type": "boolean", "description": "Include memory performance metrics", "default": True},
+        "include_disk": {"type": "boolean", "description": "Include disk performance metrics", "default": True},
+        "include_network": {"type": "boolean", "description": "Include network performance metrics", "default": True},
     },
     required=[],
     returns={
@@ -263,16 +204,13 @@ def monitor_windows_performance(
         "properties": {
             "success": {"type": "boolean"},
             "performance": {"type": "object"},
-            "timestamp": {"type": "string"}
-        }
-    }
+            "timestamp": {"type": "string"},
+        },
+    },
 )
 def get_windows_system_performance(
-    include_cpu: bool = True,
-    include_memory: bool = True,
-    include_disk: bool = True,
-    include_network: bool = True
-) -> Dict[str, Any]:
+    include_cpu: bool = True, include_memory: bool = True, include_disk: bool = True, include_network: bool = True
+) -> dict[str, Any]:
     """
     Get comprehensive Windows system performance metrics.
 
@@ -287,7 +225,6 @@ def get_windows_system_performance(
     """
     try:
         import win32pdh
-        import psutil
 
         performance = {}
         timestamp = datetime.now().isoformat()
@@ -295,12 +232,7 @@ def get_windows_system_performance(
         # CPU Performance
         if include_cpu:
             try:
-                cpu_counters = [
-                    "% Processor Time",
-                    "% User Time",
-                    "% Privileged Time",
-                    "% Interrupt Time"
-                ]
+                cpu_counters = ["% Processor Time", "% User Time", "% Privileged Time", "% Interrupt Time"]
 
                 cpu_data = {}
                 for counter in cpu_counters:
@@ -326,7 +258,7 @@ def get_windows_system_performance(
                     "Committed Bytes",
                     "Commit Limit",
                     "Pool Nonpaged Bytes",
-                    "Pool Paged Bytes"
+                    "Pool Paged Bytes",
                 ]
 
                 memory_data = {}
@@ -354,7 +286,7 @@ def get_windows_system_performance(
                     "Avg. Disk Queue Length",
                     "Disk Bytes/sec",
                     "Disk Read Bytes/sec",
-                    "Disk Write Bytes/sec"
+                    "Disk Write Bytes/sec",
                 ]
 
                 disk_data = {}
@@ -383,7 +315,7 @@ def get_windows_system_performance(
                     "Bytes Sent/sec",
                     "Packets/sec",
                     "Packets Received/sec",
-                    "Packets Sent/sec"
+                    "Packets Sent/sec",
                 ]
 
                 network_data = {}
@@ -402,22 +334,13 @@ def get_windows_system_performance(
             except Exception as e:
                 performance["network"] = {"error": str(e)}
 
-        return {
-            "success": True,
-            "performance": performance,
-            "timestamp": timestamp
-        }
+        return {"success": True, "performance": performance, "timestamp": timestamp}
 
     except ImportError:
-        return {
-            "success": False,
-            "error": "Required modules not available. Install with: pip install pywin32 psutil"
-        }
+        return {"success": False, "error": "Required modules not available. Install with: pip install pywin32"}
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to get system performance: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to get system performance: {e!s}"}
+
 
 def register_windows_performance_tools(mcp):
     """Register Windows performance monitoring tools with FastMCP."""
@@ -426,7 +349,7 @@ def register_windows_performance_tools(mcp):
     mcp.tool(monitor_windows_performance)
     mcp.tool(get_windows_system_performance)
 
-    logger.info("windows_performance_tools_registered", tools=[
-        "get_windows_performance_counters", "monitor_windows_performance",
-        "get_windows_system_performance"
-    ])
+    logger.info(
+        "windows_performance_tools_registered",
+        tools=["get_windows_performance_counters", "monitor_windows_performance", "get_windows_system_performance"],
+    )

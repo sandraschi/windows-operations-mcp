@@ -1,18 +1,9 @@
-import unittest
-import tempfile
-import os
 import shutil
-import logging
-from pathlib import Path
-import sys
+import tempfile
+import unittest
 
 # Add the project root to Python path
-from windows_operations_mcp.logging_config import (
-    get_logger,
-    setup_logging,
-    add_service_context,
-    drop_debug_logs
-)
+from windows_operations_mcp.logging_config import get_logger, setup_logging
 
 
 class TestLoggingConfig(unittest.TestCase):
@@ -32,6 +23,7 @@ class TestLoggingConfig(unittest.TestCase):
         self.assertIsNotNone(logger)
         # structlog returns a BoundLogger, not a standard Logger
         import structlog
+
         self.assertIsInstance(logger, structlog.BoundLogger)
 
     def test_get_logger_with_different_names(self):
@@ -82,6 +74,7 @@ class TestLoggingConfig(unittest.TestCase):
         # We can test that it exists and can be imported
         try:
             from windows_operations_mcp.logging_config import add_service_context
+
             self.assertTrue(callable(add_service_context))
         except Exception as e:
             self.fail(f"add_service_context import failed: {e}")
@@ -92,6 +85,7 @@ class TestLoggingConfig(unittest.TestCase):
         # The drop_debug_logs function is a processor, not a direct call
         try:
             from windows_operations_mcp.logging_config import drop_debug_logs
+
             self.assertTrue(callable(drop_debug_logs))
         except Exception as e:
             self.fail(f"drop_debug_logs import failed: {e}")
@@ -130,7 +124,7 @@ class TestLoggingConfig(unittest.TestCase):
 
         try:
             raise ValueError("Test exception")
-        except ValueError as e:
+        except ValueError:
             logger.exception("Caught test exception", extra_info="test_data")
 
     def test_logger_hierarchy(self):
@@ -145,6 +139,7 @@ class TestLoggingConfig(unittest.TestCase):
         # For structlog, we can test that they are different instances
         # but both are valid BoundLoggers
         import structlog
+
         self.assertIsInstance(parent_logger, structlog.BoundLogger)
         self.assertIsInstance(child_logger, structlog.BoundLogger)
 

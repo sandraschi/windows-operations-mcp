@@ -7,20 +7,20 @@ to 15 portmanteau tools for better discoverability and maintainability.
 """
 
 __all__ = [
+    "agentic_operations",
+    "archive_management",
     "command_execution",
-    "file_operations",
     "directory_operations",
     "file_attributes",
     "file_editing",
-    "archive_management",
+    "file_operations",
+    "git_operations",
     "json_operations",
     "media_metadata",
-    "git_operations",
-    "process_management",
-    "windows_services",
-    "windows_event_logs",
-    "windows_performance",
-    "windows_permissions",
     "system_management",
+    "windows_accounts",
+    "windows_apps",
+    "windows_automation",
+    "windows_environment",
+    "windows_network",
 ]
-

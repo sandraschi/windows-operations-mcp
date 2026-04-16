@@ -5,22 +5,24 @@ Provides comprehensive Windows Event Log management with agentic telemetry.
 
 import asyncio
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 async def windows_event_logs(
-    action: Literal["query", "clear", "export"],
+    action: Literal["query", "clear", "export", "list"],
     log_name: str = "Application",
     max_events: int = 50,
     time_range_hours: int = 24,
-    event_id: Optional[int] = None,
-    output_path: Optional[str] = None,
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    event_id: int | None = None,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Perform Windows Event Log operations with comprehensive error handling and agentic telemetry.
 
@@ -48,13 +50,38 @@ async def windows_event_logs(
             return await asyncio.to_thread(_query_logs, log_name, max_events, time_range_hours, event_id, ctx)
 
         if action == "clear":
-            if ctx: ctx.warning(f"Clearing {log_name} log...")
+            if ctx:
+                ctx.warning(f"Clearing {log_name} log...")
             await asyncio.to_thread(win32evtlog.ClearEventLog, None, log_name)
             return {"success": True, "action": action, "data": {"cleared_log": log_name}}
 
         if action == "export":
-             # Implementation for export using PowerShell or win32
-             return {"success": False, "error": "Export action not yet implemented in SOTA v14.0 wrapper."}
+            if not output_path:
+                return {"success": False, "error": "output_path required for export"}
+            if ctx:
+                ctx.info(f"Exporting {log_name} to {output_path}...")
+            # Use wevtutil for reliable export
+            cmd = ["wevtutil.exe", "epl", log_name, output_path]
+            process = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode != 0:
+                raise Exception(stderr.decode().strip() or stdout.decode().strip())
+            return {"success": True, "action": action, "data": {"exported_log": log_name, "path": output_path}}
+
+        if action == "list":
+            if ctx:
+                ctx.info("Listing all event log channels...")
+            cmd = ["wevtutil.exe", "el"]
+            process = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode != 0:
+                raise Exception(stderr.decode().strip() or stdout.decode().strip())
+            channels = stdout.decode().splitlines()
+            return {"success": True, "action": action, "data": {"channels": channels, "count": len(channels)}}
 
         return {"success": False, "error": f"Unknown action: {action}"}
 
@@ -65,46 +92,60 @@ async def windows_event_logs(
         if ctx:
             ctx.error(error_msg)
             try:
-                advice = await ctx.sample(f"Windows Event Log '{log_name}' failed {action}. Error: {e}. Suggest fix.", max_tokens=100)
+                advice = await ctx.sample(
+                    f"Windows Event Log '{log_name}' failed {action}. Error: {e}. Suggest fix.", max_tokens=100
+                )
                 if advice and advice.content:
                     return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except: pass
+            except:
+                pass
         return {"success": False, "error": error_msg}
     finally:
-        if ctx: ctx.report_progress(100, 100)
+        if ctx:
+            ctx.report_progress(100, 100)
+
 
 def _query_logs(log_name, max_events, hours, event_id, ctx):
     """Blocking query implementation."""
     import win32evtlog
+
     handle = win32evtlog.OpenEventLog(None, log_name)
     flags = win32evtlog.EVENTLOG_BACKWARDS_READ | win32evtlog.EVENTLOG_SEQUENTIAL_READ
     start_time = datetime.now() - timedelta(hours=hours)
-    
+
     events = []
     try:
         while len(events) < max_events:
             batch = win32evtlog.ReadEventLog(handle, flags, 0)
-            if not batch: break
+            if not batch:
+                break
             for ev in batch:
                 ev_time = datetime.fromtimestamp(ev.TimeGenerated)
-                if ev_time < start_time: continue
-                if event_id and ev.EventID != event_id: continue
-                
-                events.append({
-                    "timestamp": ev_time.isoformat(),
-                    "id": ev.EventID,
-                    "source": ev.SourceName,
-                    "level": _get_level(ev.EventType),
-                    "message": ev.StringInserts[0] if ev.StringInserts else ""
-                })
-                if len(events) >= max_events: break
+                if ev_time < start_time:
+                    continue
+                if event_id and ev.EventID != event_id:
+                    continue
+
+                events.append(
+                    {
+                        "timestamp": ev_time.isoformat(),
+                        "id": ev.EventID,
+                        "source": ev.SourceName,
+                        "level": _get_level(ev.EventType),
+                        "message": ev.StringInserts[0] if ev.StringInserts else "",
+                    }
+                )
+                if len(events) >= max_events:
+                    break
         return {"success": True, "action": "query", "data": {"events": events, "count": len(events)}}
     finally:
         win32evtlog.CloseEventLog(handle)
 
+
 def _get_level(code):
     m = {1: "Error", 2: "Warning", 4: "Info", 8: "AuditSuccess", 16: "AuditFailure"}
     return m.get(code, "Other")
+
 
 def register_windows_event_logs(mcp) -> None:
     """Register the modernized Windows event logs tool."""

@@ -1,8 +1,5 @@
-import unittest
 import tempfile
-import os
-from pathlib import Path
-import sys
+import unittest
 
 # Add the project root to Python path
 from windows_operations_mcp.tools.json_register import register_json_tools
@@ -10,6 +7,7 @@ from windows_operations_mcp.tools.json_register import register_json_tools
 
 class MockMCP:
     """Mock MCP server for testing."""
+
     def __init__(self):
         self.tools = {}
 
@@ -21,6 +19,7 @@ class MockMCP:
                 tool_name = name or f.__name__
                 self.tools[tool_name] = f
                 return f
+
             return decorator
         else:
             # Called as mcp.tool(function, name="...")
@@ -40,6 +39,7 @@ class TestJsonTools(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_register_json_tools(self):
@@ -47,51 +47,51 @@ class TestJsonTools(unittest.TestCase):
         register_json_tools(self.mcp)
 
         # Check that tools were registered
-        self.assertIn('validate_json', self.mcp.tools)
-        self.assertIn('format_json', self.mcp.tools)
-        self.assertIn('read_json_file', self.mcp.tools)
-        self.assertIn('write_json_file', self.mcp.tools)
-        self.assertIn('to_json', self.mcp.tools)
-        self.assertIn('extract_json', self.mcp.tools)
+        self.assertIn("validate_json", self.mcp.tools)
+        self.assertIn("format_json", self.mcp.tools)
+        self.assertIn("read_json_file", self.mcp.tools)
+        self.assertIn("write_json_file", self.mcp.tools)
+        self.assertIn("to_json", self.mcp.tools)
+        self.assertIn("extract_json", self.mcp.tools)
 
     def test_validate_json_tool(self):
         """Test validate_json tool functionality."""
         register_json_tools(self.mcp)
-        validate_json_func = self.mcp.tools['validate_json']
+        validate_json_func = self.mcp.tools["validate_json"]
 
         # Test with valid JSON
         valid_json = '{"name": "test", "value": 123}'
         result = validate_json_func(valid_json)
 
-        self.assertIn('success', result)
+        self.assertIn("success", result)
 
         # Test with invalid JSON
         invalid_json = '{"name": "test", "value": }'
         result = validate_json_func(invalid_json)
 
-        self.assertIn('success', result)
+        self.assertIn("success", result)
 
     def test_format_json_tool(self):
         """Test format_json tool functionality."""
         register_json_tools(self.mcp)
-        format_json_func = self.mcp.tools['format_json']
+        format_json_func = self.mcp.tools["format_json"]
 
         # Test with valid JSON
         json_content = '{"name":"test","value":123}'
         result = format_json_func(json_content)
 
-        self.assertIn('success', result)
+        self.assertIn("success", result)
 
     def test_json_tools_error_handling(self):
         """Test error handling in JSON tools."""
         register_json_tools(self.mcp)
 
         # Test with invalid parameters
-        validate_json_func = self.mcp.tools['validate_json']
+        validate_json_func = self.mcp.tools["validate_json"]
         result = validate_json_func("")
 
         # Should handle gracefully
-        self.assertIn('success', result)
+        self.assertIn("success", result)
 
 
 if __name__ == "__main__":

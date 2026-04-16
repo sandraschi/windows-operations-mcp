@@ -1,4 +1,4 @@
-# 🪟 Windows Operations MCP — SOTA v14.0.1
+# 🪟 Windows Operations MCP — SOTA v14.1.0
 
 ### Native Windows Control Plane & Data Surgery for Agentic Ecosystems
 
@@ -13,6 +13,9 @@
 - **Account Operations**: Local user and group management (listing, adding, password resets).
 - **Automation Hub**: Scheduled task (schtasks) orchestration and WMI/CIM system introspection.
 - **Permissions (ICACLS)**: Granular NTFS ACL management with recursive inheritance control.
+- **Networking Control**: Native firewall orchestration (`netsh`) and adapter diagnostics. [NEW]
+- **Environment Surgery**: Persistent User/System environment variable management with system-wide broadcasting. [NEW]
+- **App Management**: AppX/Store package management and automated bloatware removal. [NEW]
 
 ### 🧬 Specialized Data Surgery
 - **JSON Portmanteau**: Deep patching (recursive merging), fuzzy JSON extraction from unstructured text, and standards-compliant validation.
@@ -55,11 +58,18 @@ Or manually via `mcp_config.json`:
 | Tool | Portmanteau Action | Description |
 | :--- | :--- | :--- |
 | `windows_registry` | `read`, `write`, `delete`, `export` | Native Winreg control with Safe Mode protection. |
-| `windows_accounts` | `list_users`, `add_user`, `manage_group` | Local SAM database operations. |
-| `windows_automation` | `list_tasks`, `create_task`, `wmi_query` | System scheduling & state introspection. |
+| `windows_accounts` | `list_users`, `manage_group`, `get_group_members` | Local SAM database and security group auditing. |
+| `windows_services` | `list`, `start`, `stop`, `restart` | Native Windows Service Control Manager orchestration. |
+| `windows_event_logs` | `query`, `clear`, `export`, `list` | Comprehensive Event Log management and channel discovery. |
+| `windows_network` | `firewall_list`, `firewall_add`, `diag` | Firewall rule management and networking diagnostics. |
+| `windows_environment` | `get`, `set`, `delete`, `list` | Persistent User/System environment variable control. |
+| `windows_apps` | `list`, `uninstall` | AppX/Store package auditing and uninstallation. |
 | `windows_permissions` | `get`, `grant`, `revoke`, `set_owner` | ICACLS-backed ACL management. |
+| `windows_automation` | `list_tasks`, `create_task`, `wmi_query` | System scheduling & state introspection. |
+| `windows_performance` | `system`, `process`, `counters` | High-fidelity telemetry and performance monitoring. |
 | `json_operations` | `read`, `patch`, `extract_from_text` | Deep JSON surgery and fuzzy parsing. |
 | `archive_management` | `list`, `extract`, `expand_cab` | ZIP/TAR/CAB management. |
+| `agentic_operations` | `system_hardening`, `audit_report` | High-level autonomous troubleshooting workflows. |
 
 ---
 

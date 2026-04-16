@@ -1,6 +1,7 @@
-from typing import Dict, Any
-from fastmcp import FastMCP
 import os
+from typing import Any
+
+from fastmcp import FastMCP
 
 
 class AIRouter:
@@ -12,7 +13,7 @@ class AIRouter:
         self.endpoint = os.getenv("AI_ENDPOINT", "http://localhost:11434/api/generate")
         self.model = os.getenv("AI_MODEL", "llama3.1-8b")
 
-    async def process_command(self, query: str) -> Dict[str, Any]:
+    async def process_command(self, query: str) -> dict[str, Any]:
         """Process natural language query and map to Windows Operations MCP tools."""
         # Standard SOTA AI routing - specialized for Windows Ops
         return {
@@ -26,7 +27,7 @@ class AIRouter:
         tools = await self.mcp.list_tools()
         return [t.name for t in tools]
 
-    async def get_workflows_list(self) -> list[Dict[str, Any]]:
+    async def get_workflows_list(self) -> list[dict[str, Any]]:
         """Get list of predefined Windows workflows."""
         return [
             {

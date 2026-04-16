@@ -4,22 +4,23 @@ Provides comprehensive Windows ACL/Permission management with agentic telemetry.
 """
 
 import asyncio
-import subprocess
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 async def windows_permissions(
     action: Literal["get", "grant", "revoke", "inheritance"],
     path: str,
-    user: Optional[str] = None,
-    permission: Optional[Literal["F", "M", "RX", "R", "W"]] = "R",
+    user: str | None = None,
+    permission: Literal["F", "M", "RX", "R", "W"] | None = "R",
     enable_inheritance: bool = True,
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Perform Windows Permission (ACL) operations with comprehensive error handling and agentic telemetry.
 
@@ -41,25 +42,31 @@ async def windows_permissions(
 
     try:
         if action == "get":
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             result = await _run_icacls([path])
             return {"success": True, "action": action, "data": {"raw_acl": result}}
 
         if action == "grant":
-            if not user: return {"success": False, "error": "User required for grant"}
-            if ctx: ctx.report_progress(50, 100)
+            if not user:
+                return {"success": False, "error": "User required for grant"}
+            if ctx:
+                ctx.report_progress(50, 100)
             await _run_icacls([path, "/grant", f"{user}:{permission}"])
             return {"success": True, "action": action, "data": {"granted": f"{user}:{permission}"}}
 
         if action == "revoke":
-            if not user: return {"success": False, "error": "User required for revoke"}
-            if ctx: ctx.report_progress(50, 100)
+            if not user:
+                return {"success": False, "error": "User required for revoke"}
+            if ctx:
+                ctx.report_progress(50, 100)
             await _run_icacls([path, "/remove", user])
             return {"success": True, "action": action, "data": {"revoked": user}}
 
         if action == "inheritance":
             flag = "/inheritance:e" if enable_inheritance else "/inheritance:d"
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             await _run_icacls([path, flag])
             return {"success": True, "action": action, "data": {"inheritance_enabled": enable_inheritance}}
 
@@ -70,26 +77,29 @@ async def windows_permissions(
         if ctx:
             ctx.error(error_msg)
             try:
-                advice = await ctx.sample(f"Windows Permissions operation '{action}' failed on '{path}'. Error: {e}. Suggest fix.", max_tokens=100)
+                advice = await ctx.sample(
+                    f"Windows Permissions operation '{action}' failed on '{path}'. Error: {e}. Suggest fix.",
+                    max_tokens=100,
+                )
                 if advice and advice.content:
                     return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except: pass
+            except:
+                pass
         return {"success": False, "error": error_msg}
     finally:
-        if ctx: ctx.report_progress(100, 100)
+        if ctx:
+            ctx.report_progress(100, 100)
 
-async def _run_icacls(args: List[str]) -> str:
+
+async def _run_icacls(args: list[str]) -> str:
     """Run icacls command asynchronously."""
-    cmd = ["icacls.exe"] + args
-    process = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
+    cmd = ["icacls.exe", *args]
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await process.communicate()
     if process.returncode != 0:
         raise Exception(stderr.decode().strip() or stdout.decode().strip())
     return stdout.decode().strip()
+
 
 def register_windows_permissions(mcp) -> None:
     """Register the modernized Windows permissions tool."""

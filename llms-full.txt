@@ -1,4 +1,4 @@
-# Windows Operations MCP (SOTA v14.0.1) - Technical Deep-Dive
+# Windows Operations MCP (SOTA v14.1.0) - Technical Deep-Dive
 
 ## 📖 System Identity
 A specialized control plane for Windows system administration and data forensics.
@@ -19,6 +19,23 @@ Local SAM management via `net.exe`.
 - **Action 'add_user' / 'remove_user'**: Lifecycle control.
 - **Action 'manage_group'**: Add or remove users from groups (Administrators, etc.).
 - **Action 'set_password'**: Administrative override.
+- **Action 'get_group_members'**: Enumerate local group SID members for security auditing.
+
+### windows_network
+Perimeter and adapter diagnostics.
+- **Action 'firewall_list'**: Enumerate native advfirewall rules.
+- **Action 'firewall_add' / 'firewall_delete'**: Security perimeter surgery.
+- **Action 'diag'**: DNS flush and IP configuration introspection.
+
+### windows_environment
+Persistent variable management.
+- **Action 'set' / 'delete'**: Modifies User/System environment in Winreg.
+- **Action 'broadcast'**: System-wide notification via `WM_SETTINGCHANGE`.
+
+### windows_apps
+Modern platform management.
+- **Action 'list'**: Enumerate AppX/Store packages via PowerShell.
+- **Action 'uninstall'**: Precise package removal.
 
 ### windows_automation
 High-fidelity scheduling and introspection.
@@ -57,4 +74,4 @@ Diagnostic loop for finding root causes (Permissions vs System state).
 - **PoLP**: All user/group operations follow the Principle of Least Privilege.
 - **Auditability**: All tool calls are logged via `ctx: Context` telemetry.
 
-*Industrial Gold Standard v14.0.1 - April 2026*
+*Industrial Gold Standard v14.1.0 - April 2026*

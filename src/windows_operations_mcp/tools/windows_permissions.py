@@ -7,13 +7,15 @@ including file permissions, share permissions, and access control management.
 
 import os
 import stat
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from ..logging_config import get_logger
 from ..decorators import tool
+from ..logging_config import get_logger
 
 logger = get_logger(__name__)
+
 
 def _get_permission_string(mode: int) -> str:
     """Convert numeric permissions to readable string."""
@@ -69,6 +71,7 @@ def _get_permission_string(mode: int) -> str:
 
     return "".join(permissions)
 
+
 def _get_file_type(mode: int) -> str:
     """Get file type from mode."""
     if stat.S_ISDIR(mode):
@@ -88,40 +91,22 @@ def _get_file_type(mode: int) -> str:
     else:
         return "unknown"
 
+
 @tool(
     name="get_file_permissions",
     description="Get detailed file and directory permissions information",
     parameters={
-        "file_path": {
-            "type": "string",
-            "description": "Path to the file or directory"
-        },
-        "include_owner": {
-            "type": "boolean",
-            "description": "Include owner information",
-            "default": True
-        },
-        "include_group": {
-            "type": "boolean",
-            "description": "Include group information",
-            "default": True
-        }
+        "file_path": {"type": "string", "description": "Path to the file or directory"},
+        "include_owner": {"type": "boolean", "description": "Include owner information", "default": True},
+        "include_group": {"type": "boolean", "description": "Include group information", "default": True},
     },
     required=["file_path"],
     returns={
         "type": "object",
-        "properties": {
-            "success": {"type": "boolean"},
-            "permissions": {"type": "object"},
-            "error": {"type": "string"}
-        }
-    }
+        "properties": {"success": {"type": "boolean"}, "permissions": {"type": "object"}, "error": {"type": "string"}},
+    },
 )
-def get_file_permissions(
-    file_path: str,
-    include_owner: bool = True,
-    include_group: bool = True
-) -> Dict[str, Any]:
+def get_file_permissions(file_path: str, include_owner: bool = True, include_group: bool = True) -> dict[str, Any]:
     """
     Get detailed file and directory permissions information.
 
@@ -137,10 +122,7 @@ def get_file_permissions(
         path = Path(file_path)
 
         if not path.exists():
-            return {
-                "success": False,
-                "error": f"Path does not exist: {file_path}"
-            }
+            return {"success": False, "error": f"Path does not exist: {file_path}"}
 
         # Get file stats
         stat_info = path.stat()
@@ -158,14 +140,14 @@ def get_file_permissions(
             "size": stat_info.st_size,
             "modified_time": datetime.fromtimestamp(stat_info.st_mtime).isoformat(),
             "accessed_time": datetime.fromtimestamp(stat_info.st_atime).isoformat(),
-            "created_time": datetime.fromtimestamp(stat_info.st_ctime).isoformat()
+            "created_time": datetime.fromtimestamp(stat_info.st_ctime).isoformat(),
         }
 
         # Get owner information
         if include_owner:
             try:
-                import pwd
                 import grp
+                import pwd
 
                 # Get owner and group info
                 try:
@@ -173,65 +155,39 @@ def get_file_permissions(
                     result["owner"] = {
                         "uid": stat_info.st_uid,
                         "name": owner_info.pw_name,
-                        "gecos": owner_info.pw_gecos
+                        "gecos": owner_info.pw_gecos,
                     }
                 except (AttributeError, KeyError, ImportError):
-                    result["owner"] = {
-                        "uid": stat_info.st_uid,
-                        "name": "Unknown"
-                    }
+                    result["owner"] = {"uid": stat_info.st_uid, "name": "Unknown"}
 
                 try:
                     group_info = grp.getgrgid(stat_info.st_gid)
-                    result["group"] = {
-                        "gid": stat_info.st_gid,
-                        "name": group_info.gr_name
-                    }
+                    result["group"] = {"gid": stat_info.st_gid, "name": group_info.gr_name}
                 except (AttributeError, KeyError, ImportError):
-                    result["group"] = {
-                        "gid": stat_info.st_gid,
-                        "name": "Unknown"
-                    }
+                    result["group"] = {"gid": stat_info.st_gid, "name": "Unknown"}
 
             except ImportError:
                 # Unix-style user/group info not available on Windows
-                result["owner"] = {
-                    "uid": "N/A",
-                    "name": "Windows User"
-                }
-                result["group"] = {
-                    "gid": "N/A",
-                    "name": "Windows Group"
-                }
+                result["owner"] = {"uid": "N/A", "name": "Windows User"}
+                result["group"] = {"gid": "N/A", "name": "Windows Group"}
 
-        return {
-            "success": True,
-            "permissions": result
-        }
+        return {"success": True, "permissions": result}
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to get permissions: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to get permissions: {e!s}"}
+
 
 @tool(
     name="set_file_permissions",
     description="Set file or directory permissions",
     parameters={
-        "file_path": {
-            "type": "string",
-            "description": "Path to the file or directory"
-        },
-        "permissions": {
-            "type": "string",
-            "description": "Permission string (e.g., 'rwxr-xr-x')"
-        },
+        "file_path": {"type": "string", "description": "Path to the file or directory"},
+        "permissions": {"type": "string", "description": "Permission string (e.g., 'rwxr-xr-x')"},
         "recursive": {
             "type": "boolean",
             "description": "Apply permissions recursively to directories",
-            "default": False
-        }
+            "default": False,
+        },
     },
     required=["file_path", "permissions"],
     returns={
@@ -239,15 +195,11 @@ def get_file_permissions(
         "properties": {
             "success": {"type": "boolean"},
             "message": {"type": "string"},
-            "applied_to": {"type": "array", "items": {"type": "string"}}
-        }
-    }
+            "applied_to": {"type": "array", "items": {"type": "string"}},
+        },
+    },
 )
-def set_file_permissions(
-    file_path: str,
-    permissions: str,
-    recursive: bool = False
-) -> Dict[str, Any]:
+def set_file_permissions(file_path: str, permissions: str, recursive: bool = False) -> dict[str, Any]:
     """
     Set file or directory permissions.
 
@@ -263,10 +215,7 @@ def set_file_permissions(
         path = Path(file_path)
 
         if not path.exists():
-            return {
-                "success": False,
-                "error": f"Path does not exist: {file_path}"
-            }
+            return {"success": False, "error": f"Path does not exist: {file_path}"}
 
         applied_to = []
 
@@ -276,14 +225,11 @@ def set_file_permissions(
                 os.chmod(file_path, int(permissions, 8))
                 applied_to.append(str(path))
             except Exception as e:
-                return {
-                    "success": False,
-                    "error": f"Failed to set permissions on {file_path}: {str(e)}"
-                }
+                return {"success": False, "error": f"Failed to set permissions on {file_path}: {e!s}"}
 
         elif path.is_dir() and recursive:
             # Set permissions recursively on directory
-            for root, dirs, files in os.walk(file_path):
+            for root, _dirs, files in os.walk(file_path):
                 for file in files:
                     file_path_full = os.path.join(root, file)
                     try:
@@ -298,46 +244,26 @@ def set_file_permissions(
                 os.chmod(file_path, int(permissions, 8))
                 applied_to.append(str(path))
             except Exception as e:
-                return {
-                    "success": False,
-                    "error": f"Failed to set permissions on {file_path}: {str(e)}"
-                }
+                return {"success": False, "error": f"Failed to set permissions on {file_path}: {e!s}"}
 
         return {
             "success": True,
             "message": f"Permissions set successfully on {len(applied_to)} items",
-            "applied_to": applied_to
+            "applied_to": applied_to,
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to set permissions: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to set permissions: {e!s}"}
+
 
 @tool(
     name="analyze_directory_permissions",
     description="Analyze permissions for all files and directories in a directory tree",
     parameters={
-        "directory_path": {
-            "type": "string",
-            "description": "Path to the directory to analyze"
-        },
-        "max_depth": {
-            "type": "integer",
-            "description": "Maximum depth to analyze",
-            "default": 3
-        },
-        "include_files": {
-            "type": "boolean",
-            "description": "Include files in analysis",
-            "default": True
-        },
-        "include_directories": {
-            "type": "boolean",
-            "description": "Include directories in analysis",
-            "default": True
-        }
+        "directory_path": {"type": "string", "description": "Path to the directory to analyze"},
+        "max_depth": {"type": "integer", "description": "Maximum depth to analyze", "default": 3},
+        "include_files": {"type": "boolean", "description": "Include files in analysis", "default": True},
+        "include_directories": {"type": "boolean", "description": "Include directories in analysis", "default": True},
     },
     required=["directory_path"],
     returns={
@@ -345,16 +271,13 @@ def set_file_permissions(
         "properties": {
             "success": {"type": "boolean"},
             "analysis": {"type": "object"},
-            "directory_path": {"type": "string"}
-        }
-    }
+            "directory_path": {"type": "string"},
+        },
+    },
 )
 def analyze_directory_permissions(
-    directory_path: str,
-    max_depth: int = 3,
-    include_files: bool = True,
-    include_directories: bool = True
-) -> Dict[str, Any]:
+    directory_path: str, max_depth: int = 3, include_files: bool = True, include_directories: bool = True
+) -> dict[str, Any]:
     """
     Analyze permissions for all files and directories in a directory tree.
 
@@ -371,10 +294,7 @@ def analyze_directory_permissions(
         path = Path(directory_path)
 
         if not path.exists() or not path.is_dir():
-            return {
-                "success": False,
-                "error": f"Directory does not exist: {directory_path}"
-            }
+            return {"success": False, "error": f"Directory does not exist: {directory_path}"}
 
         permission_stats = {}
         analyzed_items = []
@@ -399,12 +319,9 @@ def analyze_directory_permissions(
 
                         permission_stats[permissions]["count"] += 1
 
-                        analyzed_items.append({
-                            "path": dir_path,
-                            "type": "directory",
-                            "permissions": permissions,
-                            "depth": current_depth
-                        })
+                        analyzed_items.append(
+                            {"path": dir_path, "type": "directory", "permissions": permissions, "depth": current_depth}
+                        )
 
                     except Exception as e:
                         logger.warning(f"Failed to analyze directory {dir_path}: {e}")
@@ -422,12 +339,9 @@ def analyze_directory_permissions(
 
                         permission_stats[permissions]["count"] += 1
 
-                        analyzed_items.append({
-                            "path": file_path,
-                            "type": "file",
-                            "permissions": permissions,
-                            "depth": current_depth
-                        })
+                        analyzed_items.append(
+                            {"path": file_path, "type": "file", "permissions": permissions, "depth": current_depth}
+                        )
 
                     except Exception as e:
                         logger.warning(f"Failed to analyze file {file_path}: {e}")
@@ -437,35 +351,26 @@ def analyze_directory_permissions(
             "analysis": {
                 "permission_stats": permission_stats,
                 "analyzed_items": analyzed_items[:100],  # Limit to first 100 for performance
-                "total_analyzed": len(analyzed_items)
+                "total_analyzed": len(analyzed_items),
             },
-            "directory_path": directory_path
+            "directory_path": directory_path,
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to analyze directory permissions: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to analyze directory permissions: {e!s}"}
+
 
 @tool(
     name="fix_file_permissions",
     description="Fix common file permission issues",
     parameters={
-        "file_path": {
-            "type": "string",
-            "description": "Path to the file or directory to fix"
-        },
+        "file_path": {"type": "string", "description": "Path to the file or directory to fix"},
         "fix_type": {
             "type": "string",
             "description": "Type of permission fix (readable, writable, executable)",
-            "default": "readable"
+            "default": "readable",
         },
-        "recursive": {
-            "type": "boolean",
-            "description": "Apply fix recursively",
-            "default": False
-        }
+        "recursive": {"type": "boolean", "description": "Apply fix recursively", "default": False},
     },
     required=["file_path"],
     returns={
@@ -473,15 +378,11 @@ def analyze_directory_permissions(
         "properties": {
             "success": {"type": "boolean"},
             "message": {"type": "string"},
-            "fixed_items": {"type": "array", "items": {"type": "string"}}
-        }
-    }
+            "fixed_items": {"type": "array", "items": {"type": "string"}},
+        },
+    },
 )
-def fix_file_permissions(
-    file_path: str,
-    fix_type: str = "readable",
-    recursive: bool = False
-) -> Dict[str, Any]:
+def fix_file_permissions(file_path: str, fix_type: str = "readable", recursive: bool = False) -> dict[str, Any]:
     """
     Fix common file permission issues.
 
@@ -497,10 +398,7 @@ def fix_file_permissions(
         path = Path(file_path)
 
         if not path.exists():
-            return {
-                "success": False,
-                "error": f"Path does not exist: {file_path}"
-            }
+            return {"success": False, "error": f"Path does not exist: {file_path}"}
 
         fixed_items = []
 
@@ -514,24 +412,18 @@ def fix_file_permissions(
             # Make file executable by owner
             new_permissions = "755"  # rwxr-xr-x
         else:
-            return {
-                "success": False,
-                "error": f"Unknown fix type: {fix_type}"
-            }
+            return {"success": False, "error": f"Unknown fix type: {fix_type}"}
 
         if path.is_file():
             try:
                 os.chmod(file_path, int(new_permissions, 8))
                 fixed_items.append(str(path))
             except Exception as e:
-                return {
-                    "success": False,
-                    "error": f"Failed to fix permissions on {file_path}: {str(e)}"
-                }
+                return {"success": False, "error": f"Failed to fix permissions on {file_path}: {e!s}"}
 
         elif path.is_dir() and recursive:
             # Fix permissions recursively
-            for root, dirs, files in os.walk(file_path):
+            for root, _dirs, files in os.walk(file_path):
                 for file in files:
                     file_path_full = os.path.join(root, file)
                     try:
@@ -546,22 +438,17 @@ def fix_file_permissions(
                 os.chmod(file_path, int(new_permissions, 8))
                 fixed_items.append(str(path))
             except Exception as e:
-                return {
-                    "success": False,
-                    "error": f"Failed to fix permissions on {file_path}: {str(e)}"
-                }
+                return {"success": False, "error": f"Failed to fix permissions on {file_path}: {e!s}"}
 
         return {
             "success": True,
             "message": f"Fixed permissions on {len(fixed_items)} items",
-            "fixed_items": fixed_items
+            "fixed_items": fixed_items,
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to fix file permissions: {str(e)}"
-        }
+        return {"success": False, "error": f"Failed to fix file permissions: {e!s}"}
+
 
 def register_windows_permissions_tools(mcp):
     """Register Windows permissions management tools with FastMCP."""
@@ -571,7 +458,7 @@ def register_windows_permissions_tools(mcp):
     mcp.tool(analyze_directory_permissions)
     mcp.tool(fix_file_permissions)
 
-    logger.info("windows_permissions_tools_registered", tools=[
-        "get_file_permissions", "set_file_permissions",
-        "analyze_directory_permissions", "fix_file_permissions"
-    ])
+    logger.info(
+        "windows_permissions_tools_registered",
+        tools=["get_file_permissions", "set_file_permissions", "analyze_directory_permissions", "fix_file_permissions"],
+    )

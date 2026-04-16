@@ -3,27 +3,27 @@ System Management Portmanteau - SOTA v14.0 (FastMCP 3.2+)
 Provides Windows system diagnostics, health checks, and port testing with telemetry.
 """
 
-import socket
-import time
 import asyncio
 import platform
-import psutil
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal
 
+import psutil
 from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 async def system_management(
     action: Literal["info", "health", "test_port", "help"],
     detailed: bool = False,
-    host: Optional[str] = None,
-    port: Optional[int] = None,
+    host: str | None = None,
+    port: int | None = None,
     timeout_seconds: int = 5,
-    category: Optional[str] = None,
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    category: str | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Perform system management operations with comprehensive error handling and agentic telemetry.
 
@@ -50,7 +50,8 @@ async def system_management(
 
     try:
         if action == "info":
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             data = {
                 "platform": platform.platform(),
                 "python": platform.python_version(),
@@ -59,25 +60,28 @@ async def system_management(
                 "memory_total": psutil.virtual_memory().total,
             }
             if detailed:
-                data.update({
-                    "boot_time": psutil.boot_time(),
-                    "users": [u.name for u in psutil.users()],
-                    "cpu_freq": psutil.cpu_freq()._asdict() if psutil.cpu_freq() else None,
-                })
+                data.update(
+                    {
+                        "boot_time": psutil.boot_time(),
+                        "users": [u.name for u in psutil.users()],
+                        "cpu_freq": psutil.cpu_freq()._asdict() if psutil.cpu_freq() else None,
+                    }
+                )
             return {"success": True, "action": action, "data": data}
 
         elif action == "health":
-            if ctx: ctx.report_progress(30, 100)
+            if ctx:
+                ctx.report_progress(30, 100)
             cpu = psutil.cpu_percent(interval=0.1)
             mem = psutil.virtual_memory().percent
-            disk = psutil.disk_usage('C:\\').percent
-            
+            disk = psutil.disk_usage("C:\\").percent
+
             status = "healthy"
             if cpu > 90 or mem > 90 or disk > 95:
                 status = "unhealthy"
             elif cpu > 70 or mem > 80 or disk > 85:
                 status = "degraded"
-                
+
             health_data = {
                 "status": status,
                 "cpu_percent": cpu,
@@ -85,54 +89,60 @@ async def system_management(
                 "disk_percent": disk,
             }
             if detailed:
-                health_data["disk_details"] = psutil.disk_usage('C:\\')._asdict()
-            
+                health_data["disk_details"] = psutil.disk_usage("C:\\")._asdict()
+
             if status != "healthy" and ctx:
                 ctx.warning(f"System status is {status}. Sampling for optimizations...")
                 try:
-                    advice = await ctx.sample(f"Window system is {status} (CPU: {cpu}%, MEM: {mem}%, Disk: {disk}%). Suggest 3 quick fixes.", max_tokens=150)
+                    advice = await ctx.sample(
+                        f"Window system is {status} (CPU: {cpu}%, MEM: {mem}%, Disk: {disk}%). Suggest 3 quick fixes.",
+                        max_tokens=150,
+                    )
                     if advice and advice.content:
                         health_data["sampling_advice"] = advice.content[0].text
-                except: pass
-                
+                except:
+                    pass
+
             return {"success": True, "action": action, "data": health_data}
 
         elif action == "test_port":
             if not host or not port:
                 return {"success": False, "error": "Host and port required for test_port"}
-            
-            if ctx: ctx.report_progress(50, 100)
+
+            if ctx:
+                ctx.report_progress(50, 100)
             reachable = await _check_port(host, port, timeout_seconds)
-            return {
-                "success": True, 
-                "action": action, 
-                "data": {"host": host, "port": port, "reachable": reachable}
-            }
+            return {"success": True, "action": action, "data": {"host": host, "port": port, "reachable": reachable}}
 
         elif action == "help":
-            return {"success": True, "action": action, "data": {"categories": ["system", "files", "services", "agentic"]}}
+            return {
+                "success": True,
+                "action": action,
+                "data": {"categories": ["system", "files", "services", "agentic"]},
+            }
 
         return {"success": False, "error": f"Unknown action: {action}"}
 
     except Exception as e:
         error_msg = f"System Management Error: {e}"
-        if ctx: ctx.error(error_msg)
+        if ctx:
+            ctx.error(error_msg)
         return {"success": False, "error": error_msg}
     finally:
-        if ctx: ctx.report_progress(100, 100)
+        if ctx:
+            ctx.report_progress(100, 100)
+
 
 async def _check_port(host: str, port: int, timeout: int) -> bool:
     """Async port connectivity check."""
     try:
-        _, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port),
-            timeout=timeout
-        )
+        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
         writer.close()
         await writer.wait_closed()
         return True
     except:
         return False
+
 
 def register_system_management(mcp) -> None:
     """Register the modernized system management tool."""

@@ -1,15 +1,10 @@
-import unittest
-import tempfile
 import os
+import tempfile
+import unittest
 from pathlib import Path
-import sys
 
 # Add the project root to Python path
-from windows_operations_mcp.utils.file_utils import (
-    create_temp_file,
-    safe_cleanup_file,
-    validate_directory
-)
+from windows_operations_mcp.utils.file_utils import create_temp_file, safe_cleanup_file, validate_directory
 
 
 class TestFileUtils(unittest.TestCase):
@@ -22,6 +17,7 @@ class TestFileUtils(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_create_temp_file(self):
@@ -38,7 +34,7 @@ class TestFileUtils(unittest.TestCase):
         temp_path = create_temp_file(".txt", test_content)
         self.assertTrue(os.path.exists(temp_path))
 
-        with open(temp_path, 'rb') as f:
+        with open(temp_path, "rb") as f:
             content = f.read()
         self.assertEqual(content, test_content)
 
@@ -66,8 +62,8 @@ class TestFileUtils(unittest.TestCase):
         self.assertTrue(valid)
         self.assertEqual(msg, "")
 
-        # Test with non-existent directory
-        valid, msg = validate_directory("/nonexistent/directory")
+        # Test with non-existent directory - using absolute path that shouldn't exist
+        valid, msg = validate_directory("C:\\THIS_DIR_SHOULD_NOT_EXIST_123456789")
         self.assertFalse(valid)
         self.assertIn("does not exist", msg)
 

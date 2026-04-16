@@ -6,8 +6,8 @@ when packaged as an MCPB extension. It ensures proper Python path resolution and
 tool registration for MCPB runtime environments.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # CRITICAL: Ensure proper Python path resolution for MCPB packaging
@@ -24,11 +24,11 @@ if src_dir.exists() and str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 # Set environment variables for proper operation
-os.environ.setdefault('PYTHONPATH', str(PACKAGE_DIR))
-os.environ.setdefault('PYTHONUNBUFFERED', '1')
+os.environ.setdefault("PYTHONPATH", str(PACKAGE_DIR))
+os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
 # Import and run the server
-from .mcp_server import main
+from .mcp_server import main  # noqa: E402
 
 if __name__ == "__main__":
     main()

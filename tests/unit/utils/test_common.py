@@ -1,13 +1,8 @@
-import unittest
 import tempfile
-import os
-from pathlib import Path
-import sys
+import unittest
 
 # Add the project root to Python path
-from windows_operations_mcp.utils.common import (
-    get_execution_result
-)
+from windows_operations_mcp.utils.common import get_execution_result
 
 
 class TestCommonUtils(unittest.TestCase):
@@ -20,6 +15,7 @@ class TestCommonUtils(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_get_execution_result(self):
@@ -27,39 +23,29 @@ class TestCommonUtils(unittest.TestCase):
         from windows_operations_mcp.utils.command_executor import ProcessOutput
 
         # Test with ProcessOutput object
-        process_output = ProcessOutput(
-            stdout="test output",
-            stderr="",
-            exit_code=0,
-            execution_time=1.5
-        )
+        process_output = ProcessOutput(stdout="test output", stderr="", exit_code=0, execution_time=1.5)
 
         result = get_execution_result(process_output)
 
-        self.assertTrue(result['success'])
-        self.assertEqual(result['stdout'], "test output")
-        self.assertEqual(result['exit_code'], 0)
-        self.assertEqual(result['execution_time'], 1.5)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["stdout"], "test output")
+        self.assertEqual(result["exit_code"], 0)
+        self.assertEqual(result["execution_time"], 1.5)
 
         # Test with dictionary
-        dict_input = {
-            'stdout': 'dict output',
-            'stderr': '',
-            'exit_code': 0,
-            'execution_time': 2.0
-        }
+        dict_input = {"stdout": "dict output", "stderr": "", "exit_code": 0, "execution_time": 2.0}
 
         result = get_execution_result(dict_input)
 
-        self.assertTrue(result['success'])
-        self.assertEqual(result['stdout'], "dict output")
-        self.assertEqual(result['execution_time'], 2.0)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["stdout"], "dict output")
+        self.assertEqual(result["execution_time"], 2.0)
 
         # Test with invalid input
         result = get_execution_result("invalid_input")
 
-        self.assertFalse(result['success'])
-        self.assertIn('Unexpected output type', result['error'])
+        self.assertFalse(result["success"])
+        self.assertIn("Unexpected output type", result["error"])
 
 
 if __name__ == "__main__":

@@ -3,22 +3,23 @@ Windows Performance Portmanteau - SOTA v14.0 (FastMCP 3.2+)
 Provides comprehensive Windows Performance monitoring with agentic telemetry.
 """
 
-import asyncio
-import psutil
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
+import psutil
 from fastmcp import Context
+
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 async def windows_performance(
     action: Literal["system", "process", "counters"],
-    pid: Optional[int] = None,
+    pid: int | None = None,
     include_network: bool = True,
     duration_seconds: int = 1,
-    ctx: Optional[Context] = None,
-) -> Dict[str, Any]:
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Perform Windows Performance monitoring with comprehensive error handling and agentic telemetry.
 
@@ -39,11 +40,12 @@ async def windows_performance(
 
     try:
         if action == "system":
-            if ctx: ctx.report_progress(50, 100)
+            if ctx:
+                ctx.report_progress(50, 100)
             cpu = psutil.cpu_percent(interval=duration_seconds, percpu=True)
             mem = psutil.virtual_memory()._asdict()
             disk = psutil.disk_io_counters()._asdict() if psutil.disk_io_counters() else {}
-            
+
             data = {
                 "cpu_percent_per_core": cpu,
                 "memory": mem,
@@ -51,12 +53,14 @@ async def windows_performance(
             }
             if include_network:
                 data["network_io"] = psutil.net_io_counters()._asdict() if psutil.net_io_counters() else {}
-            
+
             return {"success": True, "action": action, "data": data}
 
         elif action == "process":
-            if not pid: return {"success": False, "error": "PID required for process performance"}
-            if ctx: ctx.report_progress(50, 100)
+            if not pid:
+                return {"success": False, "error": "PID required for process performance"}
+            if ctx:
+                ctx.report_progress(50, 100)
             p = psutil.Process(pid)
             with p.oneshot():
                 return {
@@ -68,13 +72,16 @@ async def windows_performance(
                         "cpu_percent": p.cpu_percent(interval=duration_seconds),
                         "memory_info": p.memory_info()._asdict(),
                         "num_threads": p.num_threads(),
-                        "io_counters": p.io_counters()._asdict() if hasattr(p, 'io_counters') else None
-                    }
+                        "io_counters": p.io_counters()._asdict() if hasattr(p, "io_counters") else None,
+                    },
                 }
 
         elif action == "counters":
-             # Placeholder for specialized PDH counters (would require pywin32)
-             return {"success": False, "error": "PDH Counters not yet implemented in SOTA v14.0 wrapper. Use 'system' for core metrics."}
+            # Placeholder for specialized PDH counters (would require pywin32)
+            return {
+                "success": False,
+                "error": "PDH Counters not yet implemented in SOTA v14.0 wrapper. Use 'system' for core metrics.",
+            }
 
         return {"success": False, "error": f"Unknown action: {action}"}
 
@@ -85,13 +92,19 @@ async def windows_performance(
         if ctx:
             ctx.error(error_msg)
             try:
-                advice = await ctx.sample(f"Windows Performance monitor failed ({action}). Error: {e}. Suggest alternative diagnostics.", max_tokens=100)
+                advice = await ctx.sample(
+                    f"Windows Performance monitor failed ({action}). Error: {e}. Suggest alternative diagnostics.",
+                    max_tokens=100,
+                )
                 if advice and advice.content:
                     return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except: pass
+            except:
+                pass
         return {"success": False, "error": error_msg}
     finally:
-        if ctx: ctx.report_progress(100, 100)
+        if ctx:
+            ctx.report_progress(100, 100)
+
 
 def register_windows_performance(mcp) -> None:
     """Register the modernized Windows performance tool."""

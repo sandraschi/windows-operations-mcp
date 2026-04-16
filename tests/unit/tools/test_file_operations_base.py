@@ -1,16 +1,15 @@
-import unittest
-import tempfile
 import os
 import shutil
+import tempfile
+import unittest
 from pathlib import Path
-import sys
 
 # Add the project root to Python path
 from windows_operations_mcp.tools.file_operations.base import (
-    validate_file_path,
-    normalize_path,
+    handle_operation,
     log_operation,
-    handle_operation
+    normalize_path,
+    validate_file_path,
 )
 
 
@@ -23,11 +22,11 @@ class TestFileOperationsBase(unittest.TestCase):
 
         # Create test files
         self.test_file = os.path.join(self.test_dir, "test.txt")
-        with open(self.test_file, 'w', encoding='utf-8') as f:
+        with open(self.test_file, "w", encoding="utf-8") as f:
             f.write("Test content for file operations")
 
         self.empty_file = os.path.join(self.test_dir, "empty.txt")
-        with open(self.empty_file, 'w', encoding='utf-8') as f:
+        with open(self.empty_file, "w", encoding="utf-8") as f:
             f.write("")
 
     def tearDown(self):
@@ -37,15 +36,15 @@ class TestFileOperationsBase(unittest.TestCase):
     def test_validate_file_path(self):
         """Test file path validation."""
         # Test valid file
-        is_valid, error_msg = validate_file_path(self.test_file)
+        is_valid, _error_msg = validate_file_path(self.test_file)
         self.assertTrue(is_valid)
 
         # Test invalid file
-        is_valid, error_msg = validate_file_path("/nonexistent/file.txt")
+        is_valid, _error_msg = validate_file_path("/nonexistent/file.txt")
         self.assertFalse(is_valid)
 
         # Test directory as file
-        is_valid, error_msg = validate_file_path(self.test_dir)
+        is_valid, _error_msg = validate_file_path(self.test_dir)
         self.assertFalse(is_valid)
 
     def test_normalize_path(self):
@@ -56,6 +55,7 @@ class TestFileOperationsBase(unittest.TestCase):
 
     def test_log_operation_decorator(self):
         """Test log_operation decorator."""
+
         @log_operation("test_operation")
         def test_function():
             return {"result": "test"}
@@ -65,6 +65,7 @@ class TestFileOperationsBase(unittest.TestCase):
 
     def test_handle_operation_decorator(self):
         """Test handle_operation decorator."""
+
         @handle_operation("test_operation")
         def test_function():
             return {"result": "test"}
@@ -78,7 +79,7 @@ class TestFileOperationsBase(unittest.TestCase):
         long_name = "a" * 200 + ".txt"
         long_file = os.path.join(self.test_dir, long_name)
 
-        with open(long_file, 'w') as f:
+        with open(long_file, "w") as f:
             f.write("test")
 
         # Test path normalization with long filename
@@ -94,11 +95,11 @@ class TestFileOperationsBase(unittest.TestCase):
         unicode_file = os.path.join(self.test_dir, "unicode.txt")
         unicode_content = "Hello 世界 🌍 café naïve"
 
-        with open(unicode_file, 'w', encoding='utf-8') as f:
+        with open(unicode_file, "w", encoding="utf-8") as f:
             f.write(unicode_content)
 
         # Test path validation with Unicode filename
-        is_valid, error_msg = validate_file_path(unicode_file)
+        is_valid, _error_msg = validate_file_path(unicode_file)
         self.assertTrue(is_valid)
 
 

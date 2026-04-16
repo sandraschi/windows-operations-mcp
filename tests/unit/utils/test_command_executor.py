@@ -1,14 +1,8 @@
-import unittest
 import tempfile
-import os
-from pathlib import Path
-import sys
+import unittest
 
 # Add the project root to Python path
-from windows_operations_mcp.utils.command_executor import (
-    CommandExecutor,
-    ProcessOutput
-)
+from windows_operations_mcp.utils.command_executor import CommandExecutor, ProcessOutput
 
 
 class TestCommandExecutor(unittest.TestCase):
@@ -21,6 +15,7 @@ class TestCommandExecutor(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_command_executor_initialization(self):
@@ -32,12 +27,7 @@ class TestCommandExecutor(unittest.TestCase):
 
     def test_process_output_creation(self):
         """Test ProcessOutput creation."""
-        result = ProcessOutput(
-            stdout="test output",
-            stderr="",
-            exit_code=0,
-            execution_time=1.0
-        )
+        result = ProcessOutput(stdout="test output", stderr="", exit_code=0, execution_time=1.0)
 
         self.assertEqual(result.stdout, "test output")
         self.assertEqual(result.exit_code, 0)
@@ -45,23 +35,23 @@ class TestCommandExecutor(unittest.TestCase):
 
         # Test to_dict method
         result_dict = result.to_dict()
-        self.assertTrue(result_dict['success'])
-        self.assertEqual(result_dict['stdout'], "test output")
+        self.assertTrue(result_dict["success"])
+        self.assertEqual(result_dict["stdout"], "test output")
 
     def test_command_executor_simple_command(self):
         """Test executing a simple command."""
         result = CommandExecutor.execute_cmd("echo 'Hello, World!'")
 
-        self.assertTrue(result['success'])
-        self.assertIn("Hello, World!", result['stdout'])
+        self.assertTrue(result["success"])
+        self.assertIn("Hello, World!", result["stdout"])
 
     def test_command_executor_error_handling(self):
         """Test error handling in command execution."""
         # Test with non-existent command
         result = CommandExecutor.execute_cmd("nonexistent_command")
 
-        self.assertFalse(result['success'])
-        self.assertNotEqual(result['exit_code'], 0)
+        self.assertFalse(result["success"])
+        self.assertNotEqual(result["exit_code"], 0)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,7 @@
-import unittest
 import tempfile
-import os
-from pathlib import Path
-import sys
-import asyncio
+import unittest
 
 # Add the project root to Python path
-from windows_operations_mcp.mcp_server import mcp
 from windows_operations_mcp.tools.help_tools import register_help_tools
 from windows_operations_mcp.tools.system_tools import register_system_tools
 
@@ -20,6 +15,7 @@ class TestMCPIntegration(unittest.TestCase):
 
         # Create a fresh MCP instance for testing
         from windows_operations_mcp.mcp_server import FastMCP
+
         self.mcp = FastMCP("test-integration-server")
 
         # Register tools
@@ -29,6 +25,7 @@ class TestMCPIntegration(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_mcp_has_registered_tools(self):
@@ -51,9 +48,3 @@ class TestMCPIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
-

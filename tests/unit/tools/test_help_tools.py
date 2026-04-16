@@ -1,16 +1,13 @@
-import unittest
 import tempfile
-from pathlib import Path
-import sys
+import unittest
 
 # Add the project root to Python path
-from windows_operations_mcp.tools.help_tools import (
-    register_help_tools
-)
+from windows_operations_mcp.tools.help_tools import register_help_tools
 
 
 class MockMCP:
     """Mock MCP server for testing."""
+
     def __init__(self):
         self.tools = {}
 
@@ -24,7 +21,9 @@ class MockMCP:
             def decorator(f):
                 self.tools[f.__name__] = f
                 return f
+
             return decorator
+
 
 class TestHelpTools(unittest.TestCase):
     """Test help tools functionality."""
@@ -37,6 +36,7 @@ class TestHelpTools(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_register_help_tools(self):
@@ -44,50 +44,49 @@ class TestHelpTools(unittest.TestCase):
         register_help_tools(self.mcp)
 
         # Check that get_help tool was registered
-        self.assertIn('get_help', self.mcp.tools)
+        self.assertIn("get_help", self.mcp.tools)
 
     def test_get_help_basic(self):
         """Test basic help retrieval."""
         register_help_tools(self.mcp)
-        get_help_func = self.mcp.tools['get_help']
+        get_help_func = self.mcp.tools["get_help"]
 
         result = get_help_func()
 
-        self.assertEqual(result['status'], 'success')
-        self.assertIn('message', result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn("message", result)
 
     def test_get_help_with_command(self):
         """Test help with specific command."""
         register_help_tools(self.mcp)
-        get_help_func = self.mcp.tools['get_help']
+        get_help_func = self.mcp.tools["get_help"]
 
-        result = get_help_func(command="get_system_info")
+        # Updated to use SOTA portmanteau tool name instead of legacy get_system_info
+        result = get_help_func(command="system_management")
 
-        self.assertEqual(result['status'], 'success')
-        self.assertIn('message', result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn("message", result)
 
     def test_get_help_with_category(self):
         """Test help for specific category."""
         register_help_tools(self.mcp)
-        get_help_func = self.mcp.tools['get_help']
+        get_help_func = self.mcp.tools["get_help"]
 
         result = get_help_func(category="system")
 
-        self.assertEqual(result['status'], 'success')
-        self.assertIn('message', result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn("message", result)
 
     def test_get_help_with_invalid_command(self):
         """Test help with invalid command."""
         register_help_tools(self.mcp)
-        get_help_func = self.mcp.tools['get_help']
+        get_help_func = self.mcp.tools["get_help"]
 
         result = get_help_func(command="nonexistent_command")
 
-        self.assertEqual(result['status'], 'error')
-        self.assertIn('not found', result['message'])
+        self.assertEqual(result["status"], "error")
+        self.assertIn("not found", result["message"])
 
 
 if __name__ == "__main__":
     unittest.main()
-
-

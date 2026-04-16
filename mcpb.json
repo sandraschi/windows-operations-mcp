@@ -1,6 +1,6 @@
 {
   "name": "windows-operations-mcp",
-  "version": "14.0.1",
+  "version": "14.1.0",
   "type": "server",
   "runtime": "python",
   "entry_point": "src/windows_operations_mcp/mcp_server.py",
