@@ -149,3 +149,21 @@ clean:
 	Get-ChildItem -Path . -Recurse -Directory -Filter '__pycache__' -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item -Recurse -Force $_.FullName }
 	Get-ChildItem -Path . -Filter '*.mcpb' -ErrorAction SilentlyContinue | Remove-Item -Force
 	Write-Host 'Clean complete.' -ForegroundColor Green
+
+# ── Fleet Operations ─────────────────────────────────────────────────────────
+
+# Track modified files in the last N hours (default 4) across the fleet
+heartbeat hours="4":
+	pwsh -NoProfile -File .\scripts\fleet-heartbeat.ps1 -LookbackHours {{hours}}
+
+# Scan for stale disk bloat (min 500MB, 14 days stale)
+audit-leaks min_mb="500" age_days="14":
+	pwsh -NoProfile -File .\scripts\substrate-cleaner.ps1 -MinSizeMB {{min_mb}} -MinAgeDays {{age_days}}
+
+# Sync new research from Downloads/Desktop/Documents to ADN Inbox
+sync-research:
+	pwsh -NoProfile -File .\scripts\deep-memory-sync.ps1
+
+# EMERGENCY: Kill all fleet processes running on ports 10700-10850
+kill-fleet:
+	pwsh -NoProfile -File .\scripts\kill-fleet.ps1
