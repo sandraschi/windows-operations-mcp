@@ -1,169 +1,202 @@
+"""
+File Operations - SOTA v15.0 (FastMCP 3.2+ Projected Atomic Tools)
+
+Atomic tools mounted under namespace "winops_file":
+  winops_file/read   - Read text content of a file
+  winops_file/write  - Write text content to a file
+  winops_file/delete - Delete a file or directory tree
+  winops_file/move   - Move a file or directory
+  winops_file/copy   - Copy a file or directory tree
+  winops_file/info   - Get file/directory metadata
+"""
+
+import asyncio
 import shutil
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any
 
-from fastmcp import Context
+from fastmcp import Context, FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-async def file_operations(
-    action: Literal["read", "write", "delete", "move", "copy", "list", "info", "exists"],
-    path: str,
-    content: str | None = None,
-    destination: str | None = None,
-    overwrite: bool = False,
-    encoding: str = "utf-8",
-    create_dirs: bool = False,
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Perform core file operations with comprehensive error handling and agentic telemetry.
+def register_file_operations(parent_mcp: FastMCP) -> None:
+    """Mount atomic file operation tools under namespace 'winops_file'."""
+    ns = FastMCP(name="winops_file")
 
-    RATIONALE:
-    Consolidates reading, writing, moving, copying, and deleting into a single portmanteau.
-    Integrates with FastMCP 3.2 Context for real-time progress reporting and LLM-in-the-loop diagnostics.
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def read(
+        path: Annotated[str, Field(description="File path to read.")],
+        encoding: Annotated[str, Field(description="Text encoding.")] = "utf-8",
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Read the text content of a file.
 
-    Args:
-        action: The file operation to perform.
-        path: Target file or directory path.
-        content: Text content to write (for "write" action).
-        destination: Destination path (for "move" and "copy" actions).
-        overwrite: Allow overwriting existing files (default: False).
-        encoding: Text encoding for read/write (default: "utf-8").
-        create_dirs: Automatically create parent directories (default: False).
-        ctx: FastMCP Context for telemetry and sampling (injected).
+        ## Return Format
+        ```json
+        {"success": bool, "content": str, "size": int}
+        ```
 
-    Examples:
-        - file_operations(action="read", path="C:/temp/config.json")
-        - file_operations(action="write", path="notes.txt", content="SOTA 2026", create_dirs=True)
-    """
-    if ctx:
-        ctx.info(f"FileSystem Op: {action} on {path}")
-        ctx.report_progress(10, 100)
+        ## Examples
+            read(path="D:\\\\config\\\\app.json")
+        """
+        try:
+            p = Path(path).resolve()
+            if not p.is_file():
+                return {"success": False, "error": f"Not a file: {path}",
+                        "suggestions": ["Verify the path exists and is a file, not a directory."]}
+            content = await asyncio.to_thread(p.read_text, encoding)
+            return {"success": True, "content": content, "size": len(content)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
-    try:
-        path_obj = Path(path).resolve()
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def write(
+        path: Annotated[str, Field(description="Destination file path.")],
+        content: Annotated[str, Field(description="Text content to write.")],
+        overwrite: Annotated[bool, Field(description="Allow overwriting existing file.")] = False,
+        create_dirs: Annotated[bool, Field(description="Create parent directories if missing.")] = True,
+        encoding: Annotated[str, Field(description="Text encoding.")] = "utf-8",
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Write text content to a file.
 
-        if action == "read":
-            if not path_obj.is_file():
-                return {"success": False, "error": f"Path is not a file: {path}"}
+        ## Return Format
+        ```json
+        {"success": bool, "path": str, "bytes": int}
+        ```
 
-            if ctx:
-                ctx.report_progress(50, 100)
-            content_str = path_obj.read_text(encoding=encoding)
-            return {"success": True, "action": action, "data": {"content": content_str, "size": len(content_str)}}
-
-        elif action == "write":
-            if content is None:
-                return {"success": False, "error": "Content required for write"}
-
-            if path_obj.exists() and not overwrite:
-                return {"success": False, "error": "File exists and overwrite is False"}
-
+        ## Examples
+            write(path="D:\\\\logs\\\\output.txt", content="hello", create_dirs=True)
+        """
+        try:
+            p = Path(path).resolve()
+            if p.exists() and not overwrite:
+                return {"success": False, "error": "File exists and overwrite is False",
+                        "suggestions": ["Pass overwrite=True to replace the existing file."]}
             if create_dirs:
-                path_obj.parent.mkdir(parents=True, exist_ok=True)
+                p.parent.mkdir(parents=True, exist_ok=True)
+            await asyncio.to_thread(p.write_text, content, encoding)
+            return {"success": True, "path": str(p), "bytes": len(content)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
-            if ctx:
-                ctx.report_progress(50, 100)
-            path_obj.write_text(content, encoding=encoding)
-            return {"success": True, "action": action, "data": {"path": str(path_obj), "bytes": len(content)}}
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    async def delete(
+        path: Annotated[str, Field(description="File or directory path to delete.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Delete a file or recursively delete a directory tree.
 
-        elif action == "delete":
-            if not path_obj.exists():
-                return {"success": False, "error": "Path does not exist"}
+        ## Return Format
+        ```json
+        {"success": bool, "deleted": str}
+        ```
 
-            if ctx:
-                ctx.report_progress(50, 100)
-            if path_obj.is_file():
-                path_obj.unlink()
+        ## Examples
+            delete(path="D:\\\\temp\\\\old_file.txt")
+
+        Notes:
+         - Directories are removed with shutil.rmtree (recursive, no confirmation).
+        """
+        try:
+            p = Path(path).resolve()
+            if not p.exists():
+                return {"success": False, "error": f"Path does not exist: {path}"}
+            if p.is_file():
+                await asyncio.to_thread(p.unlink)
             else:
-                shutil.rmtree(path_obj)
-            return {"success": True, "action": action, "data": {"deleted": str(path_obj)}}
+                await asyncio.to_thread(shutil.rmtree, str(p))
+            return {"success": True, "deleted": str(p)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
-        elif action == "move":
-            if not destination:
-                return {"success": False, "error": "Destination required for move"}
-            dest_obj = Path(destination).resolve()
-            if dest_obj.exists() and not overwrite:
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    async def move(
+        path: Annotated[str, Field(description="Source file or directory path.")],
+        destination: Annotated[str, Field(description="Destination path.")],
+        overwrite: Annotated[bool, Field(description="Allow overwriting destination.")] = False,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Move a file or directory to a new location.
+
+        ## Return Format
+        ```json
+        {"success": bool, "from": str, "to": str}
+        ```
+
+        ## Examples
+            move(path="D:\\\\old\\\\file.txt", destination="D:\\\\new\\\\file.txt")
+        """
+        try:
+            src, dst = Path(path).resolve(), Path(destination).resolve()
+            if dst.exists() and not overwrite:
                 return {"success": False, "error": "Destination exists and overwrite is False"}
+            await asyncio.to_thread(shutil.move, str(src), str(dst))
+            return {"success": True, "from": str(src), "to": str(dst)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
-            if ctx:
-                ctx.report_progress(50, 100)
-            shutil.move(str(path_obj), str(dest_obj))
-            return {"success": True, "action": action, "data": {"from": str(path_obj), "to": str(dest_obj)}}
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    async def copy(
+        path: Annotated[str, Field(description="Source file or directory path.")],
+        destination: Annotated[str, Field(description="Destination path.")],
+        overwrite: Annotated[bool, Field(description="Allow overwriting destination.")] = False,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Copy a file or directory tree to a new location.
 
-        elif action == "copy":
-            if not destination:
-                return {"success": False, "error": "Destination required for copy"}
-            dest_obj = Path(destination).resolve()
-            if dest_obj.exists() and not overwrite:
+        ## Return Format
+        ```json
+        {"success": bool, "from": str, "to": str}
+        ```
+
+        ## Examples
+            copy(path="D:\\\\docs\\\\report.pdf", destination="D:\\\\backup\\\\report.pdf")
+        """
+        try:
+            src, dst = Path(path).resolve(), Path(destination).resolve()
+            if dst.exists() and not overwrite:
                 return {"success": False, "error": "Destination exists and overwrite is False"}
-
-            if ctx:
-                ctx.report_progress(50, 100)
-            if path_obj.is_dir():
-                shutil.copytree(str(path_obj), str(dest_obj), dirs_exist_ok=overwrite)
+            if src.is_dir():
+                await asyncio.to_thread(shutil.copytree, str(src), str(dst), dirs_exist_ok=overwrite)
             else:
-                shutil.copy2(str(path_obj), str(dest_obj))
-            return {"success": True, "action": action, "data": {"copied_to": str(dest_obj)}}
+                await asyncio.to_thread(shutil.copy2, str(src), str(dst))
+            return {"success": True, "from": str(src), "to": str(dst)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
-        elif action == "list":
-            if not path_obj.is_dir():
-                return {"success": False, "error": f"Path is not a directory: {path}"}
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def info(
+        path: Annotated[str, Field(description="File or directory path.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Get metadata (name, size, created, modified, is_dir) for a path.
 
-            if ctx:
-                ctx.report_progress(50, 100)
-            items = []
-            for item in path_obj.iterdir():
-                items.append(
-                    {"name": item.name, "is_dir": item.is_dir(), "size": item.stat().st_size if item.is_file() else 0}
-                )
-            return {"success": True, "action": action, "data": {"items": items, "count": len(items)}}
+        ## Return Format
+        ```json
+        {"success": bool, "name": str, "size": int, "created": float, "modified": float, "is_dir": bool}
+        ```
 
-        elif action == "info":
-            if not path_obj.exists():
-                return {"success": False, "error": "Path does not exist"}
-            stat = path_obj.stat()
+        ## Examples
+            info(path="D:\\\\data\\\\report.pdf")
+        """
+        try:
+            p = Path(path).resolve()
+            if not p.exists():
+                return {"success": False, "error": f"Path does not exist: {path}"}
+            st = p.stat()
             return {
-                "success": True,
-                "action": action,
-                "data": {
-                    "name": path_obj.name,
-                    "size": stat.st_size,
-                    "created": stat.st_ctime,
-                    "modified": stat.st_mtime,
-                    "is_dir": path_obj.is_dir(),
-                },
+                "success": True, "name": p.name, "path": str(p),
+                "size": st.st_size, "created": st.st_ctime, "modified": st.st_mtime,
+                "is_dir": p.is_dir(),
             }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
-        elif action == "exists":
-            return {"success": True, "action": action, "data": {"exists": path_obj.exists(), "path": str(path_obj)}}
-
-        return {"success": False, "error": f"Unknown action: {action}"}
-
-    except Exception as e:
-        error_msg = f"FileSystem Error: {e}"
-        if ctx:
-            ctx.error(error_msg)
-            # Sampling logic for FileSystem errors
-            try:
-                advice = await ctx.sample(
-                    f"FileSystem operation '{action}' failed on '{path}'. Error: {e}. Provide a brief fix.",
-                    max_tokens=100,
-                )
-                if advice and advice.content:
-                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except Exception:
-                pass
-        return {"success": False, "error": error_msg}
-    finally:
-        if ctx:
-            ctx.report_progress(100, 100)
-
-
-def register_file_operations(mcp) -> None:
-    """Register the modernized file operations tool."""
-    mcp.tool()(file_operations)
+    parent_mcp.mount(ns, prefix="winops_file")
+    logger.info("Mounted atomic tools: winops_file/read, /write, /delete, /move, /copy, /info")

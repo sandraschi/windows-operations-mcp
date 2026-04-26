@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "schip-mcp-windows-operations"
-version = "14.1.0"
+version = "14.2.0"
 description = "Windows Operations MCP - Comprehensive Windows system operations for Claude Desktop with MCPB packaging"
 readme = "README.md"
 requires-python = ">=3.12"

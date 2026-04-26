@@ -9,6 +9,7 @@ FIXES APPLIED:
 4. Simplified command execution
 """
 
+import asyncio
 import ctypes
 import os
 import subprocess
@@ -23,6 +24,14 @@ logger = get_logger(__name__)
 class CMDExecutor:
     """
     CMD execution with reliable output capture.
+
+    FIX v14.2: cmd.exe was hanging due to console handle inheritance and missing
+    no-interaction flags. Key changes:
+    - CREATE_NO_WINDOW: detaches from parent console, prevents pipe deadlock
+    - /Q flag: disables echo, avoids interactive prompts
+    - stdin=DEVNULL: prevents cmd.exe blocking waiting for input
+    - Explicit stdout/stderr PIPE instead of capture_output=True (same effect
+      but more explicit and avoids any capture_output interaction with creationflags)
     """
 
     def __init__(self):
@@ -32,35 +41,35 @@ class CMDExecutor:
     def _get_console_encoding(self) -> str:
         """Get the native console encoding."""
         try:
-            # Try to get the console code page
             kernel32 = ctypes.windll.kernel32
             cp = kernel32.GetConsoleCP()
             if cp:
                 return f"cp{cp}"
-        except:
+        except Exception:
             pass
-        return "cp850"  # Default Windows console encoding
+        return "cp850"
 
     def execute(self, command: str, working_directory: str | None = None, timeout: int = 30) -> dict[str, Any]:
-        """Execute CMD command with reliable output capture."""
+        """Execute CMD command with reliable non-blocking output capture."""
         start_time = time.time()
 
         try:
-            # Use cmd.exe /c to execute the command
-            cmd_args = ["cmd.exe", "/c", command]
+            # /Q: quiet mode (no echo), prevents interactive echo blocking
+            cmd_args = ["cmd.exe", "/Q", "/c", command]
 
-            # Set working directory
             cwd = working_directory or os.getcwd()
 
-            # Execute command
             result = subprocess.run(
                 cmd_args,
                 cwd=cwd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                stdin=subprocess.DEVNULL,          # Never block waiting for input
                 text=True,
                 encoding=self.encoding,
                 timeout=timeout,
                 errors="replace",
+                creationflags=subprocess.CREATE_NO_WINDOW,  # Detach from console
             )
 
             execution_time = time.time() - start_time
@@ -73,11 +82,16 @@ class CMDExecutor:
                 "execution_time": execution_time,
             }
 
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
+            # Kill the process if timeout fires
+            if e.output:
+                partial_stdout = e.output.decode(self.encoding, errors="replace") if isinstance(e.output, bytes) else str(e.output)
+            else:
+                partial_stdout = ""
             execution_time = time.time() - start_time
             return {
                 "success": False,
-                "stdout": "",
+                "stdout": partial_stdout,
                 "stderr": f"Command timed out after {timeout} seconds",
                 "exit_code": -1,
                 "execution_time": execution_time,
@@ -223,23 +237,24 @@ def register_powershell_tools(mcp):
 
     # Register PowerShell tool
     @mcp.tool()
-    def run_powershell_tool(
+    async def run_powershell_tool(
         command: str, working_directory: str | None = None, timeout_seconds: int = 30, max_output_size: int = 10000
     ) -> dict[str, Any]:
         """Execute PowerShell command with reliable output capture."""
-        return ps_executor.execute(
+        return await asyncio.to_thread(
+            ps_executor.execute,
             command=command,
             working_dir=working_directory,
             timeout=timeout_seconds,
         )
 
-    # Register CMD tool
     @mcp.tool()
-    def run_cmd_tool(
+    async def run_cmd_tool(
         command: str, working_directory: str | None = None, timeout_seconds: int = 30, max_output_size: int = 10000
     ) -> dict[str, Any]:
         """Execute CMD command with reliable output capture."""
-        return cmd_executor.execute(
+        return await asyncio.to_thread(
+            cmd_executor.execute,
             command=command,
             working_directory=working_directory,
             timeout=timeout_seconds,

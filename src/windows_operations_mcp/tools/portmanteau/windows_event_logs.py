@@ -1,118 +1,43 @@
 """
-Windows Event Logs Portmanteau - SOTA v14.0 (FastMCP 3.2+)
-Provides comprehensive Windows Event Log management with agentic telemetry.
+Windows Event Logs - SOTA v15.0 (FastMCP 3.2+ Projected Atomic Tools)
+
+Atomic tools mounted under namespace "winops_evtlog":
+  winops_evtlog/query  - Query recent events from a log channel
+  winops_evtlog/list   - List available log channels
+  winops_evtlog/export - Export a log channel to .evtx file
+  winops_evtlog/clear  - Clear a log channel
 """
 
 import asyncio
 from datetime import datetime, timedelta
-from typing import Any, Literal
+from typing import Annotated, Any
 
-from fastmcp import Context
+from fastmcp import Context, FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-async def windows_event_logs(
-    action: Literal["query", "clear", "export", "list"],
-    log_name: str = "Application",
-    max_events: int = 50,
-    time_range_hours: int = 24,
-    event_id: int | None = None,
-    output_path: str | None = None,
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Perform Windows Event Log operations with comprehensive error handling and agentic telemetry.
-
-    RATIONALE:
-    Consolidates querying, clearing, and exporting logs into a single async portmanteau.
-    Uses asyncio.to_thread for blocking pywin32 calls to maintain MCP responsiveness.
-
-    Args:
-        action: The log operation to perform.
-        log_name: Name of the event log (Application, System, Security, etc.).
-        max_events: Maximum events to return (for "query").
-        time_range_hours: Lookback window (for "query").
-        event_id: Filter by specific Event ID.
-        output_path: Destination for exported logs (for "export").
-        ctx: FastMCP Context for telemetry and sampling.
-    """
-    if ctx:
-        ctx.info(f"EventLog Op: {action} on {log_name}")
-        ctx.report_progress(10, 100)
-
-    try:
-        import win32evtlog
-
-        if action == "query":
-            return await asyncio.to_thread(_query_logs, log_name, max_events, time_range_hours, event_id, ctx)
-
-        if action == "clear":
-            if ctx:
-                ctx.warning(f"Clearing {log_name} log...")
-            await asyncio.to_thread(win32evtlog.ClearEventLog, None, log_name)
-            return {"success": True, "action": action, "data": {"cleared_log": log_name}}
-
-        if action == "export":
-            if not output_path:
-                return {"success": False, "error": "output_path required for export"}
-            if ctx:
-                ctx.info(f"Exporting {log_name} to {output_path}...")
-            # Use wevtutil for reliable export
-            cmd = ["wevtutil.exe", "epl", log_name, output_path]
-            process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                raise Exception(stderr.decode().strip() or stdout.decode().strip())
-            return {"success": True, "action": action, "data": {"exported_log": log_name, "path": output_path}}
-
-        if action == "list":
-            if ctx:
-                ctx.info("Listing all event log channels...")
-            cmd = ["wevtutil.exe", "el"]
-            process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                raise Exception(stderr.decode().strip() or stdout.decode().strip())
-            channels = stdout.decode().splitlines()
-            return {"success": True, "action": action, "data": {"channels": channels, "count": len(channels)}}
-
-        return {"success": False, "error": f"Unknown action: {action}"}
-
-    except ImportError:
-        return {"success": False, "error": "pywin32 not installed"}
-    except Exception as e:
-        error_msg = f"EventLog Error: {e}"
-        if ctx:
-            ctx.error(error_msg)
-            try:
-                advice = await ctx.sample(
-                    f"Windows Event Log '{log_name}' failed {action}. Error: {e}. Suggest fix.", max_tokens=100
-                )
-                if advice and advice.content:
-                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except:
-                pass
-        return {"success": False, "error": error_msg}
-    finally:
-        if ctx:
-            ctx.report_progress(100, 100)
+async def _wevtutil(*args: str) -> str:
+    proc = await asyncio.create_subprocess_exec(
+        "wevtutil.exe", *args,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(stderr.decode(errors="replace").strip())
+    return stdout.decode(errors="replace").strip()
 
 
-def _query_logs(log_name, max_events, hours, event_id, ctx):
-    """Blocking query implementation."""
+def _query_events_blocking(log_name: str, max_events: int, hours: int, event_id: int | None) -> list[dict]:
     import win32evtlog
-
     handle = win32evtlog.OpenEventLog(None, log_name)
     flags = win32evtlog.EVENTLOG_BACKWARDS_READ | win32evtlog.EVENTLOG_SEQUENTIAL_READ
-    start_time = datetime.now() - timedelta(hours=hours)
-
+    cutoff = datetime.now() - timedelta(hours=hours)
+    level_map = {1: "Error", 2: "Warning", 4: "Info", 8: "AuditSuccess", 16: "AuditFailure"}
     events = []
     try:
         while len(events) < max_events:
@@ -121,32 +46,133 @@ def _query_logs(log_name, max_events, hours, event_id, ctx):
                 break
             for ev in batch:
                 ev_time = datetime.fromtimestamp(ev.TimeGenerated)
-                if ev_time < start_time:
+                if ev_time < cutoff:
                     continue
                 if event_id and ev.EventID != event_id:
                     continue
-
-                events.append(
-                    {
-                        "timestamp": ev_time.isoformat(),
-                        "id": ev.EventID,
-                        "source": ev.SourceName,
-                        "level": _get_level(ev.EventType),
-                        "message": ev.StringInserts[0] if ev.StringInserts else "",
-                    }
-                )
+                events.append({
+                    "timestamp": ev_time.isoformat(),
+                    "id": ev.EventID,
+                    "source": ev.SourceName,
+                    "level": level_map.get(ev.EventType, "Other"),
+                    "message": ev.StringInserts[0] if ev.StringInserts else "",
+                })
                 if len(events) >= max_events:
                     break
-        return {"success": True, "action": "query", "data": {"events": events, "count": len(events)}}
     finally:
         win32evtlog.CloseEventLog(handle)
+    return events
 
 
-def _get_level(code):
-    m = {1: "Error", 2: "Warning", 4: "Info", 8: "AuditSuccess", 16: "AuditFailure"}
-    return m.get(code, "Other")
+def register_windows_event_logs(parent_mcp: FastMCP) -> None:
+    """Mount atomic event log tools under namespace 'winops_evtlog'."""
+    ns = FastMCP(name="winops_evtlog")
 
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def query(
+        log_name: Annotated[str, Field(description="Log channel name (Application, System, Security, etc.).")] = "Application",
+        max_events: Annotated[int, Field(description="Max events to return (1-500).", ge=1, le=500)] = 50,
+        time_range_hours: Annotated[int, Field(description="Lookback window in hours.", ge=1, le=720)] = 24,
+        event_id: Annotated[int | None, Field(description="Filter by specific Event ID.")] = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Query recent events from a Windows Event Log channel.
 
-def register_windows_event_logs(mcp) -> None:
-    """Register the modernized Windows event logs tool."""
-    mcp.tool()(windows_event_logs)
+        ## Return Format
+        ```json
+        {
+          "success": bool,
+          "log_name": str,
+          "events": [{"timestamp": str, "id": int, "source": str, "level": str, "message": str}],
+          "count": int,
+          "has_more": bool
+        }
+        ```
+
+        ## Examples
+            query(log_name="System", max_events=20, time_range_hours=1)
+            query(log_name="Application", event_id=1000)
+
+        Errors:
+         - Returns success=false if pywin32 is not installed or log_name is invalid.
+        """
+        try:
+            events = await asyncio.to_thread(_query_events_blocking, log_name, max_events, time_range_hours, event_id)
+            return {"success": True, "log_name": log_name, "events": events,
+                    "count": len(events), "has_more": len(events) == max_events}
+        except ImportError:
+            return {"success": False, "error": "pywin32 not installed",
+                    "suggestions": ["Run: uv pip install pywin32"]}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Use winops_evtlog/list to see available log channels."]}
+
+    @ns.tool(name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def list_channels(ctx: Context | None = None) -> dict[str, Any]:
+        """List all available Windows Event Log channels.
+
+        ## Return Format
+        ```json
+        {"success": bool, "channels": [str], "count": int}
+        ```
+
+        ## Examples
+            list()
+        """
+        try:
+            raw = await _wevtutil("el")
+            channels = raw.splitlines()
+            return {"success": True, "channels": channels, "count": len(channels)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    async def export(
+        log_name: Annotated[str, Field(description="Log channel to export.")],
+        output_path: Annotated[str, Field(description="Destination .evtx file path.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Export a Windows Event Log channel to an .evtx file.
+
+        ## Return Format
+        ```json
+        {"success": bool, "log_name": str, "output_path": str}
+        ```
+
+        ## Examples
+            export(log_name="System", output_path="D:\\\\logs\\\\system.evtx")
+        """
+        try:
+            await _wevtutil("epl", log_name, output_path)
+            return {"success": True, "log_name": log_name, "output_path": output_path}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Ensure output directory exists and you have write permission."]}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    async def clear(
+        log_name: Annotated[str, Field(description="Log channel to clear.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Clear all events from a Windows Event Log channel. Requires Administrator.
+
+        ## Return Format
+        ```json
+        {"success": bool, "cleared_log": str}
+        ```
+
+        ## Examples
+            clear(log_name="Application")
+        """
+        try:
+            import win32evtlog
+            await asyncio.to_thread(win32evtlog.ClearEventLog, None, log_name)
+            return {"success": True, "cleared_log": log_name}
+        except ImportError:
+            return {"success": False, "error": "pywin32 not installed"}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Run as Administrator to clear Security log."]}
+
+    parent_mcp.mount(ns, prefix="winops_evtlog")
+    logger.info("Mounted atomic tools: winops_evtlog/query, /list, /export, /clear")

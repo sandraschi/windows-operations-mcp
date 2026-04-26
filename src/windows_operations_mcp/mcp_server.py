@@ -149,6 +149,12 @@ def register_all_tools() -> None:
 
 def main() -> None:
     """Main entry point."""
+    # SOTA: Windows Binary Mode for clean JSON-RPC
+    if os.name == "nt":
+        import msvcrt
+
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+
     try:
         register_all_tools()
         mcp.run()

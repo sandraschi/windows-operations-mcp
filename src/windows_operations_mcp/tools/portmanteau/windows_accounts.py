@@ -1,167 +1,203 @@
 """
-Windows Accounts Portmanteau - SOTA v14.0 (FastMCP 3.2+)
-Provides local user and group management for Windows system hardening.
+Windows Accounts - SOTA v15.0 (FastMCP 3.2+ Projected Atomic Tools)
+
+Atomic tools mounted under namespace "winops_accounts":
+  winops_accounts/list_users       - List local users
+  winops_accounts/add_user         - Create a local user
+  winops_accounts/remove_user      - Delete a local user
+  winops_accounts/set_password     - Change a user's password
+  winops_accounts/list_groups      - List local groups
+  winops_accounts/group_members    - List members of a group
+  winops_accounts/manage_group     - Add or remove a user from a group
 """
 
 import asyncio
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastmcp import Context
+from fastmcp import Context, FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-async def windows_accounts(
-    action: Literal[
-        "list_users", "add_user", "remove_user", "set_password", "list_groups", "manage_group", "get_group_members"
-    ],
-    user: str | None = None,
-    password: str | None = None,
-    group: str | None = None,
-    group_action: Literal["add", "remove"] = "add",
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Perform Windows local account and group management with agentic telemetry.
+async def _net(args: list[str]) -> str:
+    proc = await asyncio.create_subprocess_exec(
+        "net.exe", *[str(a) for a in args],
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(stderr.decode(errors="replace").strip() or stdout.decode(errors="replace").strip())
+    return stdout.decode(errors="replace").strip()
 
-    RATIONALE:
-    Enables autonomous identity and access management (IAM) on local Windows systems.
-    Uses 'net.exe' for industrial reliability and broad OS compatibility.
 
-    Args:
-        action: The account operation to perform.
-        user: Target username.
-        password: New password (for add_user or set_password).
-        group: Target local group name.
-        group_action: Action to perform on the group (target user is 'user').
-        ctx: FastMCP Context for telemetry and sampling.
-    """
-    if ctx:
-        ctx.info(f"Accounts Op: {action} (User: {user}, Group: {group})")
-        ctx.report_progress(10, 100)
+def register_windows_accounts(parent_mcp: FastMCP) -> None:
+    """Mount atomic account management tools under namespace 'winops_accounts'."""
+    ns = FastMCP(name="winops_accounts")
 
-    try:
-        if action == "list_users":
-            if ctx:
-                ctx.report_progress(50, 100)
-            users = await _run_net(["user"])
-            return {"success": True, "action": action, "data": {"raw_users": users}}
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def list_users(ctx: Context | None = None) -> dict[str, Any]:
+        """List local Windows user accounts.
 
-        if action == "add_user":
-            if not user or not password:
-                return {"success": False, "error": "Username and password required for add_user"}
-            if ctx:
-                ctx.report_progress(50, 100)
-            await _run_net(["user", user, password, "/add"])
-            return {"success": True, "action": action, "data": {"status": f"User '{user}' added"}}
+        ## Return Format
+        ```json
+        {"success": bool, "raw_output": str}
+        ```
 
-        if action == "remove_user":
-            if not user:
-                return {"success": False, "error": "Username required for remove_user"}
-            if ctx:
-                ctx.report_progress(50, 100)
-            await _run_net(["user", user, "/delete"])
-            return {"success": True, "action": action, "data": {"status": f"User '{user}' removed"}}
+        ## Examples
+            list_users()
+        """
+        try:
+            return {"success": True, "raw_output": await _net(["user"])}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
-        if action == "set_password":
-            if not user or not password:
-                return {"success": False, "error": "Username and password required for set_password"}
-            if ctx:
-                ctx.report_progress(50, 100)
-            await _run_net(["user", user, password])
-            return {"success": True, "action": action, "data": {"status": f"Password for '{user}' updated"}}
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    async def add_user(
+        username: Annotated[str, Field(description="New user account name.")],
+        password: Annotated[str, Field(description="Initial password.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Create a new local Windows user account.
 
-        if action == "list_groups":
-            if ctx:
-                ctx.report_progress(50, 100)
-            groups = await _run_net(["localgroup"])
-            return {"success": True, "action": action, "data": {"raw_groups": groups}}
+        ## Return Format
+        ```json
+        {"success": bool, "username": str}
+        ```
 
-        if action == "manage_group":
-            if not user or not group:
-                return {"success": False, "error": "Username and group name required for manage_group"}
-            if ctx:
-                ctx.report_progress(50, 100)
-            flag = f"/{group_action}"
-            await _run_net(["localgroup", group, user, flag])
-            return {
-                "success": True,
-                "action": action,
-                "data": {"status": f"User '{user}' {group_action}ed to group '{group}'"},
-            }
+        ## Examples
+            add_user(username="jsmith", password="P@ssw0rd!")
+        """
+        try:
+            await _net(["user", username, password, "/add"])
+            return {"success": True, "username": username}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Run as Administrator. Verify username does not already exist."]}
 
-        if action == "get_group_members":
-            if not group:
-                return {"success": False, "error": "Group name required for get_group_members"}
-            if ctx:
-                ctx.report_progress(50, 100)
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    async def remove_user(
+        username: Annotated[str, Field(description="User account name to delete.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Delete a local Windows user account.
 
-            output = await _run_net(["localgroup", group])
+        ## Return Format
+        ```json
+        {"success": bool, "username": str}
+        ```
 
-            # Parse members from net localgroup output
-            # Format usually has "Members" header, then "---" separator, then names, then success message
-            lines = output.splitlines()
+        ## Examples
+            remove_user(username="jsmith")
+        """
+        try:
+            await _net(["user", username, "/delete"])
+            return {"success": True, "username": username}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Run as Administrator. Verify the user exists with list_users."]}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def set_password(
+        username: Annotated[str, Field(description="Target user account.")],
+        password: Annotated[str, Field(description="New password.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Set the password for a local Windows user account.
+
+        ## Return Format
+        ```json
+        {"success": bool, "username": str}
+        ```
+
+        ## Examples
+            set_password(username="jsmith", password="NewP@ss!")
+        """
+        try:
+            await _net(["user", username, password])
+            return {"success": True, "username": username}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def list_groups(ctx: Context | None = None) -> dict[str, Any]:
+        """List local Windows groups.
+
+        ## Return Format
+        ```json
+        {"success": bool, "raw_output": str}
+        ```
+
+        ## Examples
+            list_groups()
+        """
+        try:
+            return {"success": True, "raw_output": await _net(["localgroup"])}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def group_members(
+        group: Annotated[str, Field(description="Local group name.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """List members of a local Windows group.
+
+        ## Return Format
+        ```json
+        {"success": bool, "group": str, "members": [str]}
+        ```
+
+        ## Examples
+            group_members(group="Administrators")
+        """
+        try:
+            output = await _net(["localgroup", group])
             members = []
-            parsing_members = False
-
-            for line in lines:
-                line_stripped = line.strip()
-                if not line_stripped:
+            parsing = False
+            for line in output.splitlines():
+                s = line.strip()
+                if not s:
                     continue
-                if line_stripped.startswith("---"):
-                    parsing_members = True
+                if s.startswith("---"):
+                    parsing = True
                     continue
-                if "The command completed successfully" in line_stripped:
+                if "The command completed successfully" in s:
                     break
-                if parsing_members:
-                    # Ignore lines that look like a footer or summary
-                    if (
-                        line_stripped
-                        and not line_stripped.startswith("Alias name")
-                        and not line_stripped.startswith("Comment")
-                    ):
-                        members.append(line_stripped)
+                if parsing and s and not s.startswith(("Alias name", "Comment")):
+                    members.append(s)
+            return {"success": True, "group": group, "members": members}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Verify group name with list_groups."]}
 
-            return {
-                "success": True,
-                "action": action,
-                "data": {"group": group, "members": members, "raw_output": output},
-            }
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    async def manage_group(
+        group: Annotated[str, Field(description="Local group name.")],
+        username: Annotated[str, Field(description="User to add or remove.")],
+        action: Annotated[Literal["add", "remove"], Field(description="add or remove.")] = "add",
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Add or remove a user from a local Windows group.
 
-        return {"success": False, "error": f"Unknown action: {action}"}
+        ## Return Format
+        ```json
+        {"success": bool, "group": str, "username": str, "action": str}
+        ```
 
-    except Exception as e:
-        error_msg = f"Accounts Error: {e}"
-        if ctx:
-            ctx.error(error_msg)
-            try:
-                advice = await ctx.sample(
-                    f"Windows local account operation '{action}' failed. Error: {e}. Suggest repair.", max_tokens=100
-                )
-                if advice and advice.content:
-                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except Exception:
-                pass
-        return {"success": False, "error": error_msg}
-    finally:
-        if ctx:
-            ctx.report_progress(100, 100)
+        ## Examples
+            manage_group(group="Administrators", username="jsmith", action="add")
+            manage_group(group="Administrators", username="jsmith", action="remove")
+        """
+        try:
+            await _net(["localgroup", group, username, f"/{action}"])
+            return {"success": True, "group": group, "username": username, "action": action}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Run as Administrator. Verify both user and group exist."]}
 
-
-async def _run_net(args: list[str]) -> str:
-    """Run net.exe command asynchronously."""
-    # Ensure all args are strings
-    str_args = [str(a) for a in args]
-    cmd = ["net.exe", *str_args]
-    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    if process.returncode != 0:
-        raise Exception(stderr.decode().strip() or stdout.decode().strip())
-    return stdout.decode().strip()
-
-
-def register_windows_accounts(mcp) -> None:
-    """Register the modernized Windows accounts tool."""
-    mcp.tool()(windows_accounts)
+    parent_mcp.mount(ns, prefix="winops_accounts")
+    logger.info("Mounted atomic tools: winops_accounts/list_users, /add_user, /remove_user, /set_password, /list_groups, /group_members, /manage_group")

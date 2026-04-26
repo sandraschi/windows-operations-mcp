@@ -1,149 +1,165 @@
 """
-System Management Portmanteau - SOTA v14.0 (FastMCP 3.2+)
-Provides Windows system diagnostics, health checks, and port testing with telemetry.
+System Management - SOTA v15.0 (FastMCP 3.2+ Projected Atomic Tools)
+
+Atomic tools mounted under namespace "winops_sys":
+  winops_sys/info      - OS and hardware information
+  winops_sys/health    - Health status (CPU/mem/disk thresholds)
+  winops_sys/test_port - TCP connectivity check
 """
 
 import asyncio
 import platform
-from typing import Any, Literal
+from typing import Annotated, Any
 
 import psutil
-from fastmcp import Context
+from fastmcp import Context, FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+_SAMPLE_TIMEOUT = 10.0
 
-async def system_management(
-    action: Literal["info", "health", "test_port", "help"],
-    detailed: bool = False,
-    host: str | None = None,
-    port: int | None = None,
-    timeout_seconds: int = 5,
-    category: str | None = None,
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Perform system management operations with comprehensive error handling and agentic telemetry.
 
-    RATIONALE:
-    Consolidates system info, health checks, and network connectivity into a single portmanteau.
-    Integrates with FastMCP 3.2 Context for real-time progress reporting and LLM-in-the-loop diagnostics.
+def register_system_management(parent_mcp: FastMCP) -> None:
+    """Mount atomic system management tools under namespace 'winops_sys'."""
+    ns = FastMCP(name="winops_sys")
 
-    Args:
-        action: The system operation to perform.
-        detailed: Include additional technical details (default: False).
-        host: Target hostname for port testing.
-        port: Target port for connectivity verification.
-        timeout_seconds: Connection timeout (default: 5s).
-        category: Help category filter.
-        ctx: FastMCP Context for telemetry and sampling (injected).
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
+    async def info(
+        detailed: Annotated[bool, Field(description="Include boot time, users, and CPU frequency.")] = False,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Return OS platform, Python version, CPU core count, and total memory.
 
-    Examples:
-        - system_management(action="health", detailed=True)
-        - system_management(action="test_port", host="8.8.8.8", port=53)
-    """
-    if ctx:
-        ctx.info(f"System Management: {action}")
-        ctx.report_progress(10, 100)
+        ## Return Format
+        ```json
+        {"success": true, "platform": str, "python": str, "machine": str,
+         "cpu_cores": int, "memory_total": int,
+         "boot_time": float, "users": [str], "cpu_freq": {...}}  // detailed only
+        ```
 
-    try:
-        if action == "info":
-            if ctx:
-                ctx.report_progress(50, 100)
-            data = {
-                "platform": platform.platform(),
-                "python": platform.python_version(),
-                "machine": platform.machine(),
-                "cpu_cores": psutil.cpu_count(logical=False),
-                "memory_total": psutil.virtual_memory().total,
-            }
-            if detailed:
-                data.update(
-                    {
-                        "boot_time": psutil.boot_time(),
-                        "users": [u.name for u in psutil.users()],
-                        "cpu_freq": psutil.cpu_freq()._asdict() if psutil.cpu_freq() else None,
-                    }
-                )
-            return {"success": True, "action": action, "data": data}
+        ## Examples
+            info()
+            info(detailed=True)
+        """
+        data: dict[str, Any] = {
+            "success": True,
+            "platform": platform.platform(),
+            "python": platform.python_version(),
+            "machine": platform.machine(),
+            "cpu_cores": psutil.cpu_count(logical=False),
+            "memory_total": psutil.virtual_memory().total,
+        }
+        if detailed:
+            freq = psutil.cpu_freq()
+            data.update({
+                "boot_time": psutil.boot_time(),
+                "users": [u.name for u in psutil.users()],
+                "cpu_freq": freq._asdict() if freq else None,
+            })
+        return data
 
-        elif action == "health":
-            if ctx:
-                ctx.report_progress(30, 100)
-            cpu = psutil.cpu_percent(interval=0.1)
-            mem = psutil.virtual_memory().percent
-            disk = psutil.disk_usage("C:\\").percent
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
+    async def health(
+        detailed: Annotated[bool, Field(description="Include full disk usage breakdown.")] = False,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Check system health against CPU/memory/disk thresholds.
 
+        ## Return Format
+        ```json
+        {
+          "success": true,
+          "status": "healthy" | "degraded" | "unhealthy",
+          "cpu_percent": float, "memory_percent": float, "disk_percent": float,
+          "sampling_advice": str  // only when degraded/unhealthy and sampling available
+        }
+        ```
+
+        ## Examples
+            health()
+            health(detailed=True)
+
+        Notes:
+         - degraded: cpu>70% or mem>80% or disk>85%
+         - unhealthy: cpu>90% or mem>90% or disk>95%
+        """
+        cpu = psutil.cpu_percent(interval=0.1)
+        mem = psutil.virtual_memory().percent
+        disk = psutil.disk_usage("C:\\").percent
+
+        if cpu > 90 or mem > 90 or disk > 95:
+            status = "unhealthy"
+        elif cpu > 70 or mem > 80 or disk > 85:
+            status = "degraded"
+        else:
             status = "healthy"
-            if cpu > 90 or mem > 90 or disk > 95:
-                status = "unhealthy"
-            elif cpu > 70 or mem > 80 or disk > 85:
-                status = "degraded"
 
-            health_data = {
-                "status": status,
-                "cpu_percent": cpu,
-                "memory_percent": mem,
-                "disk_percent": disk,
-            }
-            if detailed:
-                health_data["disk_details"] = psutil.disk_usage("C:\\")._asdict()
+        data: dict[str, Any] = {
+            "success": True,
+            "status": status,
+            "cpu_percent": cpu,
+            "memory_percent": mem,
+            "disk_percent": disk,
+        }
 
-            if status != "healthy" and ctx:
-                ctx.warning(f"System status is {status}. Sampling for optimizations...")
-                try:
-                    advice = await ctx.sample(
-                        f"Window system is {status} (CPU: {cpu}%, MEM: {mem}%, Disk: {disk}%). Suggest 3 quick fixes.",
+        if detailed:
+            data["disk_details"] = psutil.disk_usage("C:\\")._asdict()
+
+        if status != "healthy" and ctx:
+            try:
+                advice = await asyncio.wait_for(
+                    ctx.sample(
+                        f"Windows system is {status} (CPU: {cpu}%, MEM: {mem}%, Disk: {disk}%). Suggest 3 quick fixes.",
                         max_tokens=150,
-                    )
-                    if advice and advice.content:
-                        health_data["sampling_advice"] = advice.content[0].text
-                except:
-                    pass
+                    ),
+                    timeout=_SAMPLE_TIMEOUT,
+                )
+                if advice and advice.content:
+                    data["sampling_advice"] = advice.content[0].text
+            except Exception:
+                pass
 
-            return {"success": True, "action": action, "data": health_data}
+        return data
 
-        elif action == "test_port":
-            if not host or not port:
-                return {"success": False, "error": "Host and port required for test_port"}
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True)
+    )
+    async def test_port(
+        host: Annotated[str, Field(description="Hostname or IP to connect to.")],
+        port: Annotated[int, Field(description="TCP port to test.", ge=1, le=65535)],
+        timeout_seconds: Annotated[int, Field(description="Connection timeout.", ge=1, le=30)] = 5,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Test TCP connectivity to a host:port.
 
-            if ctx:
-                ctx.report_progress(50, 100)
-            reachable = await _check_port(host, port, timeout_seconds)
-            return {"success": True, "action": action, "data": {"host": host, "port": port, "reachable": reachable}}
+        ## Return Format
+        ```json
+        {"success": true, "host": str, "port": int, "reachable": bool}
+        ```
 
-        elif action == "help":
-            return {
-                "success": True,
-                "action": action,
-                "data": {"categories": ["system", "files", "services", "agentic"]},
-            }
+        ## Examples
+            test_port(host="8.8.8.8", port=53)
+            test_port(host="localhost", port=10800)
+        """
+        try:
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port), timeout=timeout_seconds
+            )
+            writer.close()
+            await writer.wait_closed()
+            reachable = True
+        except Exception:
+            reachable = False
 
-        return {"success": False, "error": f"Unknown action: {action}"}
+        return {"success": True, "host": host, "port": port, "reachable": reachable}
 
-    except Exception as e:
-        error_msg = f"System Management Error: {e}"
-        if ctx:
-            ctx.error(error_msg)
-        return {"success": False, "error": error_msg}
-    finally:
-        if ctx:
-            ctx.report_progress(100, 100)
-
-
-async def _check_port(host: str, port: int, timeout: int) -> bool:
-    """Async port connectivity check."""
-    try:
-        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
-        writer.close()
-        await writer.wait_closed()
-        return True
-    except:
-        return False
-
-
-def register_system_management(mcp) -> None:
-    """Register the modernized system management tool."""
-    mcp.tool()(system_management)
+    parent_mcp.mount(ns, prefix="winops_sys")
+    logger.info("Mounted atomic tools: winops_sys/info, /health, /test_port")

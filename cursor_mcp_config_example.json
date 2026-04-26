@@ -1,8 +1,9 @@
 {
   "mcpServers": {
     "windows-operations-mcp": {
-      "command": "python",
+      "command": "py",
       "args": [
+        "-3",
         "-m",
         "windows_operations_mcp.__main__"
       ],

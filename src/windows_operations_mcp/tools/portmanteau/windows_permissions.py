@@ -1,106 +1,132 @@
 """
-Windows Permissions Portmanteau - SOTA v14.0 (FastMCP 3.2+)
-Provides comprehensive Windows ACL/Permission management with agentic telemetry.
+Windows Permissions - SOTA v15.0 (FastMCP 3.2+ Projected Atomic Tools)
+
+Atomic tools mounted under namespace "winops_acl":
+  winops_acl/get         - View ACL for a path
+  winops_acl/grant       - Grant permissions to a user/group
+  winops_acl/revoke      - Revoke permissions from a user/group
+  winops_acl/inheritance - Enable or disable ACL inheritance
 """
 
 import asyncio
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastmcp import Context
+from fastmcp import Context, FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-async def windows_permissions(
-    action: Literal["get", "grant", "revoke", "inheritance"],
-    path: str,
-    user: str | None = None,
-    permission: Literal["F", "M", "RX", "R", "W"] | None = "R",
-    enable_inheritance: bool = True,
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Perform Windows Permission (ACL) operations with comprehensive error handling and agentic telemetry.
-
-    RATIONALE:
-    Consolidates ACL viewing, granting, revoking, and inheritance management into a single portmanteau.
-    Uses 'icacls.exe' for industrial reliability on Windows.
-
-    Args:
-        action: The permission operation to perform.
-        path: Target file or directory path.
-        user: Target user or group (required for grant/revoke).
-        permission: Permission level (F=Full, M=Modify, RX=Read/Exec, R=Read, W=Write).
-        enable_inheritance: Whether to enable or disable inheritance (for "inheritance").
-        ctx: FastMCP Context for telemetry and sampling.
-    """
-    if ctx:
-        ctx.info(f"Permissions Op: {action} on {path}")
-        ctx.report_progress(10, 100)
-
-    try:
-        if action == "get":
-            if ctx:
-                ctx.report_progress(50, 100)
-            result = await _run_icacls([path])
-            return {"success": True, "action": action, "data": {"raw_acl": result}}
-
-        if action == "grant":
-            if not user:
-                return {"success": False, "error": "User required for grant"}
-            if ctx:
-                ctx.report_progress(50, 100)
-            await _run_icacls([path, "/grant", f"{user}:{permission}"])
-            return {"success": True, "action": action, "data": {"granted": f"{user}:{permission}"}}
-
-        if action == "revoke":
-            if not user:
-                return {"success": False, "error": "User required for revoke"}
-            if ctx:
-                ctx.report_progress(50, 100)
-            await _run_icacls([path, "/remove", user])
-            return {"success": True, "action": action, "data": {"revoked": user}}
-
-        if action == "inheritance":
-            flag = "/inheritance:e" if enable_inheritance else "/inheritance:d"
-            if ctx:
-                ctx.report_progress(50, 100)
-            await _run_icacls([path, flag])
-            return {"success": True, "action": action, "data": {"inheritance_enabled": enable_inheritance}}
-
-        return {"success": False, "error": f"Unknown action: {action}"}
-
-    except Exception as e:
-        error_msg = f"Permissions Error: {e}"
-        if ctx:
-            ctx.error(error_msg)
-            try:
-                advice = await ctx.sample(
-                    f"Windows Permissions operation '{action}' failed on '{path}'. Error: {e}. Suggest fix.",
-                    max_tokens=100,
-                )
-                if advice and advice.content:
-                    return {"success": False, "error": error_msg, "sampling_advice": advice.content[0].text}
-            except:
-                pass
-        return {"success": False, "error": error_msg}
-    finally:
-        if ctx:
-            ctx.report_progress(100, 100)
+async def _icacls(*args: str) -> str:
+    proc = await asyncio.create_subprocess_exec(
+        "icacls.exe", *args,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(stderr.decode(errors="replace").strip())
+    return stdout.decode(errors="replace").strip()
 
 
-async def _run_icacls(args: list[str]) -> str:
-    """Run icacls command asynchronously."""
-    cmd = ["icacls.exe", *args]
-    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    if process.returncode != 0:
-        raise Exception(stderr.decode().strip() or stdout.decode().strip())
-    return stdout.decode().strip()
+def register_windows_permissions(parent_mcp: FastMCP) -> None:
+    """Mount atomic ACL tools under namespace 'winops_acl'."""
+    ns = FastMCP(name="winops_acl")
 
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def get(
+        path: Annotated[str, Field(description="File or directory path to inspect.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """View the ACL (Access Control List) for a file or directory.
 
-def register_windows_permissions(mcp) -> None:
-    """Register the modernized Windows permissions tool."""
-    mcp.tool()(windows_permissions)
+        ## Return Format
+        ```json
+        {"success": bool, "path": str, "raw_acl": str}
+        ```
+
+        ## Examples
+            get(path="C:\\\\Users\\\\Public")
+        """
+        try:
+            return {"success": True, "path": path, "raw_acl": await _icacls(path)}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Verify path exists and is accessible."]}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    async def grant(
+        path: Annotated[str, Field(description="File or directory path.")],
+        user: Annotated[str, Field(description="Username or group to grant permission to.")],
+        permission: Annotated[
+            Literal["F", "M", "RX", "R", "W"],
+            Field(description="F=Full, M=Modify, RX=Read+Execute, R=Read, W=Write."),
+        ] = "R",
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Grant a permission level to a user or group on a file or directory.
+
+        ## Return Format
+        ```json
+        {"success": bool, "path": str, "user": str, "permission": str}
+        ```
+
+        ## Examples
+            grant(path="D:\\\\data", user="jsmith", permission="M")
+        """
+        try:
+            await _icacls(path, "/grant", f"{user}:{permission}")
+            return {"success": True, "path": path, "user": user, "permission": permission}
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "suggestions": ["Run as Administrator for system paths."]}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    async def revoke(
+        path: Annotated[str, Field(description="File or directory path.")],
+        user: Annotated[str, Field(description="Username or group to revoke.")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Revoke all explicit permissions for a user or group on a file or directory.
+
+        ## Return Format
+        ```json
+        {"success": bool, "path": str, "user": str}
+        ```
+
+        ## Examples
+            revoke(path="D:\\\\data", user="jsmith")
+        """
+        try:
+            await _icacls(path, "/remove", user)
+            return {"success": True, "path": path, "user": user}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    async def inheritance(
+        path: Annotated[str, Field(description="File or directory path.")],
+        enable: Annotated[bool, Field(description="True to enable inheritance, False to disable.")] = True,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Enable or disable ACL inheritance on a file or directory.
+
+        ## Return Format
+        ```json
+        {"success": bool, "path": str, "inheritance_enabled": bool}
+        ```
+
+        ## Examples
+            inheritance(path="D:\\\\secure", enable=False)
+        """
+        try:
+            flag = "/inheritance:e" if enable else "/inheritance:d"
+            await _icacls(path, flag)
+            return {"success": True, "path": path, "inheritance_enabled": enable}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    parent_mcp.mount(ns, prefix="winops_acl")
+    logger.info("Mounted atomic tools: winops_acl/get, /grant, /revoke, /inheritance")
