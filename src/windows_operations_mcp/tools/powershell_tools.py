@@ -1,16 +1,21 @@
 """
 PowerShell and CMD execution tools for Windows Operations MCP.
-QUICK FIX VERSION - Addresses core stdout issues and over-restrictive security.
+v15.0 - RELIABLE OUTPUT CAPTURE FIXES
 
-FIXES APPLIED:
-1. Relaxed security filters (removed 'format' block, allow common cmdlets)
-2. Fixed encoding handling (use native console encoding)
-3. Removed forced Out-String wrapping
-4. Simplified command execution
+FIXES (May 2026):
+1. PowerShell: Forces UTF-8 encoding setup before every command
+   ([Console]::OutputEncoding + $OutputEncoding)
+2. PowerShell: Uses -OutputFormat Text for text-mode output
+3. PowerShell: Appends | Out-String -Width 4096 to capture native exe output
+   (docker, psql, etc. — PowerShell 5.1 silently drops their stdout otherwise)
+4. PowerShell/Cmd: Added stdin_data parameter for piping input
+5. CMD: Uses shell=True with raw command string to prevent list2cmdline
+   quote-mangling (fixes nested quoting with docker exec ... sh -c "...")
+6. CMD: Uses full path C:\\Windows\\System32\\cmd.exe for reliability
+7. Both: Uses utf-8 encoding consistently instead of brittle console CP detection
 """
 
 import asyncio
-import ctypes
 import os
 import subprocess
 import time
@@ -23,53 +28,46 @@ logger = get_logger(__name__)
 
 class CMDExecutor:
     """
-    CMD execution with reliable output capture.
+    CMD execution with reliable output capture and proper quoting support.
 
-    FIX v14.2: cmd.exe was hanging due to console handle inheritance and missing
-    no-interaction flags. Key changes:
-    - CREATE_NO_WINDOW: detaches from parent console, prevents pipe deadlock
-    - /Q flag: disables echo, avoids interactive prompts
-    - stdin=DEVNULL: prevents cmd.exe blocking waiting for input
-    - Explicit stdout/stderr PIPE instead of capture_output=True (same effect
-      but more explicit and avoids any capture_output interaction with creationflags)
+    v15.0 FIXES:
+    - shell=True prevents list2cmdline from mangling nested quotes
+      (solves "Unterminated quoted string" errors with docker exec sh -c "...")
+    - Full cmd.exe path avoids PATH resolution issues
+    - stdin_data support for piped input
+    - utf-8 encoding for consistent cross-platform output
     """
 
     def __init__(self):
-        self.encoding = self._get_console_encoding()
-        logger.info(f"CMD executor initialized with encoding: {self.encoding}")
+        logger.info("CMD executor initialized (v15.0 — shell=True quoting fix)")
 
-    def _get_console_encoding(self) -> str:
-        """Get the native console encoding."""
-        try:
-            kernel32 = ctypes.windll.kernel32
-            cp = kernel32.GetConsoleCP()
-            if cp:
-                return f"cp{cp}"
-        except Exception:
-            pass
-        return "cp850"
-
-    def execute(self, command: str, working_directory: str | None = None, timeout: int = 30) -> dict[str, Any]:
-        """Execute CMD command with reliable non-blocking output capture."""
+    def execute(
+        self,
+        command: str,
+        working_directory: str | None = None,
+        timeout: int = 30,
+        stdin_data: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute CMD command with reliable output capture."""
         start_time = time.time()
+        cwd = working_directory or os.getcwd()
 
         try:
-            # /Q: quiet mode (no echo), prevents interactive echo blocking
-            cmd_args = ["cmd.exe", "/Q", "/c", command]
-
-            cwd = working_directory or os.getcwd()
-
+            # shell=True avoids list2cmdline quote-mangling on Windows.
+            # Python passes the raw string as "COMSPEC /c <command>", preserving
+            # the original quoting for nested patterns like:
+            #   docker exec container sh -c "python -c '...'"
             result = subprocess.run(
-                cmd_args,
+                command,
                 cwd=cwd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.DEVNULL,          # Never block waiting for input
+                shell=True,
+                capture_output=True,
                 text=True,
-                encoding=self.encoding,
+                encoding="utf-8",
                 timeout=timeout,
                 errors="replace",
-                creationflags=subprocess.CREATE_NO_WINDOW,  # Detach from console
+                input=stdin_data,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
 
             execution_time = time.time() - start_time
@@ -82,16 +80,11 @@ class CMDExecutor:
                 "execution_time": execution_time,
             }
 
-        except subprocess.TimeoutExpired as e:
-            # Kill the process if timeout fires
-            if e.output:
-                partial_stdout = e.output.decode(self.encoding, errors="replace") if isinstance(e.output, bytes) else str(e.output)
-            else:
-                partial_stdout = ""
+        except subprocess.TimeoutExpired:
             execution_time = time.time() - start_time
             return {
                 "success": False,
-                "stdout": partial_stdout,
+                "stdout": "",
                 "stderr": f"Command timed out after {timeout} seconds",
                 "exit_code": -1,
                 "execution_time": execution_time,
@@ -109,88 +102,90 @@ class CMDExecutor:
 
 class PowerShellExecutor:
     """
-    Fixed PowerShell execution that solves the "no stdout" problem.
+    PowerShell execution with guaranteed native exe output capture.
 
-    Key fixes:
-    1. Relaxed security filters - allow common PowerShell cmdlets
-    2. Native encoding detection instead of forcing UTF-8
-    3. Clean command execution without unnecessary wrapping
+    v15.0 FIXES:
+    - Prepends [Console]::OutputEncoding = UTF8 and $OutputEncoding = UTF8
+      to force PowerShell 5.1 to send output in UTF-8 when writing to a pipe
+    - Appends | Out-String -Width 4096 to force string serialization
+      (PowerShell 5.1 silently drops native exe stdout otherwise)
+    - Uses -OutputFormat Text for pipe-friendly text output
+    - Uses utf-8 encoding consistently (no brittle GetConsoleOutputCP)
+    - stdin_data support for piped input
     """
 
     def __init__(self):
-        self.console_encoding = self._get_console_encoding()
-        logger.info(f"PowerShell executor initialized with encoding: {self.console_encoding}")
+        logger.info("PowerShell executor initialized (v15.0 — Out-String + UTF-8 fixes)")
 
-    def _get_console_encoding(self):
-        """Get Windows console encoding reliably."""
-        try:
-            # Get the actual console codepage
-            console_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
-            if console_cp == 65001:  # UTF-8
-                return "utf-8"
-            elif console_cp == 1252:  # Windows-1252
-                return "cp1252"
-            else:
-                return f"cp{console_cp}"
-        except Exception as e:
-            logger.warning(f"Could not get console encoding: {e}")
-            return "utf-8"  # Safe fallback
+    def _build_command(self, command: str) -> str:
+        """Wrap command with encoding setup and output-forcing pipeline.
 
-    def execute(self, command: str, working_dir: str | None = None, timeout: int = 60) -> dict[str, Any]:
+        The | Out-String -Width 4096 suffix is critical for PowerShell 5.1:
+        without it, native executables (docker, psql, etc.) have their stdout
+        silently dropped when PowerShell writes to a pipe.
         """
-        Execute PowerShell command with reliable output capture.
+        setup = (
+            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+            "$OutputEncoding = [System.Text.Encoding]::UTF8"
+        )
+        return f"{setup}; {command} | Out-String -Width 4096"
+
+    def execute(
+        self,
+        command: str,
+        working_dir: str | None = None,
+        timeout: int = 60,
+        stdin_data: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute PowerShell command with reliable output capture.
 
         Args:
             command: PowerShell command to execute
             working_dir: Working directory (optional)
             timeout: Command timeout in seconds
+            stdin_data: Optional data to pipe to stdin
 
         Returns:
-            dict: {
-                'success': bool,
-                'stdout': str,
-                'stderr': str,
-                'exit_code': int,
-                'execution_time': float,
-                'encoding_used': str
-            }
+            dict with success, stdout, stderr, exit_code, execution_time
         """
         start_time = time.time()
 
         try:
-            # Build clean PowerShell command - NO forced encoding, NO Out-String wrapping
+            full_command = self._build_command(command)
+
             cmd = [
                 "powershell.exe",
-                "-NoProfile",  # Skip user profile loading
-                "-NonInteractive",  # No interactive prompts
+                "-NoProfile",
+                "-NonInteractive",
                 "-ExecutionPolicy",
-                "Bypass",  # Override execution policy
+                "Bypass",
+                "-OutputFormat",
+                "Text",
                 "-Command",
-                command,  # Execute command as-is, no manipulation
+                full_command,
             ]
 
             logger.debug(f"Executing PowerShell: {command[:100]}...")
 
-            # Execute with native encoding
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                encoding=self.console_encoding,  # Use detected console encoding
-                errors="replace",  # Never crash on encoding errors
+                encoding="utf-8",
+                errors="replace",
                 timeout=timeout,
                 cwd=working_dir,
+                input=stdin_data,
             )
 
             execution_time = time.time() - start_time
 
             response = {
                 "success": result.returncode == 0,
-                "stdout": result.stdout,  # No .strip() - preserve formatting
+                "stdout": result.stdout,
                 "stderr": result.stderr,
                 "exit_code": result.returncode,
                 "execution_time": execution_time,
-                "encoding_used": self.console_encoding,
             }
 
             if response["success"]:
@@ -209,9 +204,7 @@ class PowerShellExecutor:
                 "stderr": f"Command timed out after {timeout} seconds",
                 "exit_code": -1,
                 "execution_time": execution_time,
-                "encoding_used": "timeout",
             }
-
         except Exception as e:
             execution_time = time.time() - start_time
             logger.error(f"PowerShell execution error: {e}")
@@ -221,8 +214,8 @@ class PowerShellExecutor:
                 "stderr": f"Execution error: {e!s}",
                 "exit_code": -1,
                 "execution_time": execution_time,
-                "encoding_used": "error",
             }
+
 
 
 # Module-level executor instances for import by portmanteau command_execution
@@ -232,13 +225,13 @@ cmd_executor = CMDExecutor()
 
 def register_powershell_tools(mcp):
     """Register PowerShell and CMD execution tools with FastMCP."""
-    # Use module-level executor instances
-    # (also available for import: from .powershell_tools import ps_executor, cmd_executor)
-
-    # Register PowerShell tool
     @mcp.tool()
     async def run_powershell_tool(
-        command: str, working_directory: str | None = None, timeout_seconds: int = 30, max_output_size: int = 10000
+        command: str,
+        working_directory: str | None = None,
+        timeout_seconds: int = 60,
+        max_output_size: int = 10000,
+        stdin_data: str | None = None,
     ) -> dict[str, Any]:
         """Execute PowerShell command with reliable output capture."""
         return await asyncio.to_thread(
@@ -246,11 +239,16 @@ def register_powershell_tools(mcp):
             command=command,
             working_dir=working_directory,
             timeout=timeout_seconds,
+            stdin_data=stdin_data,
         )
 
     @mcp.tool()
     async def run_cmd_tool(
-        command: str, working_directory: str | None = None, timeout_seconds: int = 30, max_output_size: int = 10000
+        command: str,
+        working_directory: str | None = None,
+        timeout_seconds: int = 30,
+        max_output_size: int = 10000,
+        stdin_data: str | None = None,
     ) -> dict[str, Any]:
         """Execute CMD command with reliable output capture."""
         return await asyncio.to_thread(
@@ -258,6 +256,7 @@ def register_powershell_tools(mcp):
             command=command,
             working_directory=working_directory,
             timeout=timeout_seconds,
+            stdin_data=stdin_data,
         )
 
     logger.info("PowerShell and CMD tools registered successfully")

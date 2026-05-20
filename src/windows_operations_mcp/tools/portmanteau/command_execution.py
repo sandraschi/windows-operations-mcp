@@ -37,6 +37,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         working_directory: Annotated[str | None, Field(description="Optional working directory.")] = None,
         timeout_seconds: Annotated[int, Field(description="Hard timeout 1-300s.", ge=1, le=300)] = 30,
         max_output_size: Annotated[int, Field(description="Truncate stdout/stderr at this many chars.")] = 10000,
+        stdin_data: Annotated[str | None, Field(description="Optional data to pipe to stdin of the command.")] = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Execute a PowerShell command and return stdout, stderr, exit_code, execution_time.
@@ -60,6 +61,8 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         Notes:
          - Uses asyncio.to_thread — never blocks the event loop.
          - ctx.sample() capped at 10s to prevent hang on unsupported clients.
+         - v15.0: Native exe (docker, psql) output now reliably captured via
+           Out-String + UTF-8 encoding setup. stdin_data pipes input through stdin.
         """
         if not command:
             return {"success": False, "error": "command must be non-empty", "suggestions": ["Provide a PowerShell command string."]}
@@ -75,6 +78,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             command=command,
             working_dir=working_directory,
             timeout=timeout_seconds,
+            stdin_data=stdin_data,
         )
 
         if ctx:
@@ -125,6 +129,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         working_directory: Annotated[str | None, Field(description="Optional working directory.")] = None,
         timeout_seconds: Annotated[int, Field(description="Hard timeout 1-300s.", ge=1, le=300)] = 30,
         max_output_size: Annotated[int, Field(description="Truncate stdout/stderr at this many chars.")] = 10000,
+        stdin_data: Annotated[str | None, Field(description="Optional data to pipe to stdin of the command.")] = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Execute a CMD (cmd.exe) command and return stdout, stderr, exit_code, execution_time.
@@ -148,6 +153,8 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         Notes:
          - Uses asyncio.to_thread — never blocks the event loop.
          - ctx.sample() capped at 10s to prevent hang on unsupported clients.
+         - v15.0: Uses shell=True to fix nested quoting issues
+           (solves "Unterminated quoted string" errors). stdin_data pipes input.
         """
         if not command:
             return {"success": False, "error": "command must be non-empty", "suggestions": ["Provide a CMD command string."]}
@@ -163,6 +170,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             command=command,
             working_directory=working_directory,
             timeout=timeout_seconds,
+            stdin_data=stdin_data,
         )
 
         if ctx:

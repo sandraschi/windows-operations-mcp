@@ -125,3 +125,5 @@ dxt_package/
 extension.wasm
 *.dxt
 *.pdb
+
+_dashboard/

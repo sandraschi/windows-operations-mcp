@@ -89,6 +89,7 @@ def register_all_tools() -> None:
         # Core Portmanteau Modules
         portmanteau_tools = [
             "command_execution",
+            "container_execution",
             "archive_management",
             "json_operations",
             "process_management",

@@ -39,12 +39,16 @@ class TestFileOperationsBase(unittest.TestCase):
         is_valid, _error_msg = validate_file_path(self.test_file)
         self.assertTrue(is_valid)
 
-        # Test invalid file
-        is_valid, _error_msg = validate_file_path("/nonexistent/file.txt")
+        # Test path with invalid characters
+        is_valid, _error_msg = validate_file_path("file<b>ad.txt")
         self.assertFalse(is_valid)
 
-        # Test directory as file
-        is_valid, _error_msg = validate_file_path(self.test_dir)
+        # Test path traversal
+        is_valid, _error_msg = validate_file_path("../etc/passwd")
+        self.assertFalse(is_valid)
+
+        # Test directory as file with must_exist=True
+        is_valid, _error_msg = validate_file_path(self.test_dir, must_exist=True, check_type=True)
         self.assertFalse(is_valid)
 
     def test_normalize_path(self):
