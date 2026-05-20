@@ -7,6 +7,9 @@
   <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.2-7c5cfc?style=flat-square" alt="FastMCP"></a>
 </p>
 
+
+> 📖 **[Installation Guide](INSTALL.md)** — quick start, manual setup, and troubleshooting
+
 ### Native Windows Control Plane & Data Surgery for Agentic Ecosystems
 
 `windows-operations-mcp` is a specialized, industrial-grade MCP server designed to provide LLMs with a high-fidelity control plane for Windows-native operations and complex data manipulation. It bypasses generic filesystem overhead to offer deep integration with Registry, User Accounts, Task Automation, and SOTA Data Logic.
