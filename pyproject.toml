@@ -1,9 +1,9 @@
-[build-system]
+  EDITED  D:\Dev\repos\windows-operations-mcp\pyproject.toml [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "schip-mcp-windows-operations"
+name = "windows-operations-mcp"
 version = "14.2.0"
 description = "Windows Operations MCP - Comprehensive Windows system operations for Claude Desktop with MCPB packaging"
 readme = "README.md"
