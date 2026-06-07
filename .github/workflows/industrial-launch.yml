@@ -1,4 +1,4 @@
-name: Industrial Launch (schip-mcp-windows-operations)
+  EDITED  D:\Dev\repos\windows-operations-mcp\.github\workflows\industrial-launch.yml name: Industrial Launch (windows-operations-mcp)
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
           uv build
           # Heritage support for legacy MCPB
           if [ -d "mcpb" ]; then
-            zip -r dist/schip-mcp-windows-operations.mcpb mcpb/ -x "*.git*"
+            zip -r dist/windows-operations-mcp.mcpb mcpb/ -x "*.git*"
           fi
 
       - name: Generate Changelog
@@ -52,7 +52,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "schip-mcp-windows-operations ${{ github.ref_name }}"
+          name: "windows-operations-mcp ${{ github.ref_name }}"
           body: |
             ## 🚀 Industrial Launch: ${{ github.ref_name }}
             
@@ -60,7 +60,7 @@ jobs:
 
             ### ⚡ Quick Start (Zero-Install)
             ```powershell
-            uvx schip-mcp-windows-operations --serve
+            uvx windows-operations-mcp --serve
             ```
 
             ### 📖 What's New
