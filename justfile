@@ -1,4 +1,4 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 # Sync with pyproject / release tags when cutting a release
 __version__ := "14.1.0"
@@ -8,7 +8,7 @@ __name__ := "windows-operations-mcp"
 
 # Open the interactive recipe dashboard in the browser
 default:
-    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
+    @just --list
 
 # ── Environment ────────────────────────────────────────────────────────────────
 
@@ -143,3 +143,4 @@ sync-research:
 # EMERGENCY: Kill all fleet processes running on ports 10700-10850
 kill-fleet:
 	pwsh -NoProfile -File .\scripts\kill-fleet.ps1
+
