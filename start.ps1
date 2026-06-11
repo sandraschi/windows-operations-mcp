@@ -1,4 +1,4 @@
-﻿Param([switch]$Headless)
+Param([switch]$Headless)
 $SkipFrontend = $Headless
 
 # --- SOTA Headless Standard ---
@@ -10,13 +10,13 @@ $WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
 # ------------------------------
 
 $env:FASTMCP_LOG_LEVEL = 'WARNING'
-# windows-operations-mcp Start - Standards-Compliant SOTA
-Write-Host 'Starting windows-operations-mcp...' -ForegroundColor Cyan
+# schip-mcp-windows-operations Start - Standards-Compliant SOTA
+Write-Host 'Starting schip-mcp-windows-operations...' -ForegroundColor Cyan
 
 Set-Location $PSScriptRoot
 Write-Host 'Starting Standardized Fullstack Hybrid...' -ForegroundColor Green
 # Launch backend Hidden by default to prevent console spam
-Start-Process pwsh -ArgumentList '-NoProfile', '-Command', 'uv run windows-operations-mcp' -WindowStyle Hidden
+Start-Process pwsh -ArgumentList '-NoProfile', '-Command', 'uv run -m schip_mcp_windows_operations' -WindowStyle Hidden
 Set-Location web_sota
 if ($SkipFrontend) { return }
 npm run dev

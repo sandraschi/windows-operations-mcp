@@ -1446,58 +1446,6 @@ wheels = [
 ]
 
 [[package]]
-name = "schip-mcp-windows-operations"
-version = "14.2.0"
-source = { editable = "." }
-dependencies = [
-    { name = "fastapi" },
-    { name = "fastmcp" },
-    { name = "prefab-ui" },
-    { name = "psutil" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "ruff" },
-    { name = "structlog" },
-    { name = "uvicorn" },
-]
-
-[package.optional-dependencies]
-apps = [
-    { name = "prefab-ui" },
-]
-dev = [
-    { name = "black" },
-    { name = "flake8" },
-    { name = "isort" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
-    { name = "fastapi", specifier = ">=0.95.0" },
-    { name = "fastmcp", specifier = ">=3.2.0,<4" },
-    { name = "flake8", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
-    { name = "prefab-ui", specifier = ">=0.14.0" },
-    { name = "prefab-ui", marker = "extra == 'apps'", specifier = ">=0.18.0" },
-    { name = "psutil", specifier = ">=5.9.0" },
-    { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=305" },
-    { name = "ruff", specifier = ">=0.15.2" },
-    { name = "structlog", specifier = ">=23.0.0" },
-    { name = "uvicorn", specifier = ">=0.22.0" },
-]
-provides-extras = ["apps", "dev"]
-
-[[package]]
 name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1702,6 +1650,58 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/3e/28135a24e384493fa804216b79a6a6759a38cc4ff59118787b9fb693df93/websockets-16.0-cp314-cp314t-win_amd64.whl", hash = "sha256:b14dc141ed6d2dde437cddb216004bcac6a1df0935d79656387bd41632ba0bbd", size = 178531, upload-time = "2026-01-10T09:23:35.016Z" },
     { url = "https://files.pythonhosted.org/packages/6f/28/258ebab549c2bf3e64d2b0217b973467394a9cea8c42f70418ca2c5d0d2e/websockets-16.0-py3-none-any.whl", hash = "sha256:1637db62fad1dc833276dded54215f2c7fa46912301a24bd94d45d46a011ceec", size = 171598, upload-time = "2026-01-10T09:23:45.395Z" },
 ]
+
+[[package]]
+name = "windows-operations-mcp"
+version = "15.3.0"
+source = { editable = "." }
+dependencies = [
+    { name = "fastapi" },
+    { name = "fastmcp" },
+    { name = "prefab-ui" },
+    { name = "psutil" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "ruff" },
+    { name = "structlog" },
+    { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+apps = [
+    { name = "prefab-ui" },
+]
+dev = [
+    { name = "black" },
+    { name = "flake8" },
+    { name = "isort" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
+    { name = "fastapi", specifier = ">=0.95.0" },
+    { name = "fastmcp", specifier = ">=3.2.0,<4" },
+    { name = "flake8", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+    { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "prefab-ui", specifier = ">=0.14.0" },
+    { name = "prefab-ui", marker = "extra == 'apps'", specifier = ">=0.18.0" },
+    { name = "psutil", specifier = ">=5.9.0" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=305" },
+    { name = "ruff", specifier = ">=0.15.2" },
+    { name = "structlog", specifier = ">=23.0.0" },
+    { name = "uvicorn", specifier = ">=0.22.0" },
+]
+provides-extras = ["apps", "dev"]
 
 [[package]]
 name = "zipp"

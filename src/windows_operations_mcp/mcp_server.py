@@ -24,6 +24,9 @@ except ImportError as e:
     logger.error(f"Failed to import FastMCP 3.2+: {e}")
     sys.exit(1)
 
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
 
 @asynccontextmanager
 async def lifespan(mcp: FastMCP) -> AsyncGenerator[None, None]:
@@ -45,6 +48,11 @@ mcp = FastMCP(
     mask_error_details=True,
     client_log_level="info",
 )
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "healthy", "server": "windows-operations-mcp"})
 
 
 def _register_skills_provider() -> None:

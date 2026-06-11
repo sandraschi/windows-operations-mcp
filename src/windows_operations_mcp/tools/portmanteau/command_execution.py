@@ -46,11 +46,13 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         ```json
         {
           "success": bool,
+          "message": str,
           "stdout": str,
           "stderr": str,
           "exit_code": int,
           "execution_time": float,
-          "sampling_advice": str  // only on failure, if sampling succeeded
+          "next_steps": str | [],
+          "sampling_advice": str
         }
         ```
 
@@ -61,8 +63,8 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         Notes:
          - Uses asyncio.to_thread — never blocks the event loop.
          - ctx.sample() capped at 10s to prevent hang on unsupported clients.
-         - v15.0: Native exe (docker, psql) output now reliably captured via
-           Out-String + UTF-8 encoding setup. stdin_data pipes input through stdin.
+         - Safety guards block Linux-isms (grep, tail, rm -rf, etc.) and em dashes.
+         - stdout/stderr truncated at max_output_size chars each.
         """
         if not command:
             return {"success": False, "error": "command must be non-empty", "suggestions": ["Provide a PowerShell command string."]}
@@ -86,10 +88,12 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
 
         response: dict[str, Any] = {
             "success": result.get("success", False),
+            "message": result.get("message", ""),
             "stdout": result.get("stdout", ""),
             "stderr": result.get("stderr", ""),
             "exit_code": result.get("exit_code", -1),
             "execution_time": result.get("execution_time", 0.0),
+            "next_steps": result.get("next_steps", []),
         }
 
         if len(response["stdout"]) > max_output_size:
@@ -138,11 +142,13 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         ```json
         {
           "success": bool,
+          "message": str,
           "stdout": str,
           "stderr": str,
           "exit_code": int,
           "execution_time": float,
-          "sampling_advice": str  // only on failure, if sampling succeeded
+          "next_steps": str | [],
+          "sampling_advice": str
         }
         ```
 
@@ -153,8 +159,8 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         Notes:
          - Uses asyncio.to_thread — never blocks the event loop.
          - ctx.sample() capped at 10s to prevent hang on unsupported clients.
-         - v15.0: Uses shell=True to fix nested quoting issues
-           (solves "Unterminated quoted string" errors). stdin_data pipes input.
+         - Safety guards block Linux-isms (grep, tail, rm -rf, etc.) and em dashes.
+         - stdout/stderr truncated at max_output_size chars each.
         """
         if not command:
             return {"success": False, "error": "command must be non-empty", "suggestions": ["Provide a CMD command string."]}
@@ -178,10 +184,12 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
 
         response: dict[str, Any] = {
             "success": result.get("success", False),
+            "message": result.get("message", ""),
             "stdout": result.get("stdout", ""),
             "stderr": result.get("stderr", ""),
             "exit_code": result.get("exit_code", -1),
             "execution_time": result.get("execution_time", 0.0),
+            "next_steps": result.get("next_steps", []),
         }
 
         if len(response["stdout"]) > max_output_size:

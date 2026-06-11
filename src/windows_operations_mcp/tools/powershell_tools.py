@@ -1,8 +1,14 @@
 """
 PowerShell and CMD execution tools for Windows Operations MCP.
-v15.1 - DETACHED-CHILD DEADLOCK FIX (file-based output capture)
+v15.3 - SAFETY GUARDS + detached-child deadlock fix
 
-FIXES (June 2026, v15.1) — "the Start-Process wedge":
+SAFETY (June 2026, v15.3):
+  - Linux-ism regex guard: blocks grep, tail, rm -rf, chmod,
+    sudo, apt, brew, /bin/sh, export VAR= etc. before execution.
+  - Em dash (U+2014) block: corrupts PowerShell parser pipeline.
+  - Both apply at the executor entry point, before any subprocess call.
+
+DETACHED-CHILD DEADLOCK FIX (v15.1) — "the Start-Process wedge":
   Commands that launched background/detached processes (Start-Process,
   `start /b`, dev servers, NSSM, etc.) wedged the tool until the *entire
   detached process tree* exited, ignoring timeout_seconds entirely.
@@ -46,6 +52,7 @@ RETAINED from v15.0:
 
 import asyncio
 import os
+import re
 import subprocess
 import tempfile
 import time
@@ -56,6 +63,27 @@ from ..logging_config import get_logger
 logger = get_logger(__name__)
 
 _TREE_KILL_TIMEOUT = 10  # seconds to allow taskkill /T /F to do its work
+
+# Linux/bash patterns that have zero valid PowerShell/CMD usage.
+# Agents trained on Unix frequently emit these into winops tools.
+# Each is a full-word regex anchored to catch the command, not a substring.
+_LINUX_PATTERNS: list[re.Pattern] = [
+    re.compile(r) for r in [
+        r"\bgrep\b",
+        r"\btail\b",
+        r"\brm\s+-[rf]\b",
+        r"\bchmod\b",
+        r"\bchown\b",
+        r"\bsudo\b",
+        r"\bapt(?:-get)?(?:\s+install)?\b",
+        r"\byum\b",
+        r"\bbrew(?:\s+install)?\b",
+        r"\bpacman\b",
+        r"#!/",
+        r"/bin/(?:bash|sh|python)",
+        r"\bexport\s+\w+=",
+    ]
+]
 
 # Claude Desktop's Electron -> uv -> python launch chain can mutilate PATHEXT
 # (observed: PATHEXT=".CPL" on Goliath, 2026-06-11). Without ".EXE" in PATHEXT,
@@ -72,6 +100,26 @@ def _sanitized_env() -> dict[str, str]:
         logger.warning(f"Inherited PATHEXT is broken ({pathext!r}); normalizing")
         env["PATHEXT"] = _DEFAULT_PATHEXT
     return env
+
+
+def _validate_command_safe(command: str) -> str | None:
+    """Check command for Linux-isms and em dashes. Returns error message or None."""
+    if not command:
+        return None
+    if "\u2014" in command:
+        return (
+            "Command contains em dash (U+2014) which corrupts PowerShell parsing. "
+            "Use ASCII \"--\" instead."
+        )
+    for pat in _LINUX_PATTERNS:
+        m = pat.search(command)
+        if m:
+            return (
+                f"Command contains Linux-ism '{m.group()}' — "
+                "use the native PowerShell equivalent "
+                "(see mcp-central-docs/standards/powershell_sota.md)"
+            )
+    return None
 
 
 def _kill_process_tree(pid: int) -> None:
@@ -164,18 +212,23 @@ def _run_with_file_capture(
             stderr = f"{stderr}\n{timeout_msg}" if stderr else timeout_msg
             return {
                 "success": False,
+                "message": timeout_msg,
                 "stdout": stdout,  # partial output is preserved, unlike pre-v15.1
                 "stderr": stderr,
                 "exit_code": -1,
                 "execution_time": execution_time,
+                "next_steps": "Increase timeout_seconds or simplify the command",
             }
 
+        success = exit_code == 0
         return {
-            "success": exit_code == 0,
+            "success": success,
+            "message": "Command completed successfully" if success else f"Command failed with exit code {exit_code}",
             "stdout": stdout,
             "stderr": stderr,
             "exit_code": exit_code,
             "execution_time": execution_time,
+            "next_steps": [] if success else "Check stderr for error details",
         }
 
     except Exception as e:  # noqa: BLE001 - tool boundary: report, don't raise
@@ -189,24 +242,27 @@ def _run_with_file_capture(
         logger.error(f"Execution error: {e}")
         return {
             "success": False,
+            "message": f"Execution error: {e!s}",
             "stdout": "",
             "stderr": f"Execution error: {e!s}",
             "exit_code": -1,
             "execution_time": execution_time,
+            "next_steps": "Verify the command is valid PowerShell/CMD syntax",
         }
 
 
 class CMDExecutor:
     """
-    CMD execution with reliable output capture and proper quoting support.
+    CMD execution with safety guards, reliable output capture and proper quoting.
 
+    v15.3: safety guards (Linux-ism regex + em dash block).
     v15.1: file-based capture (detached-child deadlock fix). See module docstring.
     v15.0: shell=True prevents list2cmdline from mangling nested quotes;
            stdin_data support; utf-8 throughout.
     """
 
     def __init__(self):
-        logger.info("CMD executor initialized (v15.1 — file-capture, tree-kill on timeout)")
+        logger.info("CMD executor initialized (v15.3 — safety guards, file-capture, tree-kill)")
 
     def execute(
         self,
@@ -216,6 +272,17 @@ class CMDExecutor:
         stdin_data: str | None = None,
     ) -> dict[str, Any]:
         """Execute CMD command with reliable, deadlock-proof output capture."""
+        err = _validate_command_safe(command)
+        if err:
+            return {
+                "success": False,
+                "message": f"SAFETY GUARD: {err}",
+                "stdout": "",
+                "stderr": err,
+                "exit_code": -1,
+                "execution_time": 0,
+                "next_steps": "Replace the blocked pattern with the native Windows equivalent (see mcp-central-docs/standards/powershell_sota.md)",
+            }
         # shell=True passes the raw string as "COMSPEC /c <command>", preserving
         # nested quoting like: docker exec container sh -c "python -c '...'"
         return _run_with_file_capture(
@@ -229,15 +296,16 @@ class CMDExecutor:
 
 class PowerShellExecutor:
     """
-    PowerShell execution with guaranteed native exe output capture.
+    PowerShell execution with safety guards and guaranteed native exe output capture.
 
+    v15.3: safety guards (Linux-ism regex + em dash block).
     v15.1: file-based capture (detached-child deadlock fix). See module docstring.
     v15.0: UTF-8 encoding setup, -OutputFormat Text, | Out-String -Width 4096
            (PowerShell 5.1 silently drops native exe stdout otherwise).
     """
 
     def __init__(self):
-        logger.info("PowerShell executor initialized (v15.1 — file-capture, tree-kill on timeout)")
+        logger.info("PowerShell executor initialized (v15.3 — safety guards, file-capture, tree-kill)")
 
     def _build_command(self, command: str) -> str:
         """Wrap command with encoding setup and output-forcing pipeline.
@@ -271,6 +339,17 @@ class PowerShellExecutor:
         Returns:
             dict with success, stdout, stderr, exit_code, execution_time
         """
+        err = _validate_command_safe(command)
+        if err:
+            return {
+                "success": False,
+                "message": f"SAFETY GUARD: {err}",
+                "stdout": "",
+                "stderr": err,
+                "exit_code": -1,
+                "execution_time": 0,
+                "next_steps": "Replace the blocked pattern with the native PowerShell equivalent (see mcp-central-docs/standards/powershell_sota.md)",
+            }
         full_command = self._build_command(command)
         cmd = [
             "powershell.exe",
