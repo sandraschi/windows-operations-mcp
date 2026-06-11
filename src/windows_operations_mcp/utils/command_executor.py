@@ -70,6 +70,13 @@ class CommandExecutor:
         """
         start_time = time.time()
 
+        # Normalize PATHEXT if the inherited environment is broken (see
+        # tools/powershell_tools._sanitized_env for the full story).
+        if env is None:
+            env = dict(os.environ)
+        if ".EXE" not in env.get("PATHEXT", "").upper():
+            env["PATHEXT"] = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC"
+
         try:
             # Create process with proper encoding setup
             process = subprocess.Popen(
@@ -126,7 +133,13 @@ class CommandExecutor:
                     stdout, stderr = process.communicate(timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
-                    stdout, stderr = process.communicate()
+                    try:
+                        # CRITICAL: bounded — an unbounded communicate() here
+                        # deadlocks until detached grandchildren holding
+                        # inherited pipe handles exit (v15.1 wedge fix).
+                        stdout, stderr = process.communicate(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        stdout, stderr = "", ""
 
                 return get_execution_result(
                     success=False,

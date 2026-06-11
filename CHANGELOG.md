@@ -6,6 +6,59 @@ All notable changes to the `windows-operations-mcp` project will be documented i
 
 ## [Unreleased]
 
+## [15.2.0] - 2026-06-11
+
+### Fixed — corrupted PATHEXT in subprocess environment
+
+Live diagnosis on Goliath found `PATHEXT=".CPL"` inside the winops execution
+context (inherited via the Claude Desktop Electron -> uv -> python launch
+chain). Without `.EXE` in PATHEXT, PowerShell refuses to run executables
+("Cannot run a document in the middle of a pipeline" for `& "...exe"`) and
+even `cmd` reports "not recognized" — the root cause behind two symptoms in
+the 2026-05-01 shell-tools bug report that were misattributed to a stripped
+PATH (PATH itself was intact).
+
+Fix: `_sanitized_env()` in `tools/powershell_tools.py` copies `os.environ`
+and normalizes PATHEXT to the standard Windows value whenever `.EXE` is
+missing; passed as `env=` to the capture Popen. The legacy
+`utils/command_executor.py` applies the same normalization when no explicit
+env is provided.
+
+## [15.1.0] - 2026-06-10
+
+### Fixed — "the Start-Process wedge" (detached-child deadlock)
+
+Commands launching background/detached processes (`Start-Process` with
+redirects, `start /b`, dev servers, NSSM) wedged `winops_cmd_powershell` /
+`winops_cmd_cmd` until the *entire detached process tree* exited, ignoring
+`timeout_seconds`. Root cause was two layers deep:
+
+1. Pipe-based capture makes the pipe write handles inheritable. A grandchild
+   spawned with redirection (CreateProcess `bInheritHandles=TRUE`) inherits
+   copies of those handles, so the read side never sees EOF until the whole
+   tree dies.
+2. CPython's `subprocess.run` timeout handler makes this fatal on Windows: on
+   `TimeoutExpired` it calls `process.communicate()` with **no timeout** to
+   collect residual output, blocking on reader threads until EOF. The
+   `timeout=` parameter is therefore not honored for this case at all.
+
+Fix: stdout/stderr are now captured to temp files (`%TEMP%\winops_cap_*`).
+We wait only on the direct child (`process.wait(timeout)` — no reader
+threads), then read the files. On genuine direct-child timeout the process
+tree is killed (`taskkill /T /F`) and partial output is returned — an
+improvement over the old empty-output-on-timeout behavior. The same unbounded
+`communicate()` landmine in the legacy `utils/command_executor.py` is now
+bounded as well.
+
+Semantics: output a detached grandchild writes after the direct shell exits
+is intentionally not captured — give such processes their own log files.
+
+Regression tests: `tests/test_detached_no_hang.py` (pytest) and verified
+standalone 6/6 on Goliath (detached grandchild returns in 0.7s vs. infinite
+wedge before).
+
+## [14.2.0] - 2026-04-09
+
 ### Changed
 - **`mcp_server.py`**: Lifespan typing uses `collections.abc.AsyncGenerator`; registration comments aligned with **FastMCP 3.2+** (prompts, skills, prefab).
 

@@ -1,23 +1,53 @@
 """
 PowerShell and CMD execution tools for Windows Operations MCP.
-v15.0 - RELIABLE OUTPUT CAPTURE FIXES
+v15.1 - DETACHED-CHILD DEADLOCK FIX (file-based output capture)
 
-FIXES (May 2026):
+FIXES (June 2026, v15.1) — "the Start-Process wedge":
+  Commands that launched background/detached processes (Start-Process,
+  `start /b`, dev servers, NSSM, etc.) wedged the tool until the *entire
+  detached process tree* exited, ignoring timeout_seconds entirely.
+
+  Root cause (two layers):
+  1. With stdout/stderr captured via pipes, the pipe WRITE handles are
+     inheritable. When the shell spawns a grandchild with redirection
+     (PowerShell's Start-Process -RedirectStandardOutput uses CreateProcess
+     with bInheritHandles=TRUE), the grandchild inherits copies of our pipe
+     write handles — even though its own std handles point elsewhere. The
+     read side then never sees EOF until every handle holder exits.
+  2. CPython's subprocess.run timeout handler makes this fatal on Windows:
+     on TimeoutExpired it calls `process.communicate()` with NO timeout to
+     collect residual output (CPython subprocess.py, `if _mswindows:` branch).
+     That join blocks on the reader threads' fh.read() until EOF — i.e. until
+     the detached grandchild dies. `timeout=` is therefore not honored.
+
+  Fix: capture stdout/stderr into TEMP FILES instead of pipes. There is no
+  EOF dependency: we wait on the DIRECT child only (process.wait(timeout) —
+  no reader threads), then read the files. Detached grandchildren can hold
+  inherited file handles forever without blocking us. On a genuine timeout
+  of the direct child we kill the process tree (taskkill /T /F) and still
+  return whatever partial output reached the files — an improvement over
+  the old behavior, which returned empty output on timeout.
+
+  Semantics note: output a detached grandchild writes AFTER the direct shell
+  exits is intentionally not captured — redirect such processes to their own
+  log files (which is what callers launching servers do anyway).
+
+RETAINED from v15.0:
 1. PowerShell: Forces UTF-8 encoding setup before every command
    ([Console]::OutputEncoding + $OutputEncoding)
 2. PowerShell: Uses -OutputFormat Text for text-mode output
 3. PowerShell: Appends | Out-String -Width 4096 to capture native exe output
    (docker, psql, etc. — PowerShell 5.1 silently drops their stdout otherwise)
-4. PowerShell/Cmd: Added stdin_data parameter for piping input
-5. CMD: Uses shell=True with raw command string to prevent list2cmdline
+4. PowerShell/Cmd: stdin_data parameter for piping input
+5. CMD: shell=True with raw command string to prevent list2cmdline
    quote-mangling (fixes nested quoting with docker exec ... sh -c "...")
-6. CMD: Uses full path C:\\Windows\\System32\\cmd.exe for reliability
-7. Both: Uses utf-8 encoding consistently instead of brittle console CP detection
+6. Both: utf-8 encoding consistently instead of brittle console CP detection
 """
 
 import asyncio
 import os
 import subprocess
+import tempfile
 import time
 from typing import Any
 
@@ -25,21 +55,158 @@ from ..logging_config import get_logger
 
 logger = get_logger(__name__)
 
+_TREE_KILL_TIMEOUT = 10  # seconds to allow taskkill /T /F to do its work
+
+# Claude Desktop's Electron -> uv -> python launch chain can mutilate PATHEXT
+# (observed: PATHEXT=".CPL" on Goliath, 2026-06-11). Without ".EXE" in PATHEXT,
+# PowerShell refuses to execute exes ("Cannot run a document in the middle of a
+# pipeline") and cmd builtins like `cmd` itself become "not recognized".
+_DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC"
+
+
+def _sanitized_env() -> dict[str, str]:
+    """Copy of os.environ with PATHEXT normalized if it is missing or broken."""
+    env = dict(os.environ)
+    pathext = env.get("PATHEXT", "")
+    if ".EXE" not in pathext.upper():
+        logger.warning(f"Inherited PATHEXT is broken ({pathext!r}); normalizing")
+        env["PATHEXT"] = _DEFAULT_PATHEXT
+    return env
+
+
+def _kill_process_tree(pid: int) -> None:
+    """Kill a process and all its descendants (Windows)."""
+    try:
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(pid)],
+            capture_output=True,
+            timeout=_TREE_KILL_TIMEOUT,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+    except Exception as e:  # noqa: BLE001 - best effort, never raise from cleanup
+        logger.warning(f"taskkill tree-kill failed for pid {pid}: {e}")
+
+
+def _read_and_cleanup(path: str) -> str:
+    """Read a capture file; best-effort delete (a live grandchild may hold it)."""
+    data = ""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            data = fh.read()
+    except OSError as e:
+        logger.warning(f"Could not read capture file {path}: {e}")
+    try:
+        os.unlink(path)
+    except OSError:
+        pass  # inherited handle still open; temp dir cleanup will get it
+    return data
+
+
+def _run_with_file_capture(
+    args: list[str] | str,
+    *,
+    shell: bool,
+    cwd: str | None,
+    timeout: int,
+    stdin_data: str | None,
+) -> dict[str, Any]:
+    """
+    Execute a command with stdout/stderr captured to temp files.
+
+    Deadlock-proof against detached grandchildren holding inherited handles:
+    we only ever wait on the direct child, never on pipe EOF.
+    """
+    start_time = time.time()
+
+    out_fd, out_path = tempfile.mkstemp(prefix="winops_cap_", suffix=".out")
+    err_fd, err_path = tempfile.mkstemp(prefix="winops_cap_", suffix=".err")
+    timed_out = False
+
+    try:
+        with os.fdopen(out_fd, "wb") as out_fh, os.fdopen(err_fd, "wb") as err_fh:
+            process = subprocess.Popen(
+                args,
+                cwd=cwd,
+                shell=shell,
+                stdout=out_fh,
+                stderr=err_fh,
+                stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
+                env=_sanitized_env(),
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+
+            if stdin_data is not None:
+                try:
+                    process.stdin.write(stdin_data.encode("utf-8", errors="replace"))
+                    process.stdin.close()
+                except OSError as e:
+                    logger.warning(f"stdin write failed (process exited early?): {e}")
+
+            try:
+                exit_code = process.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                logger.error(f"Direct child (pid {process.pid}) exceeded {timeout}s; killing tree")
+                _kill_process_tree(process.pid)
+                try:
+                    exit_code = process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    exit_code = -1
+
+        # Write handles are closed here; read whatever reached the files.
+        stdout = _read_and_cleanup(out_path)
+        stderr = _read_and_cleanup(err_path)
+        execution_time = time.time() - start_time
+
+        if timed_out:
+            timeout_msg = f"Command timed out after {timeout} seconds (process tree killed)"
+            stderr = f"{stderr}\n{timeout_msg}" if stderr else timeout_msg
+            return {
+                "success": False,
+                "stdout": stdout,  # partial output is preserved, unlike pre-v15.1
+                "stderr": stderr,
+                "exit_code": -1,
+                "execution_time": execution_time,
+            }
+
+        return {
+            "success": exit_code == 0,
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit_code": exit_code,
+            "execution_time": execution_time,
+        }
+
+    except Exception as e:  # noqa: BLE001 - tool boundary: report, don't raise
+        # Ensure capture files don't accumulate on unexpected errors
+        for p in (out_path, err_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+        execution_time = time.time() - start_time
+        logger.error(f"Execution error: {e}")
+        return {
+            "success": False,
+            "stdout": "",
+            "stderr": f"Execution error: {e!s}",
+            "exit_code": -1,
+            "execution_time": execution_time,
+        }
+
 
 class CMDExecutor:
     """
     CMD execution with reliable output capture and proper quoting support.
 
-    v15.0 FIXES:
-    - shell=True prevents list2cmdline from mangling nested quotes
-      (solves "Unterminated quoted string" errors with docker exec sh -c "...")
-    - Full cmd.exe path avoids PATH resolution issues
-    - stdin_data support for piped input
-    - utf-8 encoding for consistent cross-platform output
+    v15.1: file-based capture (detached-child deadlock fix). See module docstring.
+    v15.0: shell=True prevents list2cmdline from mangling nested quotes;
+           stdin_data support; utf-8 throughout.
     """
 
     def __init__(self):
-        logger.info("CMD executor initialized (v15.0 — shell=True quoting fix)")
+        logger.info("CMD executor initialized (v15.1 — file-capture, tree-kill on timeout)")
 
     def execute(
         self,
@@ -48,81 +215,36 @@ class CMDExecutor:
         timeout: int = 30,
         stdin_data: str | None = None,
     ) -> dict[str, Any]:
-        """Execute CMD command with reliable output capture."""
-        start_time = time.time()
-        cwd = working_directory or os.getcwd()
-
-        try:
-            # shell=True avoids list2cmdline quote-mangling on Windows.
-            # Python passes the raw string as "COMSPEC /c <command>", preserving
-            # the original quoting for nested patterns like:
-            #   docker exec container sh -c "python -c '...'"
-            result = subprocess.run(
-                command,
-                cwd=cwd,
-                shell=True,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                timeout=timeout,
-                errors="replace",
-                input=stdin_data,
-                creationflags=subprocess.CREATE_NO_WINDOW,
-            )
-
-            execution_time = time.time() - start_time
-
-            return {
-                "success": result.returncode == 0,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "exit_code": result.returncode,
-                "execution_time": execution_time,
-            }
-
-        except subprocess.TimeoutExpired:
-            execution_time = time.time() - start_time
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": f"Command timed out after {timeout} seconds",
-                "exit_code": -1,
-                "execution_time": execution_time,
-            }
-        except Exception as e:
-            execution_time = time.time() - start_time
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": f"Execution error: {e!s}",
-                "exit_code": -1,
-                "execution_time": execution_time,
-            }
+        """Execute CMD command with reliable, deadlock-proof output capture."""
+        # shell=True passes the raw string as "COMSPEC /c <command>", preserving
+        # nested quoting like: docker exec container sh -c "python -c '...'"
+        return _run_with_file_capture(
+            command,
+            shell=True,
+            cwd=working_directory or os.getcwd(),
+            timeout=timeout,
+            stdin_data=stdin_data,
+        )
 
 
 class PowerShellExecutor:
     """
     PowerShell execution with guaranteed native exe output capture.
 
-    v15.0 FIXES:
-    - Prepends [Console]::OutputEncoding = UTF8 and $OutputEncoding = UTF8
-      to force PowerShell 5.1 to send output in UTF-8 when writing to a pipe
-    - Appends | Out-String -Width 4096 to force string serialization
-      (PowerShell 5.1 silently drops native exe stdout otherwise)
-    - Uses -OutputFormat Text for pipe-friendly text output
-    - Uses utf-8 encoding consistently (no brittle GetConsoleOutputCP)
-    - stdin_data support for piped input
+    v15.1: file-based capture (detached-child deadlock fix). See module docstring.
+    v15.0: UTF-8 encoding setup, -OutputFormat Text, | Out-String -Width 4096
+           (PowerShell 5.1 silently drops native exe stdout otherwise).
     """
 
     def __init__(self):
-        logger.info("PowerShell executor initialized (v15.0 — Out-String + UTF-8 fixes)")
+        logger.info("PowerShell executor initialized (v15.1 — file-capture, tree-kill on timeout)")
 
     def _build_command(self, command: str) -> str:
         """Wrap command with encoding setup and output-forcing pipeline.
 
         The | Out-String -Width 4096 suffix is critical for PowerShell 5.1:
         without it, native executables (docker, psql, etc.) have their stdout
-        silently dropped when PowerShell writes to a pipe.
+        silently dropped when PowerShell writes to a redirected handle.
         """
         setup = (
             "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
@@ -137,85 +259,38 @@ class PowerShellExecutor:
         timeout: int = 60,
         stdin_data: str | None = None,
     ) -> dict[str, Any]:
-        """Execute PowerShell command with reliable output capture.
+        """Execute PowerShell command with reliable, deadlock-proof output capture.
 
         Args:
             command: PowerShell command to execute
             working_dir: Working directory (optional)
-            timeout: Command timeout in seconds
+            timeout: Hard timeout for the DIRECT child process in seconds.
+                Detached grandchildren (Start-Process etc.) do not extend it.
             stdin_data: Optional data to pipe to stdin
 
         Returns:
             dict with success, stdout, stderr, exit_code, execution_time
         """
-        start_time = time.time()
-
-        try:
-            full_command = self._build_command(command)
-
-            cmd = [
-                "powershell.exe",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-OutputFormat",
-                "Text",
-                "-Command",
-                full_command,
-            ]
-
-            logger.debug(f"Executing PowerShell: {command[:100]}...")
-
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=timeout,
-                cwd=working_dir,
-                input=stdin_data,
-            )
-
-            execution_time = time.time() - start_time
-
-            response = {
-                "success": result.returncode == 0,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "exit_code": result.returncode,
-                "execution_time": execution_time,
-            }
-
-            if response["success"]:
-                logger.debug(f"PowerShell command succeeded in {execution_time:.2f}s")
-            else:
-                logger.warning(f"PowerShell command failed with exit code {result.returncode}")
-
-            return response
-
-        except subprocess.TimeoutExpired:
-            execution_time = time.time() - start_time
-            logger.error(f"PowerShell command timed out after {timeout} seconds")
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": f"Command timed out after {timeout} seconds",
-                "exit_code": -1,
-                "execution_time": execution_time,
-            }
-        except Exception as e:
-            execution_time = time.time() - start_time
-            logger.error(f"PowerShell execution error: {e}")
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": f"Execution error: {e!s}",
-                "exit_code": -1,
-                "execution_time": execution_time,
-            }
-
+        full_command = self._build_command(command)
+        cmd = [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-OutputFormat",
+            "Text",
+            "-Command",
+            full_command,
+        ]
+        logger.debug(f"Executing PowerShell: {command[:100]}...")
+        return _run_with_file_capture(
+            cmd,
+            shell=False,
+            cwd=working_dir,
+            timeout=timeout,
+            stdin_data=stdin_data,
+        )
 
 
 # Module-level executor instances for import by portmanteau command_execution
