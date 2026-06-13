@@ -18,6 +18,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 logger = logging.getLogger(__name__)
 
 # Supported text file extensions for safe editing
@@ -496,11 +498,10 @@ def register_edit_tools(mcp):
 
             # Get the edit function from the namespace
             if "edit" not in namespace or not callable(namespace["edit"]):
-                return {
-                    "success": False,
-                    "error": 'The edit_function must define a function named "edit"',
-                    "file": file_path,
-                }
+                return fail_response(
+                    'The edit_function must define a function named "edit"',
+                    file=file_path,
+                )
 
             editor_func = namespace["edit"]
 
@@ -523,7 +524,7 @@ def register_edit_tools(mcp):
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "file": file_path}
+            return fail_response(str(e), file=file_path)
 
     @mcp.tool()
     def fix_markdown_file(
@@ -566,4 +567,4 @@ def register_edit_tools(mcp):
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "file": file_path}
+            return fail_response(str(e), file=file_path)

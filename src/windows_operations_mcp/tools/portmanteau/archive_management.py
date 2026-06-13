@@ -21,6 +21,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -96,8 +97,10 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
             items = await asyncio.to_thread(_list_blocking, path)
             return {"success": True, "path": path, "items": items, "count": len(items)}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Ensure the file is a valid ZIP or TAR archive."]}
+            return fail_response(
+                f"Operation failed: {e}",
+                suggestions=["Ensure the file is a valid ZIP or TAR archive."],
+            )
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def extract(
@@ -119,7 +122,7 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
             await asyncio.to_thread(_extract_blocking, path, target_dir)
             return {"success": True, "path": path, "target_dir": target_dir}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def create(
@@ -142,7 +145,7 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
             await asyncio.to_thread(_create_blocking, path, source_files, archive_type)
             return {"success": True, "path": path, "archive_type": archive_type, "file_count": len(source_files)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def add(
@@ -167,8 +170,10 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
             await asyncio.to_thread(_add_blocking, path, source_files)
             return {"success": True, "path": path, "added": len(source_files)}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Only ZIP archives support add. Use create for TAR."]}
+            return fail_response(
+                f"Operation failed: {e}",
+                suggestions=["Only ZIP archives support add. Use create for TAR."],
+            )
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def expand_cab(
@@ -192,12 +197,12 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
                 "expand.exe", path, "-F:*", target_dir,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await proc.communicate()
+            _stdout, stderr = await proc.communicate()
             if proc.returncode != 0:
                 raise RuntimeError(stderr.decode(errors="replace").strip())
             return {"success": True, "path": path, "target_dir": target_dir}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     parent_mcp.mount(ns, prefix="winops_archive")
     logger.info("Mounted atomic tools: winops_archive/list, /extract, /create, /add, /expand_cab")

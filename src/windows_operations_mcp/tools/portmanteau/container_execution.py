@@ -11,11 +11,8 @@ to avoid the nested-quoting and list2cmdline issues documented in winops_stdout_
 """
 
 import asyncio
-import json
 import os
 import subprocess
-import tempfile
-from pathlib import Path
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
@@ -23,6 +20,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -50,14 +48,14 @@ async def _docker(args: list[str], cwd: str | None = None, timeout: int = 60, st
             "stderr": stderr,
             "exit_code": proc.returncode,
         }
-    except asyncio.TimeoutError:
+    except TimeoutError:
         if proc:
             proc.kill()
-        return {"success": False, "stdout": "", "stderr": f"Command timed out after {timeout}s", "exit_code": -1}
+        return fail_response(f"Command timed out after {timeout}s", stdout="", stderr=f"Command timed out after {timeout}s", exit_code=-1)
     except FileNotFoundError:
-        return {"success": False, "stdout": "", "stderr": "Docker CLI not found. Install Docker Desktop or add docker to PATH.", "exit_code": -1}
+        return fail_response("Docker CLI not found. Install Docker Desktop or add docker to PATH.", stdout="", stderr="Docker CLI not found. Install Docker Desktop or add docker to PATH.", exit_code=-1)
     except Exception as e:
-        return {"success": False, "stdout": "", "stderr": str(e), "exit_code": -1}
+        return fail_response(str(e), stdout="", stderr=str(e), exit_code=-1)
 
 
 def register_container_execution(parent_mcp: FastMCP) -> None:
@@ -91,7 +89,7 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
             exec(container="nginx", command="nginx -t", timeout_seconds=10)
         """
         if not command:
-            return {"success": False, "error": "command must be non-empty"}
+            return fail_response("command must be non-empty")
 
         if ctx:
             await ctx.info(f"Docker exec in {container}: {command[:80]}")
@@ -151,9 +149,9 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
             elif not src_is_container and dst_is_container:
                 args = ["cp", src_path, f"{container}:{dst_path}"]
             else:
-                return {"success": False, "error": "Exactly one of source/destination must have the 'container:' prefix.",
-                        "suggestions": ["Use 'container:/path' for Docker paths and 'host:/path' for local paths.",
-                                        "Example: source='host:./file.txt', destination='container:/tmp/file.txt'"]}
+                return fail_response("Exactly one of source/destination must have the 'container:' prefix.",
+                        suggestions=["Use 'container:/path' for Docker paths and 'host:/path' for local paths.",
+                                     "Example: source='host:./file.txt', destination='container:/tmp/file.txt'"])
 
             if ctx:
                 await ctx.info(f"Docker cp {' '.join(args)}")
@@ -166,7 +164,7 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
                 "exit_code": result["exit_code"],
             }
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     parent_mcp.mount(ns, prefix="winops_container")
     logger.info("Mounted atomic tools: winops_container/exec, winops_container/cp")

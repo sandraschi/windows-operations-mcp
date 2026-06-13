@@ -13,7 +13,6 @@ Atomic tools mounted under namespace "winops_file":
 """
 
 import asyncio
-import json
 import shutil
 from pathlib import Path
 from typing import Annotated, Any
@@ -25,6 +24,7 @@ from pydantic import Field
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.tools.file_operations.edit import atomic_write, detect_line_endings
 from windows_operations_mcp.tools.file_operations.folder_operations import list_directory_contents
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -52,12 +52,12 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             p = Path(path).resolve()
             if not p.is_file():
-                return {"success": False, "error": f"Not a file: {path}",
-                        "suggestions": ["Verify the path exists and is a file, not a directory."]}
+                return fail_response(f"Not a file: {path}",
+                        suggestions=["Verify the path exists and is a file, not a directory."])
             content = await asyncio.to_thread(p.read_text, encoding)
             return {"success": True, "content": content, "size": len(content)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def write(
@@ -88,15 +88,15 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             p = Path(path).resolve()
             if p.exists() and not overwrite:
-                return {"success": False, "error": "File exists and overwrite is False",
-                        "suggestions": ["Pass overwrite=True to replace the existing file."]}
+                return fail_response("File exists and overwrite is False",
+                        suggestions=["Pass overwrite=True to replace the existing file."])
             if create_dirs:
                 p.parent.mkdir(parents=True, exist_ok=True)
 
             # Map line_ending strings to actual chars
             le_map = {"lf": "\n", "crlf": "\r\n"}
             actual_le = le_map.get(line_ending) if line_ending else None
-            used_le = await asyncio.to_thread(
+            await asyncio.to_thread(
                 lambda: atomic_write(p, content, encoding=encoding, line_ending=actual_le, backup=False),
             )
             # Determine what line ending was actually used
@@ -104,7 +104,7 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
             detected_le = detect_line_endings(final_content)
             return {"success": True, "path": str(p), "bytes": len(final_content), "line_ending": repr(detected_le)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def edit(
@@ -129,11 +129,11 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             p = Path(path).resolve()
             if not p.is_file():
-                return {"success": False, "error": f"Not a file: {path}"}
+                return fail_response(f"Not a file: {path}")
             original = await asyncio.to_thread(p.read_text, encoding)
             if old_string not in original:
-                return {"success": False, "error": "old_string not found in file",
-                        "suggestions": ["Check for whitespace differences or trailing characters."]}
+                return fail_response("old_string not found in file",
+                        suggestions=["Check for whitespace differences or trailing characters."])
 
             def replacer(content: str) -> str:
                 return content.replace(old_string, new_string)
@@ -154,7 +154,7 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
             return {"success": True, "modified": True, "file": str(p),
                     "backup": str(backup_path) if backup_path else None}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_contents(
@@ -179,10 +179,10 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
                 list_directory_contents, directory_path=path, include_hidden=include_hidden, pattern=pattern,
             )
             if not result.get("exists"):
-                return {"success": False, "error": f"Directory not found: {path}"}
+                return fail_response(f"Directory not found: {path}")
             return {"success": True, "path": result["path"], "items": result["items"], "count": result["count"]}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def delete(
@@ -205,14 +205,14 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             p = Path(path).resolve()
             if not p.exists():
-                return {"success": False, "error": f"Path does not exist: {path}"}
+                return fail_response(f"Path does not exist: {path}")
             if p.is_file():
                 await asyncio.to_thread(p.unlink)
             else:
                 await asyncio.to_thread(shutil.rmtree, str(p))
             return {"success": True, "deleted": str(p)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def move(
@@ -234,11 +234,11 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             src, dst = Path(path).resolve(), Path(destination).resolve()
             if dst.exists() and not overwrite:
-                return {"success": False, "error": "Destination exists and overwrite is False"}
+                return fail_response("Destination exists and overwrite is False")
             await asyncio.to_thread(shutil.move, str(src), str(dst))
             return {"success": True, "from": str(src), "to": str(dst)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def copy(
@@ -260,14 +260,14 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             src, dst = Path(path).resolve(), Path(destination).resolve()
             if dst.exists() and not overwrite:
-                return {"success": False, "error": "Destination exists and overwrite is False"}
+                return fail_response("Destination exists and overwrite is False")
             if src.is_dir():
                 await asyncio.to_thread(shutil.copytree, str(src), str(dst), dirs_exist_ok=overwrite)
             else:
                 await asyncio.to_thread(shutil.copy2, str(src), str(dst))
             return {"success": True, "from": str(src), "to": str(dst)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def info(
@@ -287,7 +287,7 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             p = Path(path).resolve()
             if not p.exists():
-                return {"success": False, "error": f"Path does not exist: {path}"}
+                return fail_response(f"Path does not exist: {path}")
             st = p.stat()
             return {
                 "success": True, "name": p.name, "path": str(p),
@@ -295,7 +295,7 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
                 "is_dir": p.is_dir(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     parent_mcp.mount(ns, prefix="winops_file")
     logger.info("Mounted atomic tools: winops_file/read, /write, /edit, /delete, /move, /copy, /list, /info")

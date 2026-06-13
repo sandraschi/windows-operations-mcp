@@ -16,6 +16,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -53,8 +54,7 @@ def register_windows_permissions(parent_mcp: FastMCP) -> None:
         try:
             return {"success": True, "path": path, "raw_acl": await _icacls(path)}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Verify path exists and is accessible."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Verify path exists and is accessible."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def grant(
@@ -80,8 +80,7 @@ def register_windows_permissions(parent_mcp: FastMCP) -> None:
             await _icacls(path, "/grant", f"{user}:{permission}")
             return {"success": True, "path": path, "user": user, "permission": permission}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator for system paths."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator for system paths."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def revoke(
@@ -103,7 +102,7 @@ def register_windows_permissions(parent_mcp: FastMCP) -> None:
             await _icacls(path, "/remove", user)
             return {"success": True, "path": path, "user": user}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def inheritance(
@@ -126,7 +125,7 @@ def register_windows_permissions(parent_mcp: FastMCP) -> None:
             await _icacls(path, flag)
             return {"success": True, "path": path, "inheritance_enabled": enable}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     parent_mcp.mount(ns, prefix="winops_acl")
     logger.info("Mounted atomic tools: winops_acl/get, /grant, /revoke, /inheritance")

@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TypeVar
 
+from windows_operations_mcp.utils import fail_response
+
 from ..decorators import tool
 
 T = TypeVar("T")
@@ -245,7 +247,7 @@ def format_json_string(json_str: str, indent: int = 2, sort_keys: bool = False) 
         formatted = json.dumps(parsed, indent=indent, sort_keys=sort_keys, ensure_ascii=False)
         return {"formatted": formatted, "success": True}
     except json.JSONDecodeError as e:
-        return {"error": f"Invalid JSON: {e!s}", "success": False}
+        return fail_response(message=f"Invalid JSON: {e!s}")
 
 
 def convert_to_json(data: Any, indent: int | None = None) -> str:

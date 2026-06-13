@@ -16,6 +16,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -61,8 +62,8 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
          - dry_run=False will queue up to 5 HIGH-priority actions.
         """
         if not ctx:
-            return {"success": False, "error": "Context required for agentic orchestration.",
-                    "suggestions": ["Ensure this tool is called via the MCP protocol, not standalone."]}
+            return fail_response("Context required for agentic orchestration.",
+                                 suggestions=["Ensure this tool is called via the MCP protocol, not standalone."])
 
         await ctx.info(f"Mission: Hardening {target} (dry_run={dry_run})")
         await ctx.report_progress(5, 100)
@@ -75,8 +76,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
                 from .windows_services import _list_services_blocking
                 findings = await asyncio.to_thread(_list_services_blocking, None, True)
             elif target == "registry":
-                import winreg
-                from .windows_registry import _list_blocking, HIVES
+                from .windows_registry import HIVES, _list_blocking
                 subkeys, values = await asyncio.to_thread(
                     _list_blocking,
                     HIVES["HKLM"],
@@ -84,7 +84,6 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
                 )
                 findings = {"subkeys": subkeys, "values": values}
             elif target == "accounts":
-                import asyncio as _a
                 proc = await asyncio.create_subprocess_exec(
                     "net.exe", "user",
                     stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
@@ -122,7 +121,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
             # Phase 3: Remediation (live only)
             actions_taken = []
             if not dry_run:
-                high_lines = [l.strip() for l in recommendations.splitlines() if "HIGH" in l.upper() and l.strip()]
+                high_lines = [line.strip() for line in recommendations.splitlines() if "HIGH" in line.upper() and line.strip()]
                 for item in high_lines[:5]:
                     actions_taken.append({"action": item, "status": "queued"})
 
@@ -136,7 +135,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @parent_mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=False, openWorldHint=False)
@@ -167,7 +166,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
          - ctx is required for sampling.
         """
         if not ctx:
-            return {"success": False, "error": "Context required for autonomous troubleshooting."}
+            return fail_response("Context required for autonomous troubleshooting.")
 
         await ctx.info(f"Investigating: {operation_failure[:80]}")
         await ctx.report_progress(10, 100)

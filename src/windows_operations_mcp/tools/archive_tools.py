@@ -11,6 +11,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from ..decorators import tool
 from ..logging_config import get_logger
 
@@ -348,9 +350,9 @@ def create_archive(
         elif archive_format in ("tar", "tar.gz"):
             return _create_tar(archive_path, source_paths, compression_level, all_exclusions)
         else:
-            return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
+            return fail_response(message=f"Unsupported archive format: {archive_format}")
     except Exception as e:
-        return {"success": False, "message": f"Failed to create archive: {e!s}"}
+        return fail_response(message=f"Failed to create archive: {e!s}")
 
 
 @tool(
@@ -400,9 +402,9 @@ def extract_archive(archive_path: str, extract_dir: str, members: list[str] | No
         elif archive_format in ("tar", "tar.gz"):
             return _extract_tar(archive_path, extract_dir, members)
         else:
-            return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
+            return fail_response(message=f"Unsupported archive format: {archive_format}")
     except Exception as e:
-        return {"success": False, "message": f"Failed to extract archive: {e!s}"}
+        return fail_response(message=f"Failed to extract archive: {e!s}")
 
 
 @tool(
@@ -438,9 +440,9 @@ def list_archive(archive_path: str) -> dict[str, Any]:
         elif archive_format in ("tar", "tar.gz"):
             return _list_tar(archive_path)
         else:
-            return {"success": False, "message": f"Unsupported archive format: {archive_format}"}
+            return fail_response(message=f"Unsupported archive format: {archive_format}")
     except Exception as e:
-        return {"success": False, "message": f"Failed to list archive contents: {e!s}"}
+        return fail_response(message=f"Failed to list archive contents: {e!s}")
 
 
 def register_archive_tools(mcp):
@@ -504,7 +506,7 @@ def _create_zip(
             "included_count": included_count,
         }
     except Exception as e:
-        return {"success": False, "message": f"Failed to create ZIP archive: {e!s}"}
+        return fail_response(message=f"Failed to create ZIP archive: {e!s}")
 
 
 def _create_tar(
@@ -560,7 +562,7 @@ def _create_tar(
             "included_count": included_count,
         }
     except Exception as e:
-        return {"success": False, "message": f"Failed to create TAR archive: {e!s}"}
+        return fail_response(message=f"Failed to create TAR archive: {e!s}")
 
 
 def _extract_zip(archive_path: str, extract_dir: str, members: list[str] | None) -> dict[str, Any]:
@@ -576,11 +578,7 @@ def _extract_zip(archive_path: str, extract_dir: str, members: list[str] | None)
                     zipf.extract(member, extract_dir)
                     extracted_files.append(os.path.join(extract_dir, member))
                 except Exception as e:
-                    return {
-                        "success": False,
-                        "message": f"Failed to extract {member}: {e!s}",
-                        "extracted_files": extracted_files,
-                    }
+                    return fail_response(message=f"Failed to extract {member}: {e!s}", extracted_files=extracted_files)
 
         return {
             "success": True,
@@ -588,7 +586,7 @@ def _extract_zip(archive_path: str, extract_dir: str, members: list[str] | None)
             "extracted_files": extracted_files,
         }
     except Exception as e:
-        return {"success": False, "message": f"Failed to extract ZIP archive: {e!s}", "extracted_files": []}
+        return fail_response(message=f"Failed to extract ZIP archive: {e!s}", extracted_files=[])
 
 
 def _extract_tar(archive_path: str, extract_dir: str, members: list[str] | None) -> dict[str, Any]:
@@ -604,11 +602,7 @@ def _extract_tar(archive_path: str, extract_dir: str, members: list[str] | None)
                     try:
                         members_to_extract.append(tar.getmember(member))
                     except KeyError:
-                        return {
-                            "success": False,
-                            "message": f"Member not found in archive: {member}",
-                            "extracted_files": extracted_files,
-                        }
+                        return fail_response(message=f"Member not found in archive: {member}", extracted_files=extracted_files)
             else:
                 members_to_extract = tar.getmembers()
 
@@ -617,11 +611,7 @@ def _extract_tar(archive_path: str, extract_dir: str, members: list[str] | None)
                     tar.extract(member, extract_dir)
                     extracted_files.append(os.path.join(extract_dir, member.name))
                 except Exception as e:
-                    return {
-                        "success": False,
-                        "message": f"Failed to extract {member.name}: {e!s}",
-                        "extracted_files": extracted_files,
-                    }
+                    return fail_response(message=f"Failed to extract {member.name}: {e!s}", extracted_files=extracted_files)
 
         return {
             "success": True,
@@ -629,7 +619,7 @@ def _extract_tar(archive_path: str, extract_dir: str, members: list[str] | None)
             "extracted_files": extracted_files,
         }
     except Exception as e:
-        return {"success": False, "message": f"Failed to extract TAR archive: {e!s}", "extracted_files": []}
+        return fail_response(message=f"Failed to extract TAR archive: {e!s}", extracted_files=[])
 
 
 def _list_zip(archive_path: str) -> dict[str, Any]:
@@ -640,7 +630,7 @@ def _list_zip(archive_path: str) -> dict[str, Any]:
 
             return {"success": True, "message": f"Found {len(file_list)} files in {archive_path}", "files": file_list}
     except zipfile.BadZipFile as e:
-        return {"success": False, "message": f"Bad ZIP file: {e!s}"}
+        return fail_response(message=f"Bad ZIP file: {e!s}")
 
 
 def _list_tar(archive_path: str) -> dict[str, Any]:
@@ -653,4 +643,4 @@ def _list_tar(archive_path: str) -> dict[str, Any]:
 
             return {"success": True, "message": f"Found {len(file_list)} files in {archive_path}", "files": file_list}
     except tarfile.TarError as e:
-        return {"success": False, "message": f"Error reading TAR archive: {e!s}"}
+        return fail_response(message=f"Error reading TAR archive: {e!s}")

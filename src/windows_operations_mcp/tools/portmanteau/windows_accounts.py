@@ -19,6 +19,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
         try:
             return {"success": True, "raw_output": await _net(["user"])}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def add_user(
@@ -75,8 +76,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
             await _net(["user", username, password, "/add"])
             return {"success": True, "username": username}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator. Verify username does not already exist."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator. Verify username does not already exist."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def remove_user(
@@ -97,8 +97,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
             await _net(["user", username, "/delete"])
             return {"success": True, "username": username}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator. Verify the user exists with list_users."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator. Verify the user exists with list_users."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def set_password(
@@ -120,7 +119,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
             await _net(["user", username, password])
             return {"success": True, "username": username}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_groups(ctx: Context | None = None) -> dict[str, Any]:
@@ -137,7 +136,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
         try:
             return {"success": True, "raw_output": await _net(["localgroup"])}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def group_members(
@@ -171,8 +170,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
                     members.append(s)
             return {"success": True, "group": group, "members": members}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Verify group name with list_groups."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Verify group name with list_groups."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def manage_group(
@@ -196,8 +194,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
             await _net(["localgroup", group, username, f"/{action}"])
             return {"success": True, "group": group, "username": username, "action": action}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator. Verify both user and group exist."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator. Verify both user and group exist."])
 
     parent_mcp.mount(ns, prefix="winops_accounts")
     logger.info("Mounted atomic tools: winops_accounts/list_users, /add_user, /remove_user, /set_password, /list_groups, /group_members, /manage_group")

@@ -9,6 +9,8 @@ import mimetypes
 from pathlib import Path
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from . import attributes, dates
 from .base import FileOperationError, handle_operation, log_operation, normalize_path
 
@@ -354,7 +356,7 @@ def get_file_info_tool(
         return {"success": True, **info}
 
     except FileOperationError as e:
-        return {"success": False, "error": str(e), "path": file_path}
+        return fail_response(str(e), path=file_path)
 
 
 def list_directory_tool(
@@ -396,4 +398,4 @@ def list_directory_tool(
         return {"success": True, **result}
 
     except FileOperationError as e:
-        return {"success": False, "error": str(e), "path": path}
+        return fail_response(str(e), path=path)

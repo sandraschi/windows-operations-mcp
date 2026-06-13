@@ -67,6 +67,28 @@ def get_execution_result(
     }
 
 
+def fail_response(message: str, *, error: str | None = None, **extra: Any) -> dict[str, Any]:
+    """Standardized error response with conversational message (FastMCP convention).
+
+    Every error return should use this instead of inline dicts.
+    The ``message`` key gives the LLM a conversational summary while
+    ``error`` preserves the technical detail for debugging.
+
+    Args:
+        message: Human-readable conversational summary (shown as ``message``).
+        error: Technical error string (defaults to message if omitted).
+
+    Returns:
+        A dict with ``success=False``, ``message``, ``error``, and any extra keys.
+    """
+    return {
+        "success": False,
+        "message": message,
+        "error": error or message,
+        **extra,
+    }
+
+
 def measure_execution_time(func):
     """Decorator to measure function execution time."""
 

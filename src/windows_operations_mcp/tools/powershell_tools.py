@@ -59,6 +59,7 @@ import time
 from typing import Any
 
 from ..logging_config import get_logger
+from ..utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -131,7 +132,7 @@ def _kill_process_tree(pid: int) -> None:
             timeout=_TREE_KILL_TIMEOUT,
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
-    except Exception as e:  # noqa: BLE001 - best effort, never raise from cleanup
+    except Exception as e:
         logger.warning(f"taskkill tree-kill failed for pid {pid}: {e}")
 
 
@@ -210,15 +211,14 @@ def _run_with_file_capture(
         if timed_out:
             timeout_msg = f"Command timed out after {timeout} seconds (process tree killed)"
             stderr = f"{stderr}\n{timeout_msg}" if stderr else timeout_msg
-            return {
-                "success": False,
-                "message": timeout_msg,
-                "stdout": stdout,  # partial output is preserved, unlike pre-v15.1
-                "stderr": stderr,
-                "exit_code": -1,
-                "execution_time": execution_time,
-                "next_steps": "Increase timeout_seconds or simplify the command",
-            }
+            return fail_response(
+                timeout_msg,
+                stdout=stdout,
+                stderr=stderr,
+                exit_code=-1,
+                execution_time=execution_time,
+                next_steps="Increase timeout_seconds or simplify the command",
+            )
 
         success = exit_code == 0
         return {
@@ -231,7 +231,7 @@ def _run_with_file_capture(
             "next_steps": [] if success else "Check stderr for error details",
         }
 
-    except Exception as e:  # noqa: BLE001 - tool boundary: report, don't raise
+    except Exception as e:
         # Ensure capture files don't accumulate on unexpected errors
         for p in (out_path, err_path):
             try:
@@ -240,21 +240,21 @@ def _run_with_file_capture(
                 pass
         execution_time = time.time() - start_time
         logger.error(f"Execution error: {e}")
-        return {
-            "success": False,
-            "message": f"Execution error: {e!s}",
-            "stdout": "",
-            "stderr": f"Execution error: {e!s}",
-            "exit_code": -1,
-            "execution_time": execution_time,
-            "next_steps": "Verify the command is valid PowerShell/CMD syntax",
-        }
+        return fail_response(
+            f"Execution error: {e!s}",
+            stdout="",
+            stderr=f"Execution error: {e!s}",
+            exit_code=-1,
+            execution_time=execution_time,
+            next_steps="Verify the command is valid PowerShell/CMD syntax",
+        )
 
 
 class CMDExecutor:
     """
     CMD execution with safety guards, reliable output capture and proper quoting.
 
+    v15.4: `& {{ ... }}` scriptblock wrap (statement-final commands no longer break the pipe).
     v15.3: safety guards (Linux-ism regex + em dash block).
     v15.1: file-based capture (detached-child deadlock fix). See module docstring.
     v15.0: shell=True prevents list2cmdline from mangling nested quotes;
@@ -274,18 +274,17 @@ class CMDExecutor:
         """Execute CMD command with reliable, deadlock-proof output capture."""
         err = _validate_command_safe(command)
         if err:
-            return {
-                "success": False,
-                "message": f"SAFETY GUARD: {err}",
-                "stdout": "",
-                "stderr": err,
-                "exit_code": -1,
-                "execution_time": 0,
-                "next_steps": "Replace the blocked pattern with the native Windows equivalent (see mcp-central-docs/standards/powershell_sota.md)",
-            }
+            return fail_response(
+                f"SAFETY GUARD: {err}",
+                stdout="",
+                stderr=err,
+                exit_code=-1,
+                execution_time=0,
+                next_steps="Replace the blocked pattern with the native Windows equivalent (see mcp-central-docs/standards/powershell_sota.md)",
+            )
         # shell=True passes the raw string as "COMSPEC /c <command>", preserving
         # nested quoting like: docker exec container sh -c "python -c '...'"
-        return _run_with_file_capture(
+        return _run_with_file_capture(  # noqa: S604 - preserves nested quoting for docker exec etc.
             command,
             shell=True,
             cwd=working_directory or os.getcwd(),
@@ -305,7 +304,7 @@ class PowerShellExecutor:
     """
 
     def __init__(self):
-        logger.info("PowerShell executor initialized (v15.3 — safety guards, file-capture, tree-kill)")
+        logger.info("PowerShell executor initialized (v15.4 — scriptblock wrap, safety guards, file-capture, tree-kill)")
 
     def _build_command(self, command: str) -> str:
         """Wrap command with encoding setup and output-forcing pipeline.
@@ -313,12 +312,19 @@ class PowerShellExecutor:
         The | Out-String -Width 4096 suffix is critical for PowerShell 5.1:
         without it, native executables (docker, psql, etc.) have their stdout
         silently dropped when PowerShell writes to a redirected handle.
+
+        v15.4: the user command is wrapped in `& { ... }` before piping.
+        Piping directly off the raw command is a parser error when the command
+        ends in a statement (if/foreach/try block, assignment, trailing `}`):
+        'An empty pipe element is not allowed'. Scriptblock invocation turns
+        any statement sequence into a single legal pipeline element and pipes
+        the output of ALL statements through Out-String, not just the last one.
         """
         setup = (
             "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
             "$OutputEncoding = [System.Text.Encoding]::UTF8"
         )
-        return f"{setup}; {command} | Out-String -Width 4096"
+        return f"{setup}; & {{ {command}\n }} | Out-String -Width 4096"
 
     def execute(
         self,
@@ -341,15 +347,14 @@ class PowerShellExecutor:
         """
         err = _validate_command_safe(command)
         if err:
-            return {
-                "success": False,
-                "message": f"SAFETY GUARD: {err}",
-                "stdout": "",
-                "stderr": err,
-                "exit_code": -1,
-                "execution_time": 0,
-                "next_steps": "Replace the blocked pattern with the native PowerShell equivalent (see mcp-central-docs/standards/powershell_sota.md)",
-            }
+            return fail_response(
+                f"SAFETY GUARD: {err}",
+                stdout="",
+                stderr=err,
+                exit_code=-1,
+                execution_time=0,
+                next_steps="Replace the blocked pattern with the native PowerShell equivalent (see mcp-central-docs/standards/powershell_sota.md)",
+            )
         full_command = self._build_command(command)
         cmd = [
             "powershell.exe",

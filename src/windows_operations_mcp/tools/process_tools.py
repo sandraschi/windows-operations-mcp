@@ -20,6 +20,7 @@ except ImportError:
 
 from ..decorators import tool
 from ..logging_config import get_logger
+from ..utils import fail_response
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -114,15 +115,10 @@ def get_process_list(
         filter_name=filter_name, include_system=include_system, max_processes=max_processes
     )
     if not is_valid:
-        return {"success": False, "error": f"Invalid input: {error_msg}", "processes": [], "total_count": 0}
+        return fail_response(f"Invalid input: {error_msg}", processes=[], total_count=0)
 
     if not HAS_PSUTIL:
-        return {
-            "success": False,
-            "error": "psutil not available. Install with: pip install psutil",
-            "processes": [],
-            "total_count": 0,
-        }
+        return fail_response("psutil not available. Install with: pip install psutil", processes=[], total_count=0)
 
     processes = []
     start_time = time.time()
@@ -177,7 +173,7 @@ def get_process_list(
     except Exception as e:
         error_msg = f"Unexpected error getting process list: {e!s}"
         logger.error("get_process_list_error", error=error_msg, exc_info=True)
-        return {"success": False, "error": error_msg, "processes": [], "total_count": 0}
+        return fail_response(error_msg, processes=[], total_count=0)
 
 
 @tool(
@@ -196,10 +192,10 @@ def get_process_info(pid: int) -> dict[str, Any]:
 
     is_valid, error_msg = _validate_process_inputs(pid=pid)
     if not is_valid:
-        return {"success": False, "error": f"Invalid process ID: {error_msg}"}
+        return fail_response(f"Invalid process ID: {error_msg}")
 
     if not HAS_PSUTIL:
-        return {"success": False, "error": "psutil not available. Install with: pip install psutil"}
+        return fail_response("psutil not available. Install with: pip install psutil")
 
     start_time = time.time()
 
@@ -209,7 +205,7 @@ def get_process_info(pid: int) -> dict[str, Any]:
         with proc.oneshot():
             process_info = _get_process_basic_info(proc)
             if "error" in process_info:
-                return {"success": False, "error": process_info["error"]}
+                return fail_response(process_info["error"])
 
             try:
                 mem_info = proc.memory_full_info()
@@ -278,15 +274,15 @@ def get_process_info(pid: int) -> dict[str, Any]:
     except NoSuchProcess:
         error_msg = f"Process with PID {pid} not found"
         logger.error("get_process_info_not_found", pid=pid, error=error_msg)
-        return {"success": False, "error": error_msg}
+        return fail_response(error_msg)
     except AccessDenied:
         error_msg = f"Access denied for process PID {pid} (elevated privileges may be required)"
         logger.error("get_process_info_access_denied", pid=pid, error=error_msg)
-        return {"success": False, "error": error_msg}
+        return fail_response(error_msg)
     except Exception as e:
         error_msg = f"Unexpected error getting process info: {e!s}"
         logger.error("get_process_info_error", pid=pid, error=error_msg, exc_info=True)
-        return {"success": False, "error": error_msg}
+        return fail_response(error_msg)
 
 
 @tool(
@@ -305,7 +301,7 @@ def get_system_resources() -> dict[str, Any]:
     start_time = time.time()
 
     if not HAS_PSUTIL:
-        return {"success": False, "error": "psutil not available. Install with: pip install psutil"}
+        return fail_response("psutil not available. Install with: pip install psutil")
 
     try:
         # Basic system info
@@ -389,7 +385,7 @@ def get_system_resources() -> dict[str, Any]:
     except Exception as e:
         error_msg = f"Unexpected error getting system resources: {e!s}"
         logger.error("get_system_resources_error", error=error_msg, exc_info=True)
-        return {"success": False, "error": error_msg}
+        return fail_response(error_msg)
 
 
 def register_process_tools(mcp):

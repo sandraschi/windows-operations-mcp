@@ -18,11 +18,12 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
 try:
-    from prefab_ui import Card, Table, Text
+    from prefab_ui import Table
     HAS_PREFAB = True
 except ImportError:
     HAS_PREFAB = False
@@ -113,8 +114,8 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
 
             return result
         except ImportError:
-            return {"success": False, "error": "pywin32 not installed",
-                    "suggestions": ["Run: uv pip install pywin32"]}
+            return fail_response("pywin32 not installed.",
+                                 suggestions=["Run: uv pip install pywin32"])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -138,10 +139,10 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
             raw = await asyncio.to_thread(win32serviceutil.QueryServiceStatus, service_name)
             return {"success": True, "name": service_name, "status": _get_status_str(raw[1])}
         except ImportError:
-            return {"success": False, "error": "pywin32 not installed"}
+            return fail_response("pywin32 not installed.")
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Verify the service name with winops_svc/list."]}
+            return fail_response(f"Service status check failed: {e}",
+                                 suggestions=["Verify the service name with winops_svc/list."])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
@@ -167,10 +168,10 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
             result = await _wait_for_status(service_name, "running", wait_timeout, ctx)
             return {"success": "error" not in result, **result}
         except ImportError:
-            return {"success": False, "error": "pywin32 not installed"}
+            return fail_response("pywin32 not installed.")
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Check service name and elevation. Use winops_svc/status to verify."]}
+            return fail_response(f"Service start failed: {e}",
+                                 suggestions=["Check service name and elevation. Use winops_svc/status to verify."])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
@@ -196,10 +197,10 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
             result = await _wait_for_status(service_name, "stopped", wait_timeout, ctx)
             return {"success": "error" not in result, **result}
         except ImportError:
-            return {"success": False, "error": "pywin32 not installed"}
+            return fail_response("pywin32 not installed.")
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Ensure the service is running. Use winops_svc/status to verify."]}
+            return fail_response(f"Service stop failed: {e}",
+                                 suggestions=["Ensure the service is running. Use winops_svc/status to verify."])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
@@ -225,10 +226,10 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
             result = await _wait_for_status(service_name, "running", wait_timeout, ctx)
             return {"success": "error" not in result, **result}
         except ImportError:
-            return {"success": False, "error": "pywin32 not installed"}
+            return fail_response("pywin32 not installed.")
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Use winops_svc/status to check current state."]}
+            return fail_response(f"Service restart failed: {e}",
+                                 suggestions=["Use winops_svc/status to check current state."])
 
     parent_mcp.mount(ns, prefix="winops_svc")
     logger.info("Mounted atomic tools: winops_svc/list, /status, /start, /stop, /restart")

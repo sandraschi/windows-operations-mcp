@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -21,6 +22,52 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+
+function LLMProviderSelect() {
+	const [providers, setProviders] = useState<Record<string, {name:string}[]>>({});
+	const [selectedProvider, setSelectedProvider] = useState("ollama");
+	const [selectedModel, setSelectedModel] = useState("");
+
+	useEffect(() => {
+		fetch("/api/llm/providers")
+			.then(r => r.json())
+			.then(d => {
+				setProviders(d);
+				const savedP = localStorage.getItem("llm_provider") || "ollama";
+				const savedM = localStorage.getItem("llm_model") || "";
+				setSelectedProvider(savedP);
+				const models = d[savedP === "ollama" ? "ollama" : "lm_studio"];
+				if (models?.length) setSelectedModel(savedM && models.some((m:{name:string}) => m.name === savedM) ? savedM : models[0].name);
+			})
+			.catch(() => setProviders({ ollama: [{name:"llama3.2:3b"}] }));
+	}, []);
+
+	const save = (p: string, m: string) => { localStorage.setItem("llm_provider", p); localStorage.setItem("llm_model", m); };
+
+	const models = providers[selectedProvider === "ollama" ? "ollama" : "lm_studio"] || [];
+	const dot = models.length > 0 ? "bg-success" : "bg-muted-foreground";
+
+	return (
+		<div className="space-y-3">
+			<div className="flex items-center gap-2 mb-3">
+				<div className={`w-2 h-2 rounded-full ${dot}`} />
+				<span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+					{models.length > 0 ? `${selectedProvider} connected` : "no provider"}
+				</span>
+			</div>
+			<select className="h-10 w-full rounded-xl bg-white/5 border border-white/10 px-3 text-sm text-foreground"
+				value={selectedProvider} onChange={(e) => { setSelectedProvider(e.target.value); save(e.target.value, ""); }}>
+				<option value="ollama">Ollama</option>
+				<option value="lm_studio">LM Studio</option>
+			</select>
+			<select className="h-10 w-full rounded-xl bg-white/5 border border-white/10 px-3 text-sm text-foreground"
+				value={selectedModel} onChange={(e) => { setSelectedModel(e.target.value); save(selectedProvider, e.target.value); }}>
+				{models.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+			</select>
+			<p className="text-[9px] text-muted-foreground italic">Saved to browser storage. Used by AI tools and LLM chat.</p>
+		</div>
+	);
+}
 
 export default function Settings() {
 	const { data: status } = useQuery({
@@ -91,6 +138,18 @@ export default function Settings() {
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<Card className="glass border-white/5 overflow-hidden">
+					<CardHeader className="bg-white/5 border-b border-white/5">
+						<div className="flex items-center gap-3">
+							<Cpu className="w-5 h-5 text-primary" />
+							<CardTitle className="text-lg">Local LLM</CardTitle>
+						</div>
+					</CardHeader>
+					<CardContent className="p-6 space-y-4">
+						<LLMProviderSelect />
+					</CardContent>
+				</Card>
+
 				<Card className="lg:col-span-2 glass border-white/5 overflow-hidden group">
 					<CardHeader className="border-b border-white/5 bg-white/[0.02] p-8">
 						<div className="flex items-center gap-4">

@@ -211,6 +211,7 @@ def tool(
 
                 # Return error in standard format
                 return {
+                    "message": f"Tool execution failed: {e}",
                     "error": str(e),
                     "error_type": type(e).__name__,
                     "success": False,
@@ -272,6 +273,7 @@ def validate_inputs(*validators: Callable[..., tuple[bool, str]]) -> Callable[[F
             if errors:
                 return {
                     "success": False,
+                    "message": "Input validation failed",
                     "error": "Input validation failed",
                     "error_type": "ValidationError",
                     "validation_errors": errors,
@@ -330,6 +332,7 @@ def rate_limited(max_calls: int, time_window: int, key: str = "default") -> Call
             if not allowed:
                 return {
                     "success": False,
+                    "message": f"Rate limit exceeded (retry in {round(retry_after, 2)}s)",
                     "error": "Rate limit exceeded",
                     "error_type": "RateLimitError",
                     "retry_after_seconds": round(retry_after, 2),

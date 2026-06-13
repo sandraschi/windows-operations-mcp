@@ -11,6 +11,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
 from windows_operations_mcp.logging_config import get_logger, setup_logging
 
 # Initialize logging
@@ -23,9 +26,6 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import FastMCP 3.2+: {e}")
     sys.exit(1)
-
-from starlette.requests import Request
-from starlette.responses import JSONResponse
 
 
 @asynccontextmanager

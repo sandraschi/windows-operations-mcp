@@ -12,6 +12,7 @@ from typing import Any
 
 from ..decorators import tool
 from ..logging_config import get_logger
+from ..utils import fail_response
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -111,22 +112,12 @@ def _test_tcp_port(ip: str, port: int, timeout_seconds: int, start_time: float) 
                 "message": f"TCP port {port} is open",
             }
         else:
-            return {
-                "success": False,
-                "status": "closed",
-                "connect_time": round(connect_time, 3),
-                "message": f"TCP port {port} is closed or filtered",
-                "error_code": result,
-            }
+            return fail_response(f"TCP port {port} is closed or filtered", status="closed", connect_time=round(connect_time, 3), error_code=result)
 
     except TimeoutError:
-        return {
-            "success": False,
-            "status": "timeout",
-            "message": f"TCP connection to port {port} timed out after {timeout_seconds} seconds",
-        }
+        return fail_response(f"TCP connection to port {port} timed out after {timeout_seconds} seconds", status="timeout")
     except Exception as e:
-        return {"success": False, "status": "error", "message": f"TCP test failed: {e!s}"}
+        return fail_response(f"TCP test failed: {e!s}", status="error")
 
 
 def _test_udp_port(ip: str, port: int, timeout_seconds: int, start_time: float) -> dict[str, Any]:
@@ -164,7 +155,7 @@ def _test_udp_port(ip: str, port: int, timeout_seconds: int, start_time: float) 
             }
 
     except Exception as e:
-        return {"success": False, "status": "error", "message": f"UDP test failed: {e!s}"}
+        return fail_response(f"UDP test failed: {e!s}", status="error")
 
 
 @tool(
@@ -207,11 +198,7 @@ def test_port(host: str, port: int, timeout_seconds: int = DEFAULT_TIMEOUT, prot
     # Validate inputs
     is_valid, error_msg = _validate_network_inputs(host, port, timeout_seconds, protocol)
     if not is_valid:
-        return {
-            "success": False,
-            "error": f"Invalid parameters: {error_msg}",
-            "execution_time": time.time() - start_time,
-        }
+        return fail_response(f"Invalid parameters: {error_msg}", execution_time=time.time() - start_time)
 
     # Log the test attempt
     logger.info("port_test_started", host=host, port=port, protocol=protocol, timeout_seconds=timeout_seconds)
@@ -221,14 +208,7 @@ def test_port(host: str, port: int, timeout_seconds: int = DEFAULT_TIMEOUT, prot
         resolve_success, resolved_ip, resolve_error = _resolve_host(host)
         if not resolve_success:
             logger.error(f"Host resolution failed: {resolve_error}")
-            return {
-                "success": False,
-                "error": resolve_error,
-                "host": host,
-                "port": port,
-                "protocol": protocol,
-                "execution_time": time.time() - start_time,
-            }
+            return fail_response(resolve_error, host=host, port=port, protocol=protocol, execution_time=time.time() - start_time)
 
         # Test the port
         if protocol.lower() == "tcp":
@@ -262,14 +242,7 @@ def test_port(host: str, port: int, timeout_seconds: int = DEFAULT_TIMEOUT, prot
     except Exception as e:
         error_msg = f"Port test failed: {e!s}"
         logger.error("port_test_error", host=host, port=port, protocol=protocol, error=error_msg, exc_info=True)
-        return {
-            "success": False,
-            "error": error_msg,
-            "host": host,
-            "port": port,
-            "protocol": protocol,
-            "execution_time": time.time() - start_time,
-        }
+        return fail_response(error_msg, host=host, port=port, protocol=protocol, execution_time=time.time() - start_time)
 
 
 def register_network_tools(mcp):

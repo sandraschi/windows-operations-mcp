@@ -10,6 +10,7 @@ from typing import Any
 
 from ..decorators import tool
 from ..logging_config import get_logger
+from ..utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -156,9 +157,9 @@ def list_windows_services(
         return {"success": True, "services": services, "total_count": len(services), "filtered_count": len(services)}
 
     except ImportError:
-        return {"success": False, "error": "pywin32 not available. Install with: pip install pywin32"}
+        return fail_response("pywin32 not available. Install with: pip install pywin32")
     except Exception as e:
-        return {"success": False, "error": f"Failed to list services: {e!s}"}
+        return fail_response(f"Failed to list services: {e!s}")
 
 
 @tool(
@@ -213,18 +214,17 @@ def start_windows_service(service_name: str, wait_timeout: int = 30) -> dict[str
                 elif status == SERVICE_START_PENDING:
                     time.sleep(1)  # Wait 1 second before checking again
                 else:
-                    return {
-                        "success": False,
-                        "message": f"Service '{service_name}' failed to start (status: {_get_service_status_name(status)})",
-                        "final_status": _get_service_status_name(status),
-                    }
+                    return fail_response(
+                        f"Service '{service_name}' failed to start (status: {_get_service_status_name(status)})",
+                        final_status=_get_service_status_name(status),
+                    )
             except Exception as e:
-                return {"success": False, "message": f"Error checking service status: {e!s}"}
+                return fail_response(f"Error checking service status: {e!s}")
 
-        return {"success": False, "message": f"Service '{service_name}' start timed out after {wait_timeout} seconds"}
+        return fail_response(f"Service '{service_name}' start timed out after {wait_timeout} seconds")
 
     except Exception as e:
-        return {"success": False, "message": f"Failed to start service '{service_name}': {e!s}"}
+        return fail_response(f"Failed to start service '{service_name}': {e!s}")
 
 
 @tool(
@@ -279,18 +279,17 @@ def stop_windows_service(service_name: str, wait_timeout: int = 30) -> dict[str,
                 elif status == SERVICE_STOP_PENDING:
                     time.sleep(1)  # Wait 1 second before checking again
                 else:
-                    return {
-                        "success": False,
-                        "message": f"Service '{service_name}' failed to stop (status: {_get_service_status_name(status)})",
-                        "final_status": _get_service_status_name(status),
-                    }
+                    return fail_response(
+                        f"Service '{service_name}' failed to stop (status: {_get_service_status_name(status)})",
+                        final_status=_get_service_status_name(status),
+                    )
             except Exception as e:
-                return {"success": False, "message": f"Error checking service status: {e!s}"}
+                return fail_response(f"Error checking service status: {e!s}")
 
-        return {"success": False, "message": f"Service '{service_name}' stop timed out after {wait_timeout} seconds"}
+        return fail_response(f"Service '{service_name}' stop timed out after {wait_timeout} seconds")
 
     except Exception as e:
-        return {"success": False, "message": f"Failed to stop service '{service_name}': {e!s}"}
+        return fail_response(f"Failed to stop service '{service_name}': {e!s}")
 
 
 @tool(
@@ -345,7 +344,7 @@ def restart_windows_service(service_name: str, stop_timeout: int = 30, start_tim
         return start_result
 
     except Exception as e:
-        return {"success": False, "message": f"Failed to restart service '{service_name}': {e!s}"}
+        return fail_response(f"Failed to restart service '{service_name}': {e!s}")
 
 
 def register_windows_services_tools(mcp):

@@ -14,6 +14,7 @@ from typing import Any
 
 from ..decorators import tool
 from ..logging_config import get_logger
+from ..utils import fail_response
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -253,7 +254,7 @@ def get_system_info(detailed: bool = False) -> dict[str, Any]:
     except Exception as e:
         error_msg = f"Failed to gather system info: {e!s}"
         logger.error("get_system_info_error", error=error_msg, exc_info=True)
-        return {"success": False, "error": error_msg, "execution_time_ms": round((time.time() - start_time) * 1000, 2)}
+        return fail_response(error_msg, execution_time_ms=round((time.time() - start_time) * 1000, 2))
 
 
 @tool(
@@ -403,12 +404,7 @@ def health_check(
     except Exception as e:
         error_msg = f"Health check failed: {e!s}"
         logger.error("health_check_error", error=error_msg, exc_info=True)
-        return {
-            "success": False,
-            "status": "unhealthy",
-            "error": error_msg,
-            "execution_time_ms": round((time.time() - start_time) * 1000, 2),
-        }
+        return fail_response(error_msg, status="unhealthy", execution_time_ms=round((time.time() - start_time) * 1000, 2))
 
 
 def register_system_tools(mcp):

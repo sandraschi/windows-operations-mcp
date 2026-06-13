@@ -16,6 +16,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -50,8 +51,7 @@ def register_windows_network(parent_mcp: FastMCP) -> None:
             raw = await _run_cmd(["netsh", "advfirewall", "firewall", "show", "rule", "name=all"])
             return {"success": True, "raw_rules": raw}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Ensure the MCP server is running with Administrator privileges."]}
+            return fail_response(str(e), suggestions=["Ensure the MCP server is running with Administrator privileges."])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
@@ -84,8 +84,7 @@ def register_windows_network(parent_mcp: FastMCP) -> None:
             await _run_cmd(cmd)
             return {"success": True, "rule_name": rule_name}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator. Verify rule_name is unique."]}
+            return fail_response(str(e), suggestions=["Run as Administrator. Verify rule_name is unique."])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
@@ -108,8 +107,7 @@ def register_windows_network(parent_mcp: FastMCP) -> None:
             await _run_cmd(["netsh", "advfirewall", "firewall", "delete", "rule", f"name={rule_name}"])
             return {"success": True, "rule_name": rule_name}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Verify rule exists with winops_net/firewall_list."]}
+            return fail_response(str(e), suggestions=["Verify rule exists with winops_net/firewall_list."])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True)
@@ -130,7 +128,7 @@ def register_windows_network(parent_mcp: FastMCP) -> None:
             ipconfig = await _run_cmd(["ipconfig", "/all"])
             return {"success": True, "dns_flushed": True, "ipconfig": ipconfig}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     parent_mcp.mount(ns, prefix="winops_net")
     logger.info("Mounted atomic tools: winops_net/firewall_list, /firewall_add, /firewall_delete, /diag")

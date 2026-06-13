@@ -9,6 +9,8 @@ import time
 from datetime import datetime, timedelta
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from ..decorators import tool
 from ..logging_config import get_logger
 
@@ -161,9 +163,9 @@ def query_windows_event_log(
         return {"success": True, "events": events, "total_count": len(events), "log_name": log_name}
 
     except ImportError:
-        return {"success": False, "error": "pywin32 not available. Install with: pip install pywin32"}
+        return fail_response(message="pywin32 not available. Install with: pip install pywin32")
     except Exception as e:
-        return {"success": False, "error": f"Failed to query event log: {e!s}"}
+        return fail_response(message=f"Failed to query event log: {e!s}")
 
 
 @tool(
@@ -277,7 +279,7 @@ def export_windows_event_log(
         }
 
     except Exception as e:
-        return {"success": False, "error": f"Failed to export event log: {e!s}"}
+        return fail_response(message=f"Failed to export event log: {e!s}")
 
 
 @tool(
@@ -325,7 +327,7 @@ def clear_windows_event_log(
             export_result = export_windows_event_log(log_name=log_name, output_file=backup_file, format="json")
 
             if not export_result["success"]:
-                return {"success": False, "error": f"Failed to create backup: {export_result['error']}"}
+                return fail_response(message=f"Failed to create backup: {export_result['error']}")
 
         # Clear the event log
         win32evtlog.ClearEventLog(None, log_name)
@@ -337,7 +339,7 @@ def clear_windows_event_log(
         }
 
     except Exception as e:
-        return {"success": False, "error": f"Failed to clear event log: {e!s}"}
+        return fail_response(message=f"Failed to clear event log: {e!s}")
 
 
 @tool(
@@ -456,9 +458,9 @@ def monitor_windows_event_log(
         }
 
     except ImportError:
-        return {"success": False, "error": "pywin32 not available. Install with: pip install pywin32"}
+        return fail_response(message="pywin32 not available. Install with: pip install pywin32")
     except Exception as e:
-        return {"success": False, "error": f"Failed to monitor event log: {e!s}"}
+        return fail_response(message=f"Failed to monitor event log: {e!s}")
 
 
 def register_windows_event_log_tools(mcp):

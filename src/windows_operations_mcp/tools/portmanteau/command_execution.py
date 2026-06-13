@@ -14,6 +14,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -67,7 +68,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
          - stdout/stderr truncated at max_output_size chars each.
         """
         if not command:
-            return {"success": False, "error": "command must be non-empty", "suggestions": ["Provide a PowerShell command string."]}
+            return fail_response("command must be non-empty", suggestions=["Provide a PowerShell command string."])
 
         if ctx:
             await ctx.info(f"PS> {command[:80]}")
@@ -163,7 +164,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
          - stdout/stderr truncated at max_output_size chars each.
         """
         if not command:
-            return {"success": False, "error": "command must be non-empty", "suggestions": ["Provide a CMD command string."]}
+            return fail_response("command must be non-empty", suggestions=["Provide a CMD command string."])
 
         if ctx:
             await ctx.info(f"CMD> {command[:80]}")

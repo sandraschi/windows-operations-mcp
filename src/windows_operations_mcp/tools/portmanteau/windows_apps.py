@@ -15,6 +15,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -65,7 +66,7 @@ def register_windows_apps(parent_mcp: FastMCP) -> None:
             apps = await _ps(cmd)
             return {"success": True, "apps": apps}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def uninstall(
@@ -94,9 +95,9 @@ def register_windows_apps(parent_mcp: FastMCP) -> None:
             await _ps(cmd)
             return {"success": True, "package_name": package_name}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator for system packages.",
-                                    "Get PackageFullName from winops_apps/list."]}
+            return fail_response(str(e),
+                    suggestions=["Run as Administrator for system packages.",
+                                 "Get PackageFullName from winops_apps/list."])
 
     parent_mcp.mount(ns, prefix="winops_apps")
     logger.info("Mounted atomic tools: winops_apps/list, winops_apps/uninstall")

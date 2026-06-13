@@ -17,6 +17,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -48,7 +49,7 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
         try:
             return {"success": True, "raw_tasks": await _run(["schtasks.exe", "/query", "/fo", "LIST"])}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Scheduled task listing failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def task_create(
@@ -76,8 +77,8 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
                         "/sc", schedule, "/st", start_time, "/f"])
             return {"success": True, "task_name": task_name}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator. Verify task_path exists."]}
+            return fail_response(f"Task creation failed: {e}",
+                                 suggestions=["Run as Administrator. Verify task_path exists."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def task_delete(
@@ -98,8 +99,8 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             await _run(["schtasks.exe", "/delete", "/tn", task_name, "/f"])
             return {"success": True, "task_name": task_name}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Verify task exists with task_list."]}
+            return fail_response(f"Task deletion failed: {e}",
+                                 suggestions=["Verify task exists with task_list."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def task_run(
@@ -120,8 +121,8 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             await _run(["schtasks.exe", "/run", "/tn", task_name])
             return {"success": True, "task_name": task_name}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Verify task exists with task_list."]}
+            return fail_response(f"Task run failed: {e}",
+                                 suggestions=["Verify task exists with task_list."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def wmi_query(
@@ -144,8 +145,8 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             result = await _run(["wmic.exe", f"/namespace:{wmi_namespace}", "path", wmi_class, "get", "/format:list"])
             return {"success": True, "wmi_class": wmi_class, "result": result}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Verify wmi_class name. Try Win32_OperatingSystem for a basic test."]}
+            return fail_response(f"WMI query failed: {e}",
+                                 suggestions=["Verify wmi_class name. Try Win32_OperatingSystem for a basic test."])
 
     parent_mcp.mount(ns, prefix="winops_auto")
     logger.info("Mounted atomic tools: winops_auto/task_list, /task_create, /task_delete, /task_run, /wmi_query")

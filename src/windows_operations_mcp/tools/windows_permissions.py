@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from ..decorators import tool
 from ..logging_config import get_logger
 
@@ -122,7 +124,7 @@ def get_file_permissions(file_path: str, include_owner: bool = True, include_gro
         path = Path(file_path)
 
         if not path.exists():
-            return {"success": False, "error": f"Path does not exist: {file_path}"}
+            return fail_response(message=f"Path does not exist: {file_path}")
 
         # Get file stats
         stat_info = path.stat()
@@ -174,7 +176,7 @@ def get_file_permissions(file_path: str, include_owner: bool = True, include_gro
         return {"success": True, "permissions": result}
 
     except Exception as e:
-        return {"success": False, "error": f"Failed to get permissions: {e!s}"}
+        return fail_response(message=f"Failed to get permissions: {e!s}")
 
 
 @tool(
@@ -215,7 +217,7 @@ def set_file_permissions(file_path: str, permissions: str, recursive: bool = Fal
         path = Path(file_path)
 
         if not path.exists():
-            return {"success": False, "error": f"Path does not exist: {file_path}"}
+            return fail_response(message=f"Path does not exist: {file_path}")
 
         applied_to = []
 
@@ -225,7 +227,7 @@ def set_file_permissions(file_path: str, permissions: str, recursive: bool = Fal
                 os.chmod(file_path, int(permissions, 8))
                 applied_to.append(str(path))
             except Exception as e:
-                return {"success": False, "error": f"Failed to set permissions on {file_path}: {e!s}"}
+                return fail_response(message=f"Failed to set permissions on {file_path}: {e!s}")
 
         elif path.is_dir() and recursive:
             # Set permissions recursively on directory
@@ -244,7 +246,7 @@ def set_file_permissions(file_path: str, permissions: str, recursive: bool = Fal
                 os.chmod(file_path, int(permissions, 8))
                 applied_to.append(str(path))
             except Exception as e:
-                return {"success": False, "error": f"Failed to set permissions on {file_path}: {e!s}"}
+                return fail_response(message=f"Failed to set permissions on {file_path}: {e!s}")
 
         return {
             "success": True,
@@ -253,7 +255,7 @@ def set_file_permissions(file_path: str, permissions: str, recursive: bool = Fal
         }
 
     except Exception as e:
-        return {"success": False, "error": f"Failed to set permissions: {e!s}"}
+        return fail_response(message=f"Failed to set permissions: {e!s}")
 
 
 @tool(
@@ -294,7 +296,7 @@ def analyze_directory_permissions(
         path = Path(directory_path)
 
         if not path.exists() or not path.is_dir():
-            return {"success": False, "error": f"Directory does not exist: {directory_path}"}
+            return fail_response(message=f"Directory does not exist: {directory_path}")
 
         permission_stats = {}
         analyzed_items = []
@@ -357,7 +359,7 @@ def analyze_directory_permissions(
         }
 
     except Exception as e:
-        return {"success": False, "error": f"Failed to analyze directory permissions: {e!s}"}
+        return fail_response(message=f"Failed to analyze directory permissions: {e!s}")
 
 
 @tool(
@@ -398,7 +400,7 @@ def fix_file_permissions(file_path: str, fix_type: str = "readable", recursive: 
         path = Path(file_path)
 
         if not path.exists():
-            return {"success": False, "error": f"Path does not exist: {file_path}"}
+            return fail_response(message=f"Path does not exist: {file_path}")
 
         fixed_items = []
 
@@ -412,14 +414,14 @@ def fix_file_permissions(file_path: str, fix_type: str = "readable", recursive: 
             # Make file executable by owner
             new_permissions = "755"  # rwxr-xr-x
         else:
-            return {"success": False, "error": f"Unknown fix type: {fix_type}"}
+            return fail_response(message=f"Unknown fix type: {fix_type}")
 
         if path.is_file():
             try:
                 os.chmod(file_path, int(new_permissions, 8))
                 fixed_items.append(str(path))
             except Exception as e:
-                return {"success": False, "error": f"Failed to fix permissions on {file_path}: {e!s}"}
+                return fail_response(message=f"Failed to fix permissions on {file_path}: {e!s}")
 
         elif path.is_dir() and recursive:
             # Fix permissions recursively
@@ -438,7 +440,7 @@ def fix_file_permissions(file_path: str, fix_type: str = "readable", recursive: 
                 os.chmod(file_path, int(new_permissions, 8))
                 fixed_items.append(str(path))
             except Exception as e:
-                return {"success": False, "error": f"Failed to fix permissions on {file_path}: {e!s}"}
+                return fail_response(message=f"Failed to fix permissions on {file_path}: {e!s}")
 
         return {
             "success": True,
@@ -447,7 +449,7 @@ def fix_file_permissions(file_path: str, fix_type: str = "readable", recursive: 
         }
 
     except Exception as e:
-        return {"success": False, "error": f"Failed to fix file permissions: {e!s}"}
+        return fail_response(message=f"Failed to fix file permissions: {e!s}")
 
 
 def register_windows_permissions_tools(mcp):

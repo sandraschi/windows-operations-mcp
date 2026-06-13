@@ -17,6 +17,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -101,11 +102,9 @@ def register_windows_event_logs(parent_mcp: FastMCP) -> None:
             return {"success": True, "log_name": log_name, "events": events,
                     "count": len(events), "has_more": len(events) == max_events}
         except ImportError:
-            return {"success": False, "error": "pywin32 not installed",
-                    "suggestions": ["Run: uv pip install pywin32"]}
+            return fail_response("pywin32 not installed.", suggestions=["Run: uv pip install pywin32"])
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Use winops_evtlog/list to see available log channels."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Use winops_evtlog/list to see available log channels."])
 
     @ns.tool(name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_channels(ctx: Context | None = None) -> dict[str, Any]:
@@ -124,7 +123,7 @@ def register_windows_event_logs(parent_mcp: FastMCP) -> None:
             channels = raw.splitlines()
             return {"success": True, "channels": channels, "count": len(channels)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(f"Operation failed: {e}")
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def export(
@@ -146,8 +145,7 @@ def register_windows_event_logs(parent_mcp: FastMCP) -> None:
             await _wevtutil("epl", log_name, output_path)
             return {"success": True, "log_name": log_name, "output_path": output_path}
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Ensure output directory exists and you have write permission."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Ensure output directory exists and you have write permission."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def clear(
@@ -169,10 +167,9 @@ def register_windows_event_logs(parent_mcp: FastMCP) -> None:
             await asyncio.to_thread(win32evtlog.ClearEventLog, None, log_name)
             return {"success": True, "cleared_log": log_name}
         except ImportError:
-            return {"success": False, "error": "pywin32 not installed"}
+            return fail_response("pywin32 not installed.")
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Run as Administrator to clear Security log."]}
+            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator to clear Security log."])
 
     parent_mcp.mount(ns, prefix="winops_evtlog")
     logger.info("Mounted atomic tools: winops_evtlog/query, /list, /export, /clear")

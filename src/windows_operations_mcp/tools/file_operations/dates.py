@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from .base import (
     FILE_ATTRIBUTE_NORMAL,
     FILE_SHARE_READ,
@@ -258,7 +260,7 @@ def get_file_dates_tool(file_path: str) -> dict[str, Any]:
             "accessed": dates["accessed"].isoformat(),
         }
     except FileOperationError as e:
-        return {"success": False, "error": str(e), "path": file_path}
+        return fail_response(str(e), path=file_path)
 
 
 def set_file_dates_tool(
@@ -316,4 +318,4 @@ def set_file_dates_tool(
         return result
 
     except FileOperationError as e:
-        return {"success": False, "error": str(e), "path": file_path}
+        return fail_response(str(e), path=file_path)

@@ -9,6 +9,8 @@ import time
 from datetime import datetime
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from ..decorators import tool
 from ..logging_config import get_logger
 
@@ -84,9 +86,9 @@ def get_windows_performance_counters(
         return {"success": True, "counters": counters, "timestamp": timestamp}
 
     except ImportError:
-        return {"success": False, "error": "win32pdh not available. Install with: pip install pywin32"}
+        return fail_response(message="win32pdh not available. Install with: pip install pywin32")
     except Exception as e:
-        return {"success": False, "error": f"Failed to get performance counters: {e!s}"}
+        return fail_response(message=f"Failed to get performance counters: {e!s}")
 
 
 @tool(
@@ -184,9 +186,9 @@ def monitor_windows_performance(
         return {"success": True, "samples": samples, "summary": summary, "duration": time.time() - start_time}
 
     except ImportError:
-        return {"success": False, "error": "win32pdh not available. Install with: pip install pywin32"}
+        return fail_response(message="win32pdh not available. Install with: pip install pywin32")
     except Exception as e:
-        return {"success": False, "error": f"Failed to monitor performance: {e!s}"}
+        return fail_response(message=f"Failed to monitor performance: {e!s}")
 
 
 @tool(
@@ -337,9 +339,9 @@ def get_windows_system_performance(
         return {"success": True, "performance": performance, "timestamp": timestamp}
 
     except ImportError:
-        return {"success": False, "error": "Required modules not available. Install with: pip install pywin32"}
+        return fail_response(message="Required modules not available. Install with: pip install pywin32")
     except Exception as e:
-        return {"success": False, "error": f"Failed to get system performance: {e!s}"}
+        return fail_response(message=f"Failed to get system performance: {e!s}")
 
 
 def register_windows_performance_tools(mcp):

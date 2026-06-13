@@ -4,6 +4,8 @@ import os
 import subprocess
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from ..decorators import tool
 from ..logging_config import get_logger
 
@@ -22,14 +24,14 @@ def _run_git_command(args: list[str], repo_path: str | None = None) -> dict[str,
             "returncode": result.returncode,
         }
     except subprocess.CalledProcessError as e:
-        return {
-            "success": False,
-            "stdout": e.stdout.strip() if e.stdout else "",
-            "stderr": e.stderr.strip() if e.stderr else str(e),
-            "returncode": e.returncode,
-        }
+        return fail_response(
+            message=e.stderr.strip() if e.stderr else str(e),
+            stdout=e.stdout.strip() if e.stdout else "",
+            stderr=e.stderr.strip() if e.stderr else str(e),
+            returncode=e.returncode,
+        )
     except Exception as e:
-        return {"success": False, "stdout": "", "stderr": f"Git command failed: {e!s}", "returncode": -1}
+        return fail_response(message=f"Git command failed: {e!s}", stdout="", stderr=f"Git command failed: {e!s}", returncode=-1)
 
 
 @tool(

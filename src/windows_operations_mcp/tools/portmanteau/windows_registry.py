@@ -21,6 +21,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -93,7 +94,8 @@ def _list_blocking(hkey, path: str) -> tuple[list, dict]:
         i = 0
         while True:
             try:
-                subkeys.append(winreg.EnumKey(key, i)); i += 1
+                subkeys.append(winreg.EnumKey(key, i))
+                i += 1
             except OSError:
                 break
         i = 0
@@ -133,10 +135,10 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
             data, vtype = await asyncio.to_thread(_read_value_blocking, hkey, key_path, value_name)
             return {"success": True, "value": data, "type": _vtype_name(vtype)}
         except FileNotFoundError:
-            return {"success": False, "error": f"Key or value not found: {hive}\\{key_path}",
-                    "suggestions": ["Use winops_reg/list_keys to browse available keys."]}
+            return fail_response(f"Key or value not found: {hive}\\{key_path}",
+                                 suggestions=["Use winops_reg/list_keys to browse available keys."])
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def write(
@@ -173,8 +175,7 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
                 result["backup_path"] = backup_path
             return result
         except Exception as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["HKLM writes require Administrator elevation."]}
+            return fail_response(str(e), suggestions=["HKLM writes require Administrator elevation."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def delete(
@@ -205,7 +206,7 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
                 result["backup_path"] = backup_path
             return result
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_keys(
@@ -228,13 +229,13 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
             subkeys, values = await asyncio.to_thread(_list_blocking, hkey, key_path)
             return {"success": True, "subkeys": subkeys, "values": values}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def export(
-        hive: Annotated[HiveKey, Field(description="Registry hive.")] = "HKCU",
         key_path: Annotated[str, Field(description="Key path to export.")],
         output_path: Annotated[str, Field(description="Destination .reg file path.")],
+        hive: Annotated[HiveKey, Field(description="Registry hive.")] = "HKCU",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Export a registry key to a .reg file.
@@ -251,7 +252,7 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
             await _reg("export", f"{hive}\\{key_path}", output_path, "/y")
             return {"success": True, "output_path": output_path}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def import_reg(
@@ -272,7 +273,7 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
             await _reg("import", reg_file_path)
             return {"success": True, "reg_file_path": reg_file_path}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     parent_mcp.mount(ns, prefix="winops_reg")
     logger.info("Mounted atomic tools: winops_reg/read, /write, /delete, /list_keys, /export, /import_reg")

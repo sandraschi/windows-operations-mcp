@@ -31,6 +31,7 @@ def get_execution_result(output: ProcessOutput | dict[str, Any]) -> dict[str, An
     else:
         return {
             "success": False,
+            "message": f"Unexpected output type: {type(output).__name__}",
             "error": f"Unexpected output type: {type(output).__name__}",
             "exit_code": -1,
             "stdout": "",

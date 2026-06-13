@@ -21,6 +21,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -79,10 +80,10 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
             data = await asyncio.to_thread(_read_blocking, path)
             return {"success": True, "data": data}
         except FileNotFoundError:
-            return {"success": False, "error": f"File not found: {path}"}
+            return fail_response(f"File not found: {path}")
         except json.JSONDecodeError as e:
-            return {"success": False, "error": f"Invalid JSON: {e}",
-                    "suggestions": ["Use winops_json/validate to check the file first."]}
+            return fail_response(f"Invalid JSON: {e}",
+                    suggestions=["Use winops_json/validate to check the file first."])
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def write(
@@ -105,7 +106,7 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
             await asyncio.to_thread(_write_blocking, path, data, indent)
             return {"success": True, "path": path}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def validate(
@@ -150,7 +151,7 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
             return {"success": True, "path": path,
                     "updated_keys": list(updated.keys()) if isinstance(updated, dict) else []}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return fail_response(str(e))
 
     @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def extract_from_text(
@@ -195,8 +196,8 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
             obj = json.loads(text)
             return {"success": True, "formatted": json.dumps(obj, indent=indent, ensure_ascii=False)}
         except json.JSONDecodeError as e:
-            return {"success": False, "error": str(e),
-                    "suggestions": ["Use winops_json/validate first to locate syntax errors."]}
+            return fail_response(str(e),
+                    suggestions=["Use winops_json/validate first to locate syntax errors."])
 
     parent_mcp.mount(ns, prefix="winops_json")
     logger.info("Mounted atomic tools: winops_json/read, /write, /validate, /patch, /extract_from_text, /format")

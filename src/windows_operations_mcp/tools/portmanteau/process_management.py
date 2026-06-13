@@ -18,11 +18,12 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
 try:
-    from prefab_ui import BarChart, Card, Table, Text
+    from prefab_ui import BarChart, Card, Table
     HAS_PREFAB = True
 except ImportError:
     HAS_PREFAB = False
@@ -150,8 +151,10 @@ def register_process_management(parent_mcp: FastMCP) -> None:
 
             return data
         except psutil.NoSuchProcess:
-            return {"success": False, "error": f"Process {pid} not found",
-                    "suggestions": ["Verify the PID with winops_process/list first."]}
+            return fail_response(
+                f"Process {pid} not found",
+                suggestions=["Verify the PID with winops_process/list first."],
+            )
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -209,11 +212,15 @@ def register_process_management(parent_mcp: FastMCP) -> None:
             p.terminate()
             return {"success": True, "terminated_pid": pid}
         except psutil.NoSuchProcess:
-            return {"success": False, "error": f"Process {pid} not found",
-                    "suggestions": ["Verify the PID with winops_process/list."]}
+            return fail_response(
+                f"Process {pid} not found",
+                suggestions=["Verify the PID with winops_process/list."],
+            )
         except psutil.AccessDenied:
-            return {"success": False, "error": f"Access denied terminating PID {pid}",
-                    "suggestions": ["Run MCP server as Administrator to kill system processes."]}
+            return fail_response(
+                f"Access denied terminating PID {pid}",
+                suggestions=["Run MCP server as Administrator to kill system processes."],
+            )
 
     parent_mcp.mount(ns, prefix="winops_process")
     logger.info("Mounted atomic tools: winops_process/list, /info, /resources, /kill")

@@ -15,6 +15,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
+from windows_operations_mcp.utils import fail_response
 
 logger = get_logger(__name__)
 
@@ -104,8 +105,7 @@ def register_windows_performance(parent_mcp: FastMCP) -> None:
                     "io_counters": p.io_counters()._asdict() if hasattr(p, "io_counters") else None,
                 }
         except psutil.NoSuchProcess:
-            return {"success": False, "error": f"Process {pid} not found",
-                    "suggestions": ["Verify PID with winops_process/list."]}
+            return fail_response(f"Process {pid} not found", suggestions=["Verify PID with winops_process/list."])
 
     parent_mcp.mount(ns, prefix="winops_perf")
     logger.info("Mounted atomic tools: winops_perf/system, winops_perf/process")

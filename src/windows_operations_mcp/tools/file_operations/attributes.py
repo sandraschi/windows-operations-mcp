@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from windows_operations_mcp.utils import fail_response
+
 from .base import (
     FILE_ATTRIBUTE_ARCHIVE,
     FILE_ATTRIBUTE_ENCRYPTED,
@@ -175,7 +177,7 @@ def get_file_attributes_tool(file_path: str) -> dict[str, Any]:
         attrs = get_file_attributes(file_path)
         return {"success": True, "path": file_path, "attributes": attrs}
     except FileOperationError as e:
-        return {"success": False, "error": str(e), "path": file_path}
+        return fail_response(str(e), path=file_path)
 
 
 def set_file_attributes_tool(file_path: str, attributes: dict[str, bool]) -> dict[str, Any]:
@@ -194,4 +196,4 @@ def set_file_attributes_tool(file_path: str, attributes: dict[str, bool]) -> dic
         result["success"] = True
         return result
     except FileOperationError as e:
-        return {"success": False, "error": str(e), "path": file_path}
+        return fail_response(str(e), path=file_path)
