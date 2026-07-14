@@ -80,7 +80,7 @@ foreach ($item in $CsvContent) {
 }
 
 # Generate Report
-Write-Host "`n[Cleaner] 🗑️ Potential Bloat Targets Identified:" -ForegroundColor Yellow
+Write-Host "`n[Cleaner] ðŸ-‘ï¸ Potential Bloat Targets Identified:" -ForegroundColor Yellow
 if ($BloatTargets.Count -eq 0) {
     Write-Host "No stale bloat found matching criteria." -ForegroundColor Green
 } else {
