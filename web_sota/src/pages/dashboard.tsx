@@ -10,6 +10,7 @@ import {
 	Monitor,
 	Search,
 } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 import { cn } from "@/common/utils";
 import { Progress } from "@/components/ui/progress";
 
@@ -96,13 +97,13 @@ function StatCard({
 export default function Dashboard() {
 	const { data: stats } = useQuery({
 		queryKey: ["system-stats"],
-		queryFn: () => fetch("/api/system-stats").then((res) => res.json()),
+		queryFn: () => fetch(API_BASE + "/api/system-stats").then((res) => res.json()),
 		refetchInterval: 2000,
 	});
 
 	const { data: processes } = useQuery({
 		queryKey: ["processes"],
-		queryFn: () => fetch("/api/processes").then((res) => res.json()),
+		queryFn: () => fetch(API_BASE + "/api/processes").then((res) => res.json()),
 		refetchInterval: 5000,
 	});
 

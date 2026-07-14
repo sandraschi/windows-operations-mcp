@@ -1,0 +1,1 @@
+{"timestamp":"2026-07-13","repos":["windows-operations-mcp"],"fixes":[".env.example","MCPB manifest prompts removed"],"msg":"Small fixes — repo was otherwise clean"}

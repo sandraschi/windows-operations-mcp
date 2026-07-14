@@ -1,4 +1,5 @@
 import platform
+from pathlib import Path
 
 import psutil
 from fastapi import Body, Depends, FastAPI, HTTPException
@@ -67,6 +68,24 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
         # Sort by CPU usage and take top 10
         sorted_procs = sorted(procs, key=lambda x: x["cpu_percent"], reverse=True)[:10]
         return {"processes": sorted_procs}
+
+    @app.get("/api/skills")
+    async def list_skills():
+        """List available skills from the skills directory."""
+        skills_dir = Path(__file__).resolve().parent.parent.parent / "skills"
+        results = []
+        if skills_dir.is_dir():
+            for d in skills_dir.iterdir():
+                if d.is_dir() and (d / "SKILL.md").exists():
+                    results.append({
+                        "name": d.name,
+                        "description": (d / "SKILL.md").read_text(encoding="utf-8")[:200],
+                    })
+        if not results:
+            results = [
+                {"name": "windows-expert", "description": "Windows system administration, registry, services, accounts, event logs, networking, permissions, automation, and performance monitoring."},
+            ]
+        return results
 
     @app.get("/api/tools")
     async def list_tools(_user: str = Depends(authenticate)):

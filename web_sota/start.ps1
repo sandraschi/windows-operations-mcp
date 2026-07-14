@@ -31,7 +31,7 @@ foreach ($p in $pids) {
 
 # 2. Setup
 Set-Location $PSScriptRoot
-if (-not (Test-Path "node_modules")) { npm install }
+if (-not (Test-Path "node_modules")) { bun install }
 uv sync
 
 # 3. Start the Python backend (Background)
@@ -59,7 +59,7 @@ Start-Process powershell -ArgumentList "-NoProfile", "-WindowStyle", "Hidden", "
 
 Write-Host "Browser will open automatically when Vite is ready." -ForegroundColor Gray
 if ($SkipFrontend) { return }
-npm run dev -- --port $WebPort --host
+bun run dev -- --port $WebPort --host
 
 
 

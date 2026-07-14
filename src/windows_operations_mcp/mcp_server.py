@@ -166,7 +166,9 @@ def main() -> None:
 
     try:
         register_all_tools()
-        mcp.run()
+        from .transport import run_server
+
+        run_server(mcp, server_name="windows-operations-mcp")
     except Exception as e:
         logger.critical(f"Fatal error in MCP server: {e}")
         sys.exit(1)

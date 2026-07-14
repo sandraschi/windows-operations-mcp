@@ -10,7 +10,7 @@ register_all_tools()
 # 2. HTTP API (SOTA hub) + MCP transport (FastMCP 3.2+ exposes ASGI via http_app())
 app = FastAPI()
 setup_webapp(app, mcp)
-app.mount("/mcp", mcp.http_app())
+app.mount("/mcp", mcp.http_app(path="/"))
 
 app.add_middleware(
     CORSMiddleware,

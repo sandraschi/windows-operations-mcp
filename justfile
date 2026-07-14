@@ -1,4 +1,5 @@
-﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+import 'scripts/just/fleet.just'
 
 # Sync with pyproject / release tags when cutting a release
 __version__ := "14.1.0"
@@ -98,15 +99,12 @@ audit-deps:
 
 # ── Packaging & verify ─────────────────────────────────────────────────────
 
-# Build MCPB bundle via project script
+# Build MCPB bundle via project script (legacy helper; prefer `just mcpb-pack` from fleet.just)
 build:
 	Set-Location '{{justfile_directory()}}'
 	uv run python build_mcpb.py
 
-# Pack with mcpb CLI when available (output under dist/)
-mcpb-pack:
-	Set-Location '{{justfile_directory()}}'
-	mcpb pack . "dist/{{__name__}}-v{{__version__}}.mcpb"
+# mcpb-pack, cua-nsis-test: provided by scripts/just/fleet.just
 
 # Smoke-test MCP server import
 verify:
@@ -144,3 +142,19 @@ sync-research:
 kill-fleet:
 	pwsh -NoProfile -File .\scripts\kill-fleet.ps1
 
+# ── Tauri NSIS ─────────────────────────────────────────────────────────────────
+
+# Build the PyInstaller backend .exe and copy to Tauri resources
+build-sidecar:
+	pwsh -NoProfile -File native\build-sidecar.ps1
+
+# Build the Tauri NSIS desktop installer (full pipeline: frontend -> sidecar -> Rust -> NSIS)
+build-native: build-sidecar
+	$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+	$vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+	$envOutput = cmd /c "`"$vcvars`" > nul & set" | Where-Object { $_ -match '^(INCLUDE|LIB|LIBPATH|VCToolsVersion|WindowsSdkDir|UniversalCRTSdkDir|UCRTVersion)=' }
+	foreach ($line in $envOutput) { $parts = $line.Split('=', 2); Set-Item -Path "env:$($parts[0])" -Value $parts[1] -ErrorAction SilentlyContinue }
+	Set-Location '{{justfile_directory()}}\native'
+	npx @tauri-apps/cli build --bundles nsis
+
+# cua-nsis-test: provided by scripts/just/fleet.just

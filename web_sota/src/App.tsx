@@ -2,10 +2,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	Activity,
+	BookOpen,
 	Box,
+	ChevronLeft,
+	ChevronRight,
 	ExternalLink,
 	Globe,
 	LayoutDashboard,
+	Search,
 	Settings as SettingsIcon,
 	Terminal,
 	Wrench,
@@ -19,22 +23,30 @@ import {
 	useLocation,
 } from "react-router-dom";
 import { cn } from "./common/utils";
+import { useAppStore } from "./lib/store";
 import Chat from "./pages/chat";
 import Dashboard from "./pages/dashboard";
 import Settings from "./pages/settings";
 import Tools from "./pages/tools";
 import Workflows from "./pages/workflows";
+import Logging from "./pages/Logging";
+import SkillsPage from "./pages/skills";
+import AppsHub from "./pages/apps";
 
 const queryClient = new QueryClient();
 
 function Sidebar() {
 	const location = useLocation();
+	const { sidebarCollapsed, toggleSidebar } = useAppStore();
 
 	const navItems = [
 		{ name: "Dashboard", path: "/", icon: LayoutDashboard },
 		{ name: "Workflows", path: "/workflows", icon: Zap },
 		{ name: "Tools", path: "/tools", icon: Wrench },
+		{ name: "Skills", path: "/skills", icon: BookOpen },
+		{ name: "Apps", path: "/apps", icon: Search },
 		{ name: "Chat", path: "/chat", icon: Terminal },
+		{ name: "Logs", path: "/logs", icon: Terminal },
 		{ name: "Settings", path: "/settings", icon: SettingsIcon },
 	];
 
@@ -45,25 +57,38 @@ function Sidebar() {
 	];
 
 	return (
-		<aside className="w-64 glass h-screen flex flex-col p-4 z-50 sticky top-0">
-			<div className="flex items-center space-x-3 px-2 py-6 mb-6">
-				<div className="w-10 h-10 vibrant-gradient rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-					<Activity className="w-6 h-6 text-white" />
-				</div>
-				<div>
-					<h1 className="font-extrabold text-lg tracking-tight leading-none vibrant-text">
-						Windows
-					</h1>
-					<p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mt-1">
-						Operations SOTA
-					</p>
-				</div>
+		<aside className={cn("glass h-screen flex flex-col p-4 z-50 sticky top-0 transition-all duration-300", sidebarCollapsed ? "w-16" : "w-64")}>
+			<div className={cn("flex items-center mb-6", sidebarCollapsed ? "justify-center px-0 py-6" : "space-x-3 px-2 py-6")}>
+				{sidebarCollapsed ? (
+					<button onClick={toggleSidebar} className="w-10 h-10 vibrant-gradient rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+						<ChevronRight className="w-5 h-5 text-white" />
+					</button>
+				) : (
+					<>
+						<div className="w-10 h-10 vibrant-gradient rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+							<Activity className="w-6 h-6 text-white" />
+						</div>
+						<div className="flex-1">
+							<h1 className="font-extrabold text-lg tracking-tight leading-none vibrant-text">
+								Windows
+							</h1>
+							<p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mt-1">
+								Operations
+							</p>
+						</div>
+						<button onClick={toggleSidebar} className="text-muted-foreground hover:text-foreground transition-colors p-1 -mr-1">
+							<ChevronLeft className="w-4 h-4" />
+						</button>
+					</>
+				)}
 			</div>
 
 			<div className="flex-1 space-y-1">
-				<p className="text-[10px] font-bold text-muted-foreground px-3 mb-2 uppercase tracking-widest">
-					Main Menu
-				</p>
+				{!sidebarCollapsed && (
+					<p className="text-[10px] font-bold text-muted-foreground px-3 mb-2 uppercase tracking-widest">
+						Main Menu
+					</p>
+				)}
 				{navItems.map((item) => {
 					const isActive = location.pathname === item.path;
 					return (
@@ -71,13 +96,15 @@ function Sidebar() {
 							key={item.path}
 							to={item.path}
 							className={cn(
-								"relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-300 group",
+								"relative flex items-center rounded-xl transition-all duration-300 group",
+								sidebarCollapsed ? "justify-center p-2.5" : "space-x-3 px-3 py-2.5",
 								isActive
 									? "text-primary bg-primary/10 shadow-sm"
 									: "text-muted-foreground hover:text-foreground hover:bg-white/5",
 							)}
+							title={sidebarCollapsed ? item.name : undefined}
 						>
-							{isActive && (
+							{isActive && !sidebarCollapsed && (
 								<motion.div
 									layoutId="active-pill"
 									className="absolute left-0 w-1 h-6 bg-primary rounded-r-full"
@@ -86,51 +113,55 @@ function Sidebar() {
 							)}
 							<item.icon
 								className={cn(
-									"w-5 h-5 transition-transform group-hover:scale-110",
+									"w-5 h-5 shrink-0 transition-transform group-hover:scale-110",
 									isActive && "text-primary",
 								)}
 							/>
-							<span className="text-sm font-semibold">{item.name}</span>
+							{!sidebarCollapsed && <span className="text-sm font-semibold">{item.name}</span>}
 						</Link>
 					);
 				})}
 			</div>
 
 			<div className="mt-auto space-y-4">
-				<div className="p-3 bg-white/5 rounded-2xl border border-white/5">
-					<p className="text-[10px] font-bold text-muted-foreground mb-3 uppercase tracking-widest flex items-center gap-1.5">
-						<Globe className="w-3 h-3" /> Fleet Discovery
-					</p>
-					<div className="space-y-1">
-						{fleetApps.map((app) => (
-							<a
-								key={app.name}
-								href={app.url}
-								target="_blank"
-								rel="noreferrer"
-								className="flex items-center justify-between px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors hover:bg-primary/5 rounded-lg group"
-							>
-								<span className="flex items-center gap-2">
-									<app.icon className="w-3.5 h-3.5" />
-									{app.name}
-								</span>
-								<ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-							</a>
-						))}
+				{!sidebarCollapsed && (
+					<div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+						<p className="text-[10px] font-bold text-muted-foreground mb-3 uppercase tracking-widest flex items-center gap-1.5">
+							<Globe className="w-3 h-3" /> Fleet Discovery
+						</p>
+						<div className="space-y-1">
+							{fleetApps.map((app) => (
+								<a
+									key={app.name}
+									href={app.url}
+									target="_blank"
+									rel="noreferrer"
+									className="flex items-center justify-between px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors hover:bg-primary/5 rounded-lg group"
+								>
+									<span className="flex items-center gap-2">
+										<app.icon className="w-3.5 h-3.5" />
+										{app.name}
+									</span>
+									<ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+								</a>
+							))}
+						</div>
 					</div>
-				</div>
+				)}
 
-				<div className="flex items-center gap-3 px-3 py-4 border-t border-white/5">
-					<div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center text-[10px] font-bold text-primary">
-						SS
+				{!sidebarCollapsed && (
+					<div className="flex items-center gap-3 px-3 py-4 border-t border-white/5">
+						<div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center text-[10px] font-bold text-primary">
+							SS
+						</div>
+						<div className="flex flex-col">
+							<span className="text-xs font-bold leading-none">Sandra S.</span>
+							<span className="text-[10px] text-muted-foreground mt-0.5">
+								Administrator
+							</span>
+						</div>
 					</div>
-					<div className="flex flex-col">
-						<span className="text-xs font-bold leading-none">Sandra S.</span>
-						<span className="text-[10px] text-muted-foreground mt-0.5">
-							Administrator
-						</span>
-					</div>
-				</div>
+				)}
 			</div>
 		</aside>
 	);
@@ -190,8 +221,11 @@ function AnimatedRoutes() {
 					<Route path="/" element={<Dashboard />} />
 					<Route path="/workflows" element={<Workflows />} />
 					<Route path="/tools" element={<Tools />} />
+					<Route path="/skills" element={<SkillsPage />} />
+					<Route path="/apps" element={<AppsHub />} />
 					<Route path="/chat" element={<Chat />} />
 					<Route path="/settings" element={<Settings />} />
+					<Route path="/logs" element={<Logging />} />
 				</Routes>
 			</motion.div>
 		</AnimatePresence>

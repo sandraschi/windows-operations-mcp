@@ -9,13 +9,14 @@ import {
 	Plus,
 	Zap,
 } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function Workflows() {
 	const { data: workflows, isLoading } = useQuery({
 		queryKey: ["workflows"],
-		queryFn: () => fetch("/api/workflows").then((res) => res.json()),
+		queryFn: () => fetch(API_BASE + "/api/workflows").then((res) => res.json()),
 	});
 
 	return (

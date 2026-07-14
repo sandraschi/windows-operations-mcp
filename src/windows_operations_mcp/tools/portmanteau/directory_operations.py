@@ -81,7 +81,7 @@ def directory_operations(
         # List directory with detailed info
         result = await directory_operations(action="list", path=".")
         if result["success"]:
-            print(f"Directory has {result['data']['count']} items")
+            pass
 
         # Move directory atomically
         result = await directory_operations(

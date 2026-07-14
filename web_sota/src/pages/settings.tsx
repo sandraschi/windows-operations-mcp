@@ -13,6 +13,7 @@ import {
 	Server,
 	ShieldCheck,
 } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 import { cn } from "@/common/utils";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,7 +30,7 @@ function LLMProviderSelect() {
 	const [selectedModel, setSelectedModel] = useState("");
 
 	useEffect(() => {
-		fetch("/api/llm/providers")
+		fetch(API_BASE + "/api/llm/providers")
 			.then(r => r.json())
 			.then(d => {
 				setProviders(d);
@@ -72,7 +73,7 @@ function LLMProviderSelect() {
 export default function Settings() {
 	const { data: status } = useQuery({
 		queryKey: ["status"],
-		queryFn: () => fetch("/api/status").then((res) => res.json()),
+		queryFn: () => fetch(API_BASE + "/api/status").then((res) => res.json()),
 	});
 
 	const configItems = [

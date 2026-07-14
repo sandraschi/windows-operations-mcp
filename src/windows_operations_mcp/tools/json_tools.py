@@ -200,24 +200,19 @@ if __name__ == "__main__":
 
         # Write to file
         write_json_file(data, "example.json", indent=2)
-        print("Data written to example.json")
 
         # Read from file
         loaded_data = read_json_file("example.json")
-        print("Data loaded from file:")
-        print(json_to_string(loaded_data, indent=2))
 
         # Validate JSON
         json_str = '{"test": "value"}'
-        print(f"Is valid JSON: {validate_json(json_str)}")
+        validate_json(json_str)
 
         # Merge JSON objects
         merged = merge_json({"a": 1, "b": {"x": 10}}, {"b": {"y": 20}, "c": 30})
-        print("Merged data:")
-        print(json_to_string(merged, indent=2))
 
-    except Exception as e:
-        print(f"Error: {e!s}")
+    except Exception:
+        pass
 
 
 @tool(

@@ -298,5 +298,4 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
 
 if __name__ == "__main__":
     # Simple self-test
-    res = ExtendedCommandExecutor.execute_cmd("echo Hello")
-    print(res)
+    ExtendedCommandExecutor.execute_cmd("echo Hello")

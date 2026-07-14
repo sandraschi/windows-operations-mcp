@@ -19,4 +19,4 @@ Write-Host 'Starting Standardized Fullstack Hybrid...' -ForegroundColor Green
 Start-Process pwsh -ArgumentList '-NoProfile', '-Command', 'uv run -m schip_mcp_windows_operations' -WindowStyle Hidden
 Set-Location web_sota
 if ($SkipFrontend) { return }
-npm run dev
+bun run dev

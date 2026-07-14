@@ -12,6 +12,7 @@ import {
 	Wrench,
 	Zap,
 } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 import { cn } from "@/common/utils";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -90,7 +91,7 @@ function ToolCard({ tool, idx }: { tool: string; idx: number }) {
 export default function Tools() {
 	const { data: tools, isLoading } = useQuery({
 		queryKey: ["tools"],
-		queryFn: () => fetch("/api/tools").then((res) => res.json()),
+		queryFn: () => fetch(API_BASE + "/api/tools").then((res) => res.json()),
 	});
 
 	return (

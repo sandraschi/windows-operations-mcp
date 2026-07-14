@@ -12,24 +12,7 @@
     "type": "git",
     "url": "https://github.com/sandraschi/windows-operations-mcp"
   },
-  "prompts": [
-    {
-      "name": "registry_hardening_wizard",
-      "description": "Guide for identifying and fixing insecure registry keys and persistence points."
-    },
-    {
-      "name": "powershell_agent_scaffold",
-      "description": "Generate robust, error-tolerant PowerShell scripts for complex system tasks."
-    },
-    {
-      "name": "system_account_audit",
-      "description": "Evaluate local user accounts and group memberships for security alignment."
-    },
-    {
-      "name": "data_surgery_forensics",
-      "description": "Orchestrate JSON and Archive tools for system configuration analysis."
-    }
-  ],
+
   "server": {
     "type": "python",
     "entry_point": "src/windows_operations_mcp/mcp_server.py",

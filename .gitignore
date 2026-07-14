@@ -102,6 +102,7 @@ desktop.ini
 # [LOGS / TEMP]
 *.log
 *.bak
+*.backup
 *.tmp
 *.temp
 out.txt
