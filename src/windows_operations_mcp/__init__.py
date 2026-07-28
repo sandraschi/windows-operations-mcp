@@ -18,8 +18,8 @@ PACKAGE_DIR = Path(__file__).parent.absolute()
 if str(PACKAGE_DIR) not in sys.path:
     sys.path.insert(0, str(PACKAGE_DIR))
 
-from .logging_config import get_logger, setup_logging  # noqa: E402
-from .mcp_server import mcp, register_all_tools  # noqa: E402
+from .logging_config import get_logger, setup_logging
+from .mcp_server import mcp, register_all_tools
 
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 setup_logging(level=log_level)
