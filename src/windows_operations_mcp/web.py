@@ -77,13 +77,18 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
         if skills_dir.is_dir():
             for d in skills_dir.iterdir():
                 if d.is_dir() and (d / "SKILL.md").exists():
-                    results.append({
-                        "name": d.name,
-                        "description": (d / "SKILL.md").read_text(encoding="utf-8")[:200],
-                    })
+                    results.append(
+                        {
+                            "name": d.name,
+                            "description": (d / "SKILL.md").read_text(encoding="utf-8")[:200],
+                        }
+                    )
         if not results:
             results = [
-                {"name": "windows-expert", "description": "Windows system administration, registry, services, accounts, event logs, networking, permissions, automation, and performance monitoring."},
+                {
+                    "name": "windows-expert",
+                    "description": "Windows system administration, registry, services, accounts, event logs, networking, permissions, automation, and performance monitoring.",
+                },
             ]
         return results
 

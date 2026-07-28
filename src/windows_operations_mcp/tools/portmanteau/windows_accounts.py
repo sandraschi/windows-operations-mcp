@@ -26,8 +26,10 @@ logger = get_logger(__name__)
 
 async def _net(args: list[str]) -> str:
     proc = await asyncio.create_subprocess_exec(
-        "net.exe", *[str(a) for a in args],
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        "net.exe",
+        *[str(a) for a in args],
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
@@ -39,7 +41,9 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
     """Mount atomic account management tools under namespace 'winops_accounts'."""
     ns = FastMCP(name="winops_accounts")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def list_users(ctx: Context | None = None) -> dict[str, Any]:
         """List local Windows user accounts.
 
@@ -56,7 +60,11 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def add_user(
         username: Annotated[str, Field(description="New user account name.")],
         password: Annotated[str, Field(description="Initial password.")],
@@ -76,9 +84,13 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
             await _net(["user", username, password, "/add"])
             return {"success": True, "username": username}
         except Exception as e:
-            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator. Verify username does not already exist."])
+            return fail_response(
+                f"Operation failed: {e}", suggestions=["Run as Administrator. Verify username does not already exist."]
+            )
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+    )
     async def remove_user(
         username: Annotated[str, Field(description="User account name to delete.")],
         ctx: Context | None = None,
@@ -97,9 +109,13 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
             await _net(["user", username, "/delete"])
             return {"success": True, "username": username}
         except Exception as e:
-            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator. Verify the user exists with list_users."])
+            return fail_response(
+                f"Operation failed: {e}", suggestions=["Run as Administrator. Verify the user exists with list_users."]
+            )
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def set_password(
         username: Annotated[str, Field(description="Target user account.")],
         password: Annotated[str, Field(description="New password.")],
@@ -121,7 +137,9 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def list_groups(ctx: Context | None = None) -> dict[str, Any]:
         """List local Windows groups.
 
@@ -138,7 +156,9 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def group_members(
         group: Annotated[str, Field(description="Local group name.")],
         ctx: Context | None = None,
@@ -172,7 +192,11 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}", suggestions=["Verify group name with list_groups."])
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def manage_group(
         group: Annotated[str, Field(description="Local group name.")],
         username: Annotated[str, Field(description="User to add or remove.")],
@@ -194,7 +218,11 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
             await _net(["localgroup", group, username, f"/{action}"])
             return {"success": True, "group": group, "username": username, "action": action}
         except Exception as e:
-            return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator. Verify both user and group exist."])
+            return fail_response(
+                f"Operation failed: {e}", suggestions=["Run as Administrator. Verify both user and group exist."]
+            )
 
     parent_mcp.mount(ns, prefix="winops_accounts")
-    logger.info("Mounted atomic tools: winops_accounts/list_users, /add_user, /remove_user, /set_password, /list_groups, /group_members, /manage_group")
+    logger.info(
+        "Mounted atomic tools: winops_accounts/list_users, /add_user, /remove_user, /set_password, /list_groups, /group_members, /manage_group"
+    )

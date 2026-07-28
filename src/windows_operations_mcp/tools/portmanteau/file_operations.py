@@ -33,7 +33,9 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
     """Mount atomic file operation tools under namespace 'winops_file'."""
     ns = FastMCP(name="winops_file")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def read(
         path: Annotated[str, Field(description="File path to read.")],
         encoding: Annotated[str, Field(description="Text encoding.")] = "utf-8",
@@ -52,21 +54,26 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             p = Path(path).resolve()
             if not p.is_file():
-                return fail_response(f"Not a file: {path}",
-                        suggestions=["Verify the path exists and is a file, not a directory."])
+                return fail_response(
+                    f"Not a file: {path}", suggestions=["Verify the path exists and is a file, not a directory."]
+                )
             content = await asyncio.to_thread(p.read_text, encoding)
             return {"success": True, "content": content, "size": len(content)}
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def write(
         path: Annotated[str, Field(description="Destination file path.")],
         content: Annotated[str, Field(description="Text content to write.")],
         overwrite: Annotated[bool, Field(description="Allow overwriting existing file.")] = False,
         create_dirs: Annotated[bool, Field(description="Create parent directories if missing.")] = True,
         encoding: Annotated[str, Field(description="Text encoding.")] = "utf-8",
-        line_ending: Annotated[str | None, Field(description="Line ending: 'lf' (\\\\n), 'crlf' (\\\\r\\\\n), or null (auto-detect).")] = None,
+        line_ending: Annotated[
+            str | None, Field(description="Line ending: 'lf' (\\\\n), 'crlf' (\\\\r\\\\n), or null (auto-detect).")
+        ] = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Write text content to a file with line ending normalization.
@@ -88,8 +95,10 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         try:
             p = Path(path).resolve()
             if p.exists() and not overwrite:
-                return fail_response("File exists and overwrite is False",
-                        suggestions=["Pass overwrite=True to replace the existing file."])
+                return fail_response(
+                    "File exists and overwrite is False",
+                    suggestions=["Pass overwrite=True to replace the existing file."],
+                )
             if create_dirs:
                 p.parent.mkdir(parents=True, exist_ok=True)
 
@@ -106,7 +115,11 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def edit(
         path: Annotated[str, Field(description="File path to edit.")],
         old_string: Annotated[str, Field(description="String to find.")],
@@ -132,8 +145,10 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
                 return fail_response(f"Not a file: {path}")
             original = await asyncio.to_thread(p.read_text, encoding)
             if old_string not in original:
-                return fail_response("old_string not found in file",
-                        suggestions=["Check for whitespace differences or trailing characters."])
+                return fail_response(
+                    "old_string not found in file",
+                    suggestions=["Check for whitespace differences or trailing characters."],
+                )
 
             def replacer(content: str) -> str:
                 return content.replace(old_string, new_string)
@@ -149,14 +164,25 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
                 backup_path = await asyncio.to_thread(create_backup, p)
 
             await asyncio.to_thread(
-                atomic_write, p, modified, encoding=encoding, backup=False,
+                atomic_write,
+                p,
+                modified,
+                encoding=encoding,
+                backup=False,
             )
-            return {"success": True, "modified": True, "file": str(p),
-                    "backup": str(backup_path) if backup_path else None}
+            return {
+                "success": True,
+                "modified": True,
+                "file": str(p),
+                "backup": str(backup_path) if backup_path else None,
+            }
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        name="list",
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    )
     async def list_contents(
         path: Annotated[str, Field(description="Directory path to list.")],
         pattern: Annotated[str | None, Field(description="Optional glob pattern filter (e.g. '*.py').")] = None,
@@ -176,7 +202,10 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         """
         try:
             result = await asyncio.to_thread(
-                list_directory_contents, directory_path=path, include_hidden=include_hidden, pattern=pattern,
+                list_directory_contents,
+                directory_path=path,
+                include_hidden=include_hidden,
+                pattern=pattern,
             )
             if not result.get("exists"):
                 return fail_response(f"Directory not found: {path}")
@@ -184,7 +213,9 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+    )
     async def delete(
         path: Annotated[str, Field(description="File or directory path to delete.")],
         ctx: Context | None = None,
@@ -214,7 +245,11 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def move(
         path: Annotated[str, Field(description="Source file or directory path.")],
         destination: Annotated[str, Field(description="Destination path.")],
@@ -240,7 +275,11 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def copy(
         path: Annotated[str, Field(description="Source file or directory path.")],
         destination: Annotated[str, Field(description="Destination path.")],
@@ -269,7 +308,9 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def info(
         path: Annotated[str, Field(description="File or directory path.")],
         ctx: Context | None = None,
@@ -290,8 +331,12 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
                 return fail_response(f"Path does not exist: {path}")
             st = p.stat()
             return {
-                "success": True, "name": p.name, "path": str(p),
-                "size": st.st_size, "created": st.st_ctime, "modified": st.st_mtime,
+                "success": True,
+                "name": p.name,
+                "path": str(p),
+                "size": st.st_size,
+                "created": st.st_ctime,
+                "modified": st.st_mtime,
                 "is_dir": p.is_dir(),
             }
         except Exception as e:

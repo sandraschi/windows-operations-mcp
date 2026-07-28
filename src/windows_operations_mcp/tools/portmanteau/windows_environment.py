@@ -71,7 +71,12 @@ def _delete_env_blocking(scope: str, name: str) -> None:
 
 def _broadcast_change() -> None:
     ctypes.windll.user32.SendMessageTimeoutW(
-        HWND_BROADCAST, WM_SETTINGCHANGE, 0, "Environment", SMTO_ABORTIFHUNG, 5000,
+        HWND_BROADCAST,
+        WM_SETTINGCHANGE,
+        0,
+        "Environment",
+        SMTO_ABORTIFHUNG,
+        5000,
         ctypes.byref(ctypes.c_size_t()),
     )
 
@@ -81,7 +86,8 @@ def register_windows_environment(parent_mcp: FastMCP) -> None:
     ns = FastMCP(name="winops_env")
 
     @ns.tool(
-        name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+        name="list",
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
     )
     async def list_env(
         scope: Annotated[Literal["user", "system"], Field(description="Registry scope.")] = "user",
@@ -126,8 +132,10 @@ def register_windows_environment(parent_mcp: FastMCP) -> None:
             val = await asyncio.to_thread(_get_env_blocking, scope, name)
             return {"success": True, "name": name, "value": val}
         except FileNotFoundError:
-            return fail_response(f"Variable '{name}' not found in {scope} scope",
-                    suggestions=["Use winops_env/list to see available variables."])
+            return fail_response(
+                f"Variable '{name}' not found in {scope} scope",
+                suggestions=["Use winops_env/list to see available variables."],
+            )
         except Exception as e:
             return fail_response(str(e))
 
@@ -160,8 +168,7 @@ def register_windows_environment(parent_mcp: FastMCP) -> None:
             await asyncio.to_thread(_broadcast_change)
             return {"success": True, "name": name, "value": value, "scope": scope}
         except Exception as e:
-            return fail_response(str(e),
-                    suggestions=["System scope requires Administrator elevation."])
+            return fail_response(str(e), suggestions=["System scope requires Administrator elevation."])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
@@ -186,8 +193,9 @@ def register_windows_environment(parent_mcp: FastMCP) -> None:
             await asyncio.to_thread(_broadcast_change)
             return {"success": True, "name": name, "deleted": True}
         except FileNotFoundError:
-            return fail_response(f"Variable '{name}' not found",
-                    suggestions=["Use winops_env/list to verify the variable exists."])
+            return fail_response(
+                f"Variable '{name}' not found", suggestions=["Use winops_env/list to verify the variable exists."]
+            )
         except Exception as e:
             return fail_response(str(e))
 

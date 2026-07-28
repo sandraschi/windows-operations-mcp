@@ -51,8 +51,11 @@ def _patch_blocking(path: str, patch_data: dict, indent: int) -> dict:
                 base[k] = v
         return base
 
-    updated = deep_merge(existing.copy() if isinstance(existing, dict) else {}, patch_data) \
-        if isinstance(patch_data, dict) else patch_data
+    updated = (
+        deep_merge(existing.copy() if isinstance(existing, dict) else {}, patch_data)
+        if isinstance(patch_data, dict)
+        else patch_data
+    )
     _write_blocking(path, updated, indent)
     return updated
 
@@ -61,7 +64,9 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
     """Mount atomic JSON operation tools under namespace 'winops_json'."""
     ns = FastMCP(name="winops_json")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def read(
         path: Annotated[str, Field(description="Path to the JSON file.")],
         ctx: Context | None = None,
@@ -82,10 +87,13 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
         except FileNotFoundError:
             return fail_response(f"File not found: {path}")
         except json.JSONDecodeError as e:
-            return fail_response(f"Invalid JSON: {e}",
-                    suggestions=["Use winops_json/validate to check the file first."])
+            return fail_response(
+                f"Invalid JSON: {e}", suggestions=["Use winops_json/validate to check the file first."]
+            )
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def write(
         path: Annotated[str, Field(description="Destination file path.")],
         data: Annotated[Any, Field(description="Data to serialise as JSON.")],
@@ -108,7 +116,9 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def validate(
         text: Annotated[str, Field(description="JSON string to validate.")],
         ctx: Context | None = None,
@@ -129,7 +139,9 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
         except json.JSONDecodeError as e:
             return {"success": True, "valid": False, "error": str(e)}
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def patch(
         path: Annotated[str, Field(description="JSON file to patch.")],
         data: Annotated[dict, Field(description="Dict of keys to deep-merge into the existing file.")],
@@ -148,12 +160,17 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
         """
         try:
             updated = await asyncio.to_thread(_patch_blocking, path, data, indent)
-            return {"success": True, "path": path,
-                    "updated_keys": list(updated.keys()) if isinstance(updated, dict) else []}
+            return {
+                "success": True,
+                "path": path,
+                "updated_keys": list(updated.keys()) if isinstance(updated, dict) else [],
+            }
         except Exception as e:
             return fail_response(str(e))
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def extract_from_text(
         text: Annotated[str, Field(description="Unstructured text that may contain JSON blobs.")],
         ctx: Context | None = None,
@@ -176,7 +193,9 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
                 continue
         return {"success": True, "found": len(results), "items": results}
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def format(
         text: Annotated[str, Field(description="JSON string to pretty-print.")],
         indent: Annotated[int, Field(description="Indentation spaces.", ge=0, le=8)] = 2,
@@ -196,8 +215,7 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
             obj = json.loads(text)
             return {"success": True, "formatted": json.dumps(obj, indent=indent, ensure_ascii=False)}
         except json.JSONDecodeError as e:
-            return fail_response(str(e),
-                    suggestions=["Use winops_json/validate first to locate syntax errors."])
+            return fail_response(str(e), suggestions=["Use winops_json/validate first to locate syntax errors."])
 
     parent_mcp.mount(ns, prefix="winops_json")
     logger.info("Mounted atomic tools: winops_json/read, /write, /validate, /patch, /extract_from_text, /format")

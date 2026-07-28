@@ -112,10 +112,17 @@ def _test_tcp_port(ip: str, port: int, timeout_seconds: int, start_time: float) 
                 "message": f"TCP port {port} is open",
             }
         else:
-            return fail_response(f"TCP port {port} is closed or filtered", status="closed", connect_time=round(connect_time, 3), error_code=result)
+            return fail_response(
+                f"TCP port {port} is closed or filtered",
+                status="closed",
+                connect_time=round(connect_time, 3),
+                error_code=result,
+            )
 
     except TimeoutError:
-        return fail_response(f"TCP connection to port {port} timed out after {timeout_seconds} seconds", status="timeout")
+        return fail_response(
+            f"TCP connection to port {port} timed out after {timeout_seconds} seconds", status="timeout"
+        )
     except Exception as e:
         return fail_response(f"TCP test failed: {e!s}", status="error")
 
@@ -208,7 +215,9 @@ def test_port(host: str, port: int, timeout_seconds: int = DEFAULT_TIMEOUT, prot
         resolve_success, resolved_ip, resolve_error = _resolve_host(host)
         if not resolve_success:
             logger.error(f"Host resolution failed: {resolve_error}")
-            return fail_response(resolve_error, host=host, port=port, protocol=protocol, execution_time=time.time() - start_time)
+            return fail_response(
+                resolve_error, host=host, port=port, protocol=protocol, execution_time=time.time() - start_time
+            )
 
         # Test the port
         if protocol.lower() == "tcp":
@@ -242,7 +251,9 @@ def test_port(host: str, port: int, timeout_seconds: int = DEFAULT_TIMEOUT, prot
     except Exception as e:
         error_msg = f"Port test failed: {e!s}"
         logger.error("port_test_error", host=host, port=port, protocol=protocol, error=error_msg, exc_info=True)
-        return fail_response(error_msg, host=host, port=port, protocol=protocol, execution_time=time.time() - start_time)
+        return fail_response(
+            error_msg, host=host, port=port, protocol=protocol, execution_time=time.time() - start_time
+        )
 
 
 def register_network_tools(mcp):

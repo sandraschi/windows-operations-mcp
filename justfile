@@ -1,4 +1,4 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
 import 'scripts/just/fleet.just'
 
 # Sync with pyproject / release tags when cutting a release
@@ -33,12 +33,12 @@ mcp:
 # Start Vite + FastAPI hub (ports 10749 / 10748) — same as .\\start.ps1
 web:
 	Set-Location '{{justfile_directory()}}'
-	pwsh -NoProfile -File .\start.ps1
+	powershell.exe -NoProfile -File .\start.ps1
 
 # Run API + UI from web_sota launcher only
 web-sota:
 	Set-Location '{{justfile_directory()}}'
-	pwsh -NoProfile -File .\web_sota\start.ps1
+	powershell.exe -NoProfile -File .\web_sota\start.ps1
 
 # API only: uvicorn with reload (127.0.0.1:10748)
 api:
@@ -128,25 +128,25 @@ clean:
 
 # Track modified files in the last N hours (default 4) across the fleet
 heartbeat hours="4":
-	pwsh -NoProfile -File .\scripts\fleet-heartbeat.ps1 -LookbackHours {{hours}}
+	powershell.exe -NoProfile -File .\scripts\fleet-heartbeat.ps1 -LookbackHours {{hours}}
 
 # Scan for stale disk bloat (min 500MB, 14 days stale)
 audit-leaks min_mb="500" age_days="14":
-	pwsh -NoProfile -File .\scripts\substrate-cleaner.ps1 -MinSizeMB {{min_mb}} -MinAgeDays {{age_days}}
+	powershell.exe -NoProfile -File .\scripts\substrate-cleaner.ps1 -MinSizeMB {{min_mb}} -MinAgeDays {{age_days}}
 
 # Sync new research from Downloads/Desktop/Documents to ADN Inbox
 sync-research:
-	pwsh -NoProfile -File .\scripts\deep-memory-sync.ps1
+	powershell.exe -NoProfile -File .\scripts\deep-memory-sync.ps1
 
 # EMERGENCY: Kill all fleet processes running on ports 10700-10850
 kill-fleet:
-	pwsh -NoProfile -File .\scripts\kill-fleet.ps1
+	powershell.exe -NoProfile -File .\scripts\kill-fleet.ps1
 
 # ── Tauri NSIS ─────────────────────────────────────────────────────────────────
 
 # Build the PyInstaller backend .exe and copy to Tauri resources
 build-sidecar:
-	pwsh -NoProfile -File native\build-sidecar.ps1
+	powershell.exe -NoProfile -File native\build-sidecar.ps1
 
 # Build the Tauri NSIS desktop installer (full pipeline: frontend -> sidecar -> Rust -> NSIS)
 build-native: build-sidecar

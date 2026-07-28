@@ -602,7 +602,9 @@ def _extract_tar(archive_path: str, extract_dir: str, members: list[str] | None)
                     try:
                         members_to_extract.append(tar.getmember(member))
                     except KeyError:
-                        return fail_response(message=f"Member not found in archive: {member}", extracted_files=extracted_files)
+                        return fail_response(
+                            message=f"Member not found in archive: {member}", extracted_files=extracted_files
+                        )
             else:
                 members_to_extract = tar.getmembers()
 
@@ -611,7 +613,9 @@ def _extract_tar(archive_path: str, extract_dir: str, members: list[str] | None)
                     tar.extract(member, extract_dir)
                     extracted_files.append(os.path.join(extract_dir, member.name))
                 except Exception as e:
-                    return fail_response(message=f"Failed to extract {member.name}: {e!s}", extracted_files=extracted_files)
+                    return fail_response(
+                        message=f"Failed to extract {member.name}: {e!s}", extracted_files=extracted_files
+                    )
 
         return {
             "success": True,

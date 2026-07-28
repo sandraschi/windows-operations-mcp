@@ -78,7 +78,10 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
     """Mount atomic archive tools under namespace 'winops_archive'."""
     ns = FastMCP(name="winops_archive")
 
-    @ns.tool(name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        name="list",
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    )
     async def list_contents(
         path: Annotated[str, Field(description="Path to ZIP or TAR archive.")],
         ctx: Context | None = None,
@@ -102,7 +105,11 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
                 suggestions=["Ensure the file is a valid ZIP or TAR archive."],
             )
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def extract(
         path: Annotated[str, Field(description="Archive to extract.")],
         target_dir: Annotated[str, Field(description="Destination directory.")],
@@ -124,7 +131,11 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def create(
         path: Annotated[str, Field(description="Output archive path.")],
         source_files: Annotated[list[str], Field(description="Files or directories to include.")],
@@ -147,7 +158,11 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def add(
         path: Annotated[str, Field(description="Existing ZIP archive path.")],
         source_files: Annotated[list[str], Field(description="Files to add to the archive.")],
@@ -175,7 +190,11 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
                 suggestions=["Only ZIP archives support add. Use create for TAR."],
             )
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def expand_cab(
         path: Annotated[str, Field(description="Path to the .cab file.")],
         target_dir: Annotated[str, Field(description="Destination directory.")],
@@ -194,8 +213,12 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
         try:
             Path(target_dir).mkdir(parents=True, exist_ok=True)
             proc = await asyncio.create_subprocess_exec(
-                "expand.exe", path, "-F:*", target_dir,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                "expand.exe",
+                path,
+                "-F:*",
+                target_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
             _stdout, stderr = await proc.communicate()
             if proc.returncode != 0:

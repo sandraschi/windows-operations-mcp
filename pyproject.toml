@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [
-    { name = "Sandra Schipal", email = "sandra@schipal.at" }
+    { name = "Sandra Schipal", email = "sandraschipal@gmail.com" }
 ]
 dependencies = [
-    "fastmcp>=3.4.2,<4",
+    "fastmcp>=3.4.4,<4",
     "psutil>=5.9.0",
     "structlog>=23.0.0",
     "fastapi>=0.95.0",
@@ -21,7 +21,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
     "pywin32>=305; sys_platform == 'win32'",
-    "ruff>=0.15.2",
+    "ruff>=0.16.0,<0.17",
     "prefab-ui>=0.14.0",
 ]
 classifiers = [

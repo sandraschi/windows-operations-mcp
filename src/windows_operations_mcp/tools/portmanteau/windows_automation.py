@@ -34,7 +34,9 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
     """Mount atomic automation tools under namespace 'winops_auto'."""
     ns = FastMCP(name="winops_auto")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def task_list(ctx: Context | None = None) -> dict[str, Any]:
         """List all Windows Scheduled Tasks.
 
@@ -51,7 +53,11 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Scheduled task listing failed: {e}")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def task_create(
         task_name: Annotated[str, Field(description="Unique task name.")],
         task_path: Annotated[str, Field(description="Full path to the executable.")],
@@ -73,14 +79,30 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             task_create(task_name="DailyBackup", task_path="C:\\\\scripts\\\\backup.bat", schedule="DAILY")
         """
         try:
-            await _run(["schtasks.exe", "/create", "/tn", task_name, "/tr", f'"{task_path}"',
-                        "/sc", schedule, "/st", start_time, "/f"])
+            await _run(
+                [
+                    "schtasks.exe",
+                    "/create",
+                    "/tn",
+                    task_name,
+                    "/tr",
+                    f'"{task_path}"',
+                    "/sc",
+                    schedule,
+                    "/st",
+                    start_time,
+                    "/f",
+                ]
+            )
             return {"success": True, "task_name": task_name}
         except Exception as e:
-            return fail_response(f"Task creation failed: {e}",
-                                 suggestions=["Run as Administrator. Verify task_path exists."])
+            return fail_response(
+                f"Task creation failed: {e}", suggestions=["Run as Administrator. Verify task_path exists."]
+            )
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+    )
     async def task_delete(
         task_name: Annotated[str, Field(description="Task name to delete.")],
         ctx: Context | None = None,
@@ -99,10 +121,13 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             await _run(["schtasks.exe", "/delete", "/tn", task_name, "/f"])
             return {"success": True, "task_name": task_name}
         except Exception as e:
-            return fail_response(f"Task deletion failed: {e}",
-                                 suggestions=["Verify task exists with task_list."])
+            return fail_response(f"Task deletion failed: {e}", suggestions=["Verify task exists with task_list."])
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def task_run(
         task_name: Annotated[str, Field(description="Task name to trigger immediately.")],
         ctx: Context | None = None,
@@ -121,12 +146,15 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             await _run(["schtasks.exe", "/run", "/tn", task_name])
             return {"success": True, "task_name": task_name}
         except Exception as e:
-            return fail_response(f"Task run failed: {e}",
-                                 suggestions=["Verify task exists with task_list."])
+            return fail_response(f"Task run failed: {e}", suggestions=["Verify task exists with task_list."])
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def wmi_query(
-        wmi_class: Annotated[str, Field(description="WMI class to query (e.g. Win32_Processor).")] = "Win32_OperatingSystem",
+        wmi_class: Annotated[
+            str, Field(description="WMI class to query (e.g. Win32_Processor).")
+        ] = "Win32_OperatingSystem",
         wmi_namespace: Annotated[str, Field(description="WMI namespace.")] = "root\\cimv2",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
@@ -145,8 +173,10 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             result = await _run(["wmic.exe", f"/namespace:{wmi_namespace}", "path", wmi_class, "get", "/format:list"])
             return {"success": True, "wmi_class": wmi_class, "result": result}
         except Exception as e:
-            return fail_response(f"WMI query failed: {e}",
-                                 suggestions=["Verify wmi_class name. Try Win32_OperatingSystem for a basic test."])
+            return fail_response(
+                f"WMI query failed: {e}",
+                suggestions=["Verify wmi_class name. Try Win32_OperatingSystem for a basic test."],
+            )
 
     parent_mcp.mount(ns, prefix="winops_auto")
     logger.info("Mounted atomic tools: winops_auto/task_list, /task_create, /task_delete, /task_run, /wmi_query")

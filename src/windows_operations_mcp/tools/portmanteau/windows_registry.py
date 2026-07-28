@@ -37,8 +37,10 @@ HiveKey = Literal["HKLM", "HKCU", "HKU", "HKCR"]
 
 async def _reg(*args: str) -> str:
     proc = await asyncio.create_subprocess_exec(
-        "reg.exe", *args,
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        "reg.exe",
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
@@ -113,7 +115,9 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
     """Mount atomic registry tools under namespace 'winops_reg'."""
     ns = FastMCP(name="winops_reg")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def read(
         hive: Annotated[HiveKey, Field(description="Registry hive.")] = "HKCU",
         key_path: Annotated[str, Field(description="Path within the hive (e.g. Software\\\\MyApp).")] = "",
@@ -135,12 +139,16 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
             data, vtype = await asyncio.to_thread(_read_value_blocking, hkey, key_path, value_name)
             return {"success": True, "value": data, "type": _vtype_name(vtype)}
         except FileNotFoundError:
-            return fail_response(f"Key or value not found: {hive}\\{key_path}",
-                                 suggestions=["Use winops_reg/list_keys to browse available keys."])
+            return fail_response(
+                f"Key or value not found: {hive}\\{key_path}",
+                suggestions=["Use winops_reg/list_keys to browse available keys."],
+            )
         except Exception as e:
             return fail_response(str(e))
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def write(
         key_path: Annotated[str, Field(description="Path within the hive.")],
         value_name: Annotated[str, Field(description="Value name to write.")],
@@ -177,11 +185,15 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e), suggestions=["HKLM writes require Administrator elevation."])
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+    )
     async def delete(
         hive: Annotated[HiveKey, Field(description="Registry hive.")] = "HKCU",
         key_path: Annotated[str, Field(description="Path within the hive.")] = "",
-        value_name: Annotated[str | None, Field(description="Value name to delete (None deletes the whole key).")] = None,
+        value_name: Annotated[
+            str | None, Field(description="Value name to delete (None deletes the whole key).")
+        ] = None,
         safe_mode: Annotated[bool, Field(description="Auto-export key backup before deleting.")] = True,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
@@ -208,7 +220,9 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def list_keys(
         hive: Annotated[HiveKey, Field(description="Registry hive.")] = "HKCU",
         key_path: Annotated[str, Field(description="Path within the hive.")] = "",
@@ -231,7 +245,9 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    )
     async def export(
         key_path: Annotated[str, Field(description="Key path to export.")],
         output_path: Annotated[str, Field(description="Destination .reg file path.")],
@@ -254,7 +270,11 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def import_reg(
         reg_file_path: Annotated[str, Field(description="Path to the .reg file to import.")],
         ctx: Context | None = None,

@@ -57,11 +57,13 @@ def register_system_management(parent_mcp: FastMCP) -> None:
         }
         if detailed:
             freq = psutil.cpu_freq()
-            data.update({
-                "boot_time": psutil.boot_time(),
-                "users": [u.name for u in psutil.users()],
-                "cpu_freq": freq._asdict() if freq else None,
-            })
+            data.update(
+                {
+                    "boot_time": psutil.boot_time(),
+                    "users": [u.name for u in psutil.users()],
+                    "cpu_freq": freq._asdict() if freq else None,
+                }
+            )
         return data
 
     @ns.tool(
@@ -150,9 +152,7 @@ def register_system_management(parent_mcp: FastMCP) -> None:
             test_port(host="localhost", port=10800)
         """
         try:
-            _, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port), timeout=timeout_seconds
-            )
+            _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout_seconds)
             writer.close()
             await writer.wait_closed()
             reachable = True

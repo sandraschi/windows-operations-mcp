@@ -24,6 +24,7 @@ logger = get_logger(__name__)
 
 try:
     from prefab_ui import Table
+
     HAS_PREFAB = True
 except ImportError:
     HAS_PREFAB = False
@@ -32,6 +33,7 @@ except ImportError:
 def _get_status_str(code: int) -> str:
     try:
         import win32service
+
         m = {
             win32service.SERVICE_STOPPED: "stopped",
             win32service.SERVICE_START_PENDING: "starting",
@@ -45,6 +47,7 @@ def _get_status_str(code: int) -> str:
 
 def _list_services_blocking(filter_status: str | None, include_system: bool) -> dict[str, Any]:
     import win32service
+
     hscm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
     try:
         status = win32service.EnumServicesStatus(hscm, win32service.SERVICE_WIN32, win32service.SERVICE_STATE_ALL)
@@ -63,6 +66,7 @@ def _list_services_blocking(filter_status: str | None, include_system: bool) -> 
 
 async def _wait_for_status(name: str, target: str, timeout: int, ctx: Context | None) -> dict[str, Any]:
     import win32serviceutil
+
     start = time.time()
     while time.time() - start < timeout:
         status = await asyncio.to_thread(win32serviceutil.QueryServiceStatus, name)
@@ -78,7 +82,8 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
     ns = FastMCP(name="winops_svc")
 
     @ns.tool(
-        name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+        name="list",
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
     )
     async def list_services(
         filter_status: Annotated[str | None, Field(description="Filter by status: running, stopped, or all.")] = None,
@@ -105,6 +110,7 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
 
             if HAS_PREFAB and data["services"]:
                 from fastmcp.utilities.types import ToolResult
+
                 component = Table(
                     title=f"Windows Services ({data['count']})",
                     columns=["Name", "Display Name", "Status"],
@@ -114,8 +120,7 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
 
             return result
         except ImportError:
-            return fail_response("pywin32 not installed.",
-                                 suggestions=["Run: uv pip install pywin32"])
+            return fail_response("pywin32 not installed.", suggestions=["Run: uv pip install pywin32"])
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -136,16 +141,20 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
         """
         try:
             import win32serviceutil
+
             raw = await asyncio.to_thread(win32serviceutil.QueryServiceStatus, service_name)
             return {"success": True, "name": service_name, "status": _get_status_str(raw[1])}
         except ImportError:
             return fail_response("pywin32 not installed.")
         except Exception as e:
-            return fail_response(f"Service status check failed: {e}",
-                                 suggestions=["Verify the service name with winops_svc/list."])
+            return fail_response(
+                f"Service status check failed: {e}", suggestions=["Verify the service name with winops_svc/list."]
+            )
 
     @ns.tool(
-        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
     )
     async def start(
         service_name: Annotated[str, Field(description="Windows service name to start.")],
@@ -164,17 +173,22 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
         """
         try:
             import win32serviceutil
+
             await asyncio.to_thread(win32serviceutil.StartService, service_name)
             result = await _wait_for_status(service_name, "running", wait_timeout, ctx)
             return {"success": "error" not in result, **result}
         except ImportError:
             return fail_response("pywin32 not installed.")
         except Exception as e:
-            return fail_response(f"Service start failed: {e}",
-                                 suggestions=["Check service name and elevation. Use winops_svc/status to verify."])
+            return fail_response(
+                f"Service start failed: {e}",
+                suggestions=["Check service name and elevation. Use winops_svc/status to verify."],
+            )
 
     @ns.tool(
-        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
     )
     async def stop(
         service_name: Annotated[str, Field(description="Windows service name to stop.")],
@@ -193,17 +207,22 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
         """
         try:
             import win32serviceutil
+
             await asyncio.to_thread(win32serviceutil.StopService, service_name)
             result = await _wait_for_status(service_name, "stopped", wait_timeout, ctx)
             return {"success": "error" not in result, **result}
         except ImportError:
             return fail_response("pywin32 not installed.")
         except Exception as e:
-            return fail_response(f"Service stop failed: {e}",
-                                 suggestions=["Ensure the service is running. Use winops_svc/status to verify."])
+            return fail_response(
+                f"Service stop failed: {e}",
+                suggestions=["Ensure the service is running. Use winops_svc/status to verify."],
+            )
 
     @ns.tool(
-        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
     )
     async def restart(
         service_name: Annotated[str, Field(description="Windows service name to restart.")],
@@ -222,14 +241,16 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
         """
         try:
             import win32serviceutil
+
             await asyncio.to_thread(win32serviceutil.RestartService, service_name)
             result = await _wait_for_status(service_name, "running", wait_timeout, ctx)
             return {"success": "error" not in result, **result}
         except ImportError:
             return fail_response("pywin32 not installed.")
         except Exception as e:
-            return fail_response(f"Service restart failed: {e}",
-                                 suggestions=["Use winops_svc/status to check current state."])
+            return fail_response(
+                f"Service restart failed: {e}", suggestions=["Use winops_svc/status to check current state."]
+            )
 
     parent_mcp.mount(ns, prefix="winops_svc")
     logger.info("Mounted atomic tools: winops_svc/list, /status, /start, /stop, /restart")

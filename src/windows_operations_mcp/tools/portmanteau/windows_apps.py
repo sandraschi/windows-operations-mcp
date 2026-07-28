@@ -22,8 +22,13 @@ logger = get_logger(__name__)
 
 async def _ps(command: str) -> Any:
     proc = await asyncio.create_subprocess_exec(
-        "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command,
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
@@ -39,7 +44,10 @@ def register_windows_apps(parent_mcp: FastMCP) -> None:
     """Mount atomic AppX package tools under namespace 'winops_apps'."""
     ns = FastMCP(name="winops_apps")
 
-    @ns.tool(name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        name="list",
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    )
     async def list_apps(
         name_filter: Annotated[str | None, Field(description="Substring filter on package name (e.g. 'Xbox').")] = None,
         all_users: Annotated[bool, Field(description="Include packages for all users (requires elevation).")] = False,
@@ -68,7 +76,9 @@ def register_windows_apps(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+    )
     async def uninstall(
         package_name: Annotated[str, Field(description="PackageFullName of the app to remove.")],
         all_users: Annotated[bool, Field(description="Remove for all users (requires elevation).")] = False,
@@ -95,9 +105,10 @@ def register_windows_apps(parent_mcp: FastMCP) -> None:
             await _ps(cmd)
             return {"success": True, "package_name": package_name}
         except Exception as e:
-            return fail_response(str(e),
-                    suggestions=["Run as Administrator for system packages.",
-                                 "Get PackageFullName from winops_apps/list."])
+            return fail_response(
+                str(e),
+                suggestions=["Run as Administrator for system packages.", "Get PackageFullName from winops_apps/list."],
+            )
 
     parent_mcp.mount(ns, prefix="winops_apps")
     logger.info("Mounted atomic tools: winops_apps/list, winops_apps/uninstall")

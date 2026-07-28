@@ -8,9 +8,10 @@ from windows_operations_mcp.web import setup_webapp
 register_all_tools()
 
 # 2. HTTP API (SOTA hub) + MCP transport (FastMCP 3.2+ exposes ASGI via http_app())
-app = FastAPI()
+_mcp_http = mcp.http_app(path="/")
+app = FastAPI(lifespan=_mcp_http.lifespan)
 setup_webapp(app, mcp)
-app.mount("/mcp", mcp.http_app(path="/"))
+app.mount("/mcp", _mcp_http)
 
 app.add_middleware(
     CORSMiddleware,

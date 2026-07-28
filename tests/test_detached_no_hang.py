@@ -26,7 +26,7 @@ DETACHED_PS = (
     "Start-Process -FilePath powershell.exe "
     "-ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 25' "
     "-WindowStyle Hidden -RedirectStandardOutput $o "
-    "-RedirectStandardError \"$o.err\"; "
+    '-RedirectStandardError "$o.err"; '
     "Write-Output 'launched'"
 )
 
@@ -45,9 +45,7 @@ def test_powershell_returns_immediately_despite_detached_grandchild():
 def test_powershell_timeout_kills_tree_and_returns_partial_output():
     """Direct child overruns: tree-killed at timeout, partial stdout preserved."""
     start = time.time()
-    result = ps_executor.execute(
-        "Write-Output 'before sleep'; Start-Sleep -Seconds 60", timeout=3
-    )
+    result = ps_executor.execute("Write-Output 'before sleep'; Start-Sleep -Seconds 60", timeout=3)
     elapsed = time.time() - start
 
     assert elapsed < 25, f"Timeout not honored: {elapsed:.1f}s"
@@ -63,8 +61,7 @@ def test_cmd_returns_despite_detached_grandchild():
     """Same repro through cmd.exe via `start`."""
     start = time.time()
     result = cmd_executor.execute(
-        'start /b powershell -NoProfile -Command "Start-Sleep -Seconds 25" '
-        "& echo launched",
+        'start /b powershell -NoProfile -Command "Start-Sleep -Seconds 25" & echo launched',
         timeout=20,
     )
     elapsed = time.time() - start
@@ -82,8 +79,7 @@ def test_powershell_plain_command_still_works():
 
 
 def test_powershell_stdin_data():
-    result = ps_executor.execute("$input | ForEach-Object { $_.ToUpper() }",
-                                 timeout=15, stdin_data="quiet please\n")
+    result = ps_executor.execute("$input | ForEach-Object { $_.ToUpper() }", timeout=15, stdin_data="quiet please\n")
     assert result["success"], f"stderr: {result['stderr']}"
     assert "QUIET PLEASE" in result["stdout"]
 

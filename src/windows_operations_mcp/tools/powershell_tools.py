@@ -69,7 +69,8 @@ _TREE_KILL_TIMEOUT = 10  # seconds to allow taskkill /T /F to do its work
 # Agents trained on Unix frequently emit these into winops tools.
 # Each is a full-word regex anchored to catch the command, not a substring.
 _LINUX_PATTERNS: list[re.Pattern] = [
-    re.compile(r) for r in [
+    re.compile(r)
+    for r in [
         r"\bgrep\b",
         r"\btail\b",
         r"\brm\s+-[rf]\b",
@@ -108,10 +109,7 @@ def _validate_command_safe(command: str) -> str | None:
     if not command:
         return None
     if "\u2014" in command:
-        return (
-            "Command contains em dash (U+2014) which corrupts PowerShell parsing. "
-            "Use ASCII \"--\" instead."
-        )
+        return 'Command contains em dash (U+2014) which corrupts PowerShell parsing. Use ASCII "--" instead.'
     for pat in _LINUX_PATTERNS:
         m = pat.search(command)
         if m:
@@ -304,7 +302,9 @@ class PowerShellExecutor:
     """
 
     def __init__(self):
-        logger.info("PowerShell executor initialized (v15.4 — scriptblock wrap, safety guards, file-capture, tree-kill)")
+        logger.info(
+            "PowerShell executor initialized (v15.4 — scriptblock wrap, safety guards, file-capture, tree-kill)"
+        )
 
     def _build_command(self, command: str) -> str:
         """Wrap command with encoding setup and output-forcing pipeline.
@@ -321,8 +321,7 @@ class PowerShellExecutor:
         the output of ALL statements through Out-String, not just the last one.
         """
         setup = (
-            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
-            "$OutputEncoding = [System.Text.Encoding]::UTF8"
+            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8"
         )
         return f"{setup}; & {{ {command}\n }} | Out-String -Width 4096"
 
@@ -384,6 +383,7 @@ cmd_executor = CMDExecutor()
 
 def register_powershell_tools(mcp):
     """Register PowerShell and CMD execution tools with FastMCP."""
+
     @mcp.tool()
     async def run_powershell_tool(
         command: str,

@@ -404,7 +404,9 @@ def health_check(
     except Exception as e:
         error_msg = f"Health check failed: {e!s}"
         logger.error("health_check_error", error=error_msg, exc_info=True)
-        return fail_response(error_msg, status="unhealthy", execution_time_ms=round((time.time() - start_time) * 1000, 2))
+        return fail_response(
+            error_msg, status="unhealthy", execution_time_ms=round((time.time() - start_time) * 1000, 2)
+        )
 
 
 def register_system_tools(mcp):

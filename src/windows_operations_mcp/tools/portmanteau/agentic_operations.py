@@ -27,7 +27,9 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
     """Register agentic orchestrator tools directly on the parent MCP."""
 
     @parent_mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
     )
     async def agentic_system_hardening(
         target: Annotated[
@@ -62,8 +64,10 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
          - dry_run=False will queue up to 5 HIGH-priority actions.
         """
         if not ctx:
-            return fail_response("Context required for agentic orchestration.",
-                                 suggestions=["Ensure this tool is called via the MCP protocol, not standalone."])
+            return fail_response(
+                "Context required for agentic orchestration.",
+                suggestions=["Ensure this tool is called via the MCP protocol, not standalone."],
+            )
 
         await ctx.info(f"Mission: Hardening {target} (dry_run={dry_run})")
         await ctx.report_progress(5, 100)
@@ -74,9 +78,11 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
             # Phase 1: Inventory
             if target == "services":
                 from .windows_services import _list_services_blocking
+
                 findings = await asyncio.to_thread(_list_services_blocking, None, True)
             elif target == "registry":
                 from .windows_registry import HIVES, _list_blocking
+
                 subkeys, values = await asyncio.to_thread(
                     _list_blocking,
                     HIVES["HKLM"],
@@ -85,8 +91,10 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
                 findings = {"subkeys": subkeys, "values": values}
             elif target == "accounts":
                 proc = await asyncio.create_subprocess_exec(
-                    "net.exe", "user",
-                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                    "net.exe",
+                    "user",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
                 findings = {"raw_users": stdout.decode(errors="replace").strip()}
@@ -112,7 +120,9 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
                     ),
                     timeout=_SAMPLE_TIMEOUT,
                 )
-                recommendations = sampling_res.content[0].text if sampling_res and sampling_res.content else "No recommendations."
+                recommendations = (
+                    sampling_res.content[0].text if sampling_res and sampling_res.content else "No recommendations."
+                )
             except Exception as e:
                 recommendations = f"Sampling unavailable: {e}"
 
@@ -121,7 +131,9 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
             # Phase 3: Remediation (live only)
             actions_taken = []
             if not dry_run:
-                high_lines = [line.strip() for line in recommendations.splitlines() if "HIGH" in line.upper() and line.strip()]
+                high_lines = [
+                    line.strip() for line in recommendations.splitlines() if "HIGH" in line.upper() and line.strip()
+                ]
                 for item in high_lines[:5]:
                     actions_taken.append({"action": item, "status": "queued"})
 
@@ -176,6 +188,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
         # Phase 1: Event log
         try:
             from .windows_event_logs import _query_events_blocking
+
             events = await asyncio.to_thread(_query_events_blocking, "System", 20, 1, None)
             findings["event_log_errors"] = [e for e in events if e.get("level") == "Error"]
         except Exception as e:
@@ -186,6 +199,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
         # Phase 2: Process snapshot
         try:
             import psutil
+
             procs = []
             for p in psutil.process_iter(["pid", "name", "username"]):
                 try:

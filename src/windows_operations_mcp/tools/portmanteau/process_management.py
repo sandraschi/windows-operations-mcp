@@ -24,6 +24,7 @@ logger = get_logger(__name__)
 
 try:
     from prefab_ui import BarChart, Card, Table
+
     HAS_PREFAB = True
 except ImportError:
     HAS_PREFAB = False
@@ -34,7 +35,8 @@ def register_process_management(parent_mcp: FastMCP) -> None:
     ns = FastMCP(name="winops_process")
 
     @ns.tool(
-        name="list", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+        name="list",
+        annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
     )
     async def list_processes(
         name_filter: Annotated[str | None, Field(description="Substring filter on process name.")] = None,
@@ -74,8 +76,15 @@ def register_process_management(parent_mcp: FastMCP) -> None:
                     continue
                 if name_filter and name_filter.lower() not in name.lower():
                     continue
-                procs.append({"pid": info["pid"], "name": name, "user": user,
-                               "cpu": info["cpu_percent"], "mem": round(info["memory_percent"], 2)})
+                procs.append(
+                    {
+                        "pid": info["pid"],
+                        "name": name,
+                        "user": user,
+                        "cpu": info["cpu_percent"],
+                        "mem": round(info["memory_percent"], 2),
+                    }
+                )
                 if len(procs) >= limit:
                     break
             except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -84,10 +93,16 @@ def register_process_management(parent_mcp: FastMCP) -> None:
         if ctx:
             await ctx.report_progress(100, 100)
 
-        data: dict[str, Any] = {"success": True, "processes": procs, "count": len(procs), "has_more": len(procs) == limit}
+        data: dict[str, Any] = {
+            "success": True,
+            "processes": procs,
+            "count": len(procs),
+            "has_more": len(procs) == limit,
+        }
 
         if HAS_PREFAB and procs:
             from fastmcp.utilities.types import ToolResult
+
             component = Table(
                 title=f"Windows Processes ({len(procs)})",
                 columns=["PID", "Name", "User", "CPU%", "Mem%"],
@@ -137,6 +152,7 @@ def register_process_management(parent_mcp: FastMCP) -> None:
 
             if HAS_PREFAB:
                 from fastmcp.utilities.types import ToolResult
+
                 component = Card(
                     title=f"Process: {data['name']} ({pid})",
                     content=[
@@ -178,10 +194,12 @@ def register_process_management(parent_mcp: FastMCP) -> None:
 
         if HAS_PREFAB:
             from fastmcp.utilities.types import ToolResult
+
             component = BarChart(
                 title="System Resource Utilisation",
                 data=[{"label": "CPU Usage", "value": cpu}, {"label": "Memory Usage", "value": mem.percent}],
-                max_value=100, unit="%",
+                max_value=100,
+                unit="%",
             )
             return ToolResult(content=str(data), structured_content=component)
 

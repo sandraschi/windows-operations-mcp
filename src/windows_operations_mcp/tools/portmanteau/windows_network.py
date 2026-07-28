@@ -51,10 +51,14 @@ def register_windows_network(parent_mcp: FastMCP) -> None:
             raw = await _run_cmd(["netsh", "advfirewall", "firewall", "show", "rule", "name=all"])
             return {"success": True, "raw_rules": raw}
         except Exception as e:
-            return fail_response(str(e), suggestions=["Ensure the MCP server is running with Administrator privileges."])
+            return fail_response(
+                str(e), suggestions=["Ensure the MCP server is running with Administrator privileges."]
+            )
 
     @ns.tool(
-        annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
     )
     async def firewall_add(
         rule_name: Annotated[str, Field(description="Unique name for the firewall rule.")],
@@ -75,8 +79,16 @@ def register_windows_network(parent_mcp: FastMCP) -> None:
             firewall_add(rule_name="Allow SSH", direction="in", action="allow", port="22")
         """
         try:
-            cmd = ["netsh", "advfirewall", "firewall", "add", "rule",
-                   f"name={rule_name}", f"dir={direction}", f"action={action}"]
+            cmd = [
+                "netsh",
+                "advfirewall",
+                "firewall",
+                "add",
+                "rule",
+                f"name={rule_name}",
+                f"dir={direction}",
+                f"action={action}",
+            ]
             if program:
                 cmd.append(f"program={program}")
             if port:

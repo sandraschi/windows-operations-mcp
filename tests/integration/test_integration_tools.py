@@ -1,7 +1,9 @@
 import json
+
 import pytest
 
-from windows_operations_mcp.mcp_server import mcp as server, register_all_tools
+from windows_operations_mcp.mcp_server import mcp as server
+from windows_operations_mcp.mcp_server import register_all_tools
 
 # Must register tools on the module-level mcp instance before calling tools
 register_all_tools()
@@ -19,9 +21,7 @@ def _parse(result):
 async def test_command_execution_powershell():
     """Verify PowerShell command execution (requires MCP session for ctx)."""
     try:
-        result = await server.call_tool(
-            "winops_cmd_powershell", {"command": "$PSVersionTable.PSVersion.ToString()"}
-        )
+        result = await server.call_tool("winops_cmd_powershell", {"command": "$PSVersionTable.PSVersion.ToString()"})
         data = _parse(result)
         assert data.get("success") is True
         assert "." in data.get("stdout", "")
@@ -49,9 +49,7 @@ async def test_command_execution_cmd():
 async def test_command_execution_failure_sampling():
     """Verify failed commands report failure (requires MCP session for ctx)."""
     try:
-        result = await server.call_tool(
-            "winops_cmd_powershell", {"command": "NonExistentCmdlet-ErrorTest"}
-        )
+        result = await server.call_tool("winops_cmd_powershell", {"command": "NonExistentCmdlet-ErrorTest"})
         data = _parse(result)
         assert data.get("success") is False
         assert data.get("exit_code") != 0

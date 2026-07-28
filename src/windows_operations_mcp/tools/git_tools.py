@@ -31,7 +31,9 @@ def _run_git_command(args: list[str], repo_path: str | None = None) -> dict[str,
             returncode=e.returncode,
         )
     except Exception as e:
-        return fail_response(message=f"Git command failed: {e!s}", stdout="", stderr=f"Git command failed: {e!s}", returncode=-1)
+        return fail_response(
+            message=f"Git command failed: {e!s}", stdout="", stderr=f"Git command failed: {e!s}", returncode=-1
+        )
 
 
 @tool(

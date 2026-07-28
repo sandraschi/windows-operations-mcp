@@ -25,11 +25,14 @@ from windows_operations_mcp.utils import fail_response
 logger = get_logger(__name__)
 
 
-async def _docker(args: list[str], cwd: str | None = None, timeout: int = 60, stdin_data: str | None = None) -> dict[str, Any]:
+async def _docker(
+    args: list[str], cwd: str | None = None, timeout: int = 60, stdin_data: str | None = None
+) -> dict[str, Any]:
     """Run a docker command via subprocess with reliable output capture."""
     try:
         proc = await asyncio.create_subprocess_exec(
-            "docker", *args,
+            "docker",
+            *args,
             cwd=cwd,
             stdin=asyncio.subprocess.PIPE if stdin_data else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
@@ -51,9 +54,16 @@ async def _docker(args: list[str], cwd: str | None = None, timeout: int = 60, st
     except TimeoutError:
         if proc:
             proc.kill()
-        return fail_response(f"Command timed out after {timeout}s", stdout="", stderr=f"Command timed out after {timeout}s", exit_code=-1)
+        return fail_response(
+            f"Command timed out after {timeout}s", stdout="", stderr=f"Command timed out after {timeout}s", exit_code=-1
+        )
     except FileNotFoundError:
-        return fail_response("Docker CLI not found. Install Docker Desktop or add docker to PATH.", stdout="", stderr="Docker CLI not found. Install Docker Desktop or add docker to PATH.", exit_code=-1)
+        return fail_response(
+            "Docker CLI not found. Install Docker Desktop or add docker to PATH.",
+            stdout="",
+            stderr="Docker CLI not found. Install Docker Desktop or add docker to PATH.",
+            exit_code=-1,
+        )
     except Exception as e:
         return fail_response(str(e), stdout="", stderr=str(e), exit_code=-1)
 
@@ -62,7 +72,11 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
     """Mount atomic container execution tools under namespace 'winops_container'."""
     ns = FastMCP(name="winops_container")
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def exec(
         container: Annotated[str, Field(description="Container name or ID.")],
         command: Annotated[str, Field(description="Command to execute inside the container.")],
@@ -115,11 +129,22 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
             "exit_code": result["exit_code"],
         }
 
-    @ns.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @ns.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False
+        )
+    )
     async def cp(
         container: Annotated[str, Field(description="Container name or ID.")],
-        source: Annotated[str, Field(description="Source path. Format: 'host:/path/file' or 'container:/path/file' (prefix determines direction).")],
-        destination: Annotated[str, Field(description="Destination path. Format: 'host:/path/' or 'container:/path/'.")],
+        source: Annotated[
+            str,
+            Field(
+                description="Source path. Format: 'host:/path/file' or 'container:/path/file' (prefix determines direction)."
+            ),
+        ],
+        destination: Annotated[
+            str, Field(description="Destination path. Format: 'host:/path/' or 'container:/path/'.")
+        ],
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Copy files between the host and a Docker container.
@@ -149,9 +174,13 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
             elif not src_is_container and dst_is_container:
                 args = ["cp", src_path, f"{container}:{dst_path}"]
             else:
-                return fail_response("Exactly one of source/destination must have the 'container:' prefix.",
-                        suggestions=["Use 'container:/path' for Docker paths and 'host:/path' for local paths.",
-                                     "Example: source='host:./file.txt', destination='container:/tmp/file.txt'"])
+                return fail_response(
+                    "Exactly one of source/destination must have the 'container:' prefix.",
+                    suggestions=[
+                        "Use 'container:/path' for Docker paths and 'host:/path' for local paths.",
+                        "Example: source='host:./file.txt', destination='container:/tmp/file.txt'",
+                    ],
+                )
 
             if ctx:
                 await ctx.info(f"Docker cp {' '.join(args)}")
