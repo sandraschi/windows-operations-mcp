@@ -216,8 +216,17 @@ async def run_server_async(mcp_app, args: argparse.Namespace | None = None, serv
             port = config["port"]
             path = config["path"]
             endpoint = f"http://{host}:{port}{path}"
-            logger.info(f"Running in HTTP Streamable mode: {endpoint}")
-            await mcp_app.run_http_async(host=host, port=port, path=path)
+            # Serve the FastAPI bridge (REST /api/*, /health, MCP at /mcp) via
+            # uvicorn.Server. FastMCP's internal run_http_async() drops custom
+            # middlewares (CORS), so it is NOT used — fleet CORS standard.
+            import uvicorn
+
+            from windows_operations_mcp.server import create_bridge_app
+
+            web_app = create_bridge_app(mcp_app)
+            logger.info(f"Running in HTTP mode: {endpoint} (FastAPI bridge)")
+            server = uvicorn.Server(uvicorn.Config(web_app, host=host, port=port, log_level="info"))
+            await server.serve()
 
         elif transport == "sse":
             host = config["host"]

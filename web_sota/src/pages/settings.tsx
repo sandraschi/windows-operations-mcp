@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -13,7 +12,7 @@ import {
 	Server,
 	ShieldCheck,
 } from "lucide-react";
-import { API_BASE } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { cn } from "@/common/utils";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,49 +22,79 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { API_BASE } from "@/lib/api";
 
 function LLMProviderSelect() {
-	const [providers, setProviders] = useState<Record<string, {name:string}[]>>({});
+	const [providers, setProviders] = useState<
+		Record<string, { name: string }[]>
+	>({});
 	const [selectedProvider, setSelectedProvider] = useState("ollama");
 	const [selectedModel, setSelectedModel] = useState("");
 
 	useEffect(() => {
 		fetch(API_BASE + "/api/llm/providers")
-			.then(r => r.json())
-			.then(d => {
+			.then((r) => r.json())
+			.then((d) => {
 				setProviders(d);
 				const savedP = localStorage.getItem("llm_provider") || "ollama";
 				const savedM = localStorage.getItem("llm_model") || "";
 				setSelectedProvider(savedP);
 				const models = d[savedP === "ollama" ? "ollama" : "lm_studio"];
-				if (models?.length) setSelectedModel(savedM && models.some((m:{name:string}) => m.name === savedM) ? savedM : models[0].name);
+				if (models?.length)
+					setSelectedModel(
+						savedM && models.some((m: { name: string }) => m.name === savedM)
+							? savedM
+							: models[0].name,
+					);
 			})
-			.catch(() => setProviders({ ollama: [{name:"llama3.2:3b"}] }));
+			.catch(() => setProviders({ ollama: [{ name: "llama3.2:3b" }] }));
 	}, []);
 
-	const save = (p: string, m: string) => { localStorage.setItem("llm_provider", p); localStorage.setItem("llm_model", m); };
+	const save = (p: string, m: string) => {
+		localStorage.setItem("llm_provider", p);
+		localStorage.setItem("llm_model", m);
+	};
 
-	const models = providers[selectedProvider === "ollama" ? "ollama" : "lm_studio"] || [];
+	const models =
+		providers[selectedProvider === "ollama" ? "ollama" : "lm_studio"] || [];
 	const dot = models.length > 0 ? "bg-success" : "bg-muted-foreground";
 
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center gap-2 mb-3">
 				<div className={`w-2 h-2 rounded-full ${dot}`} />
-				<span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+				<span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
 					{models.length > 0 ? `${selectedProvider} connected` : "no provider"}
 				</span>
 			</div>
-			<select className="h-10 w-full rounded-xl bg-white/5 border border-white/10 px-3 text-sm text-foreground"
-				value={selectedProvider} onChange={(e) => { setSelectedProvider(e.target.value); save(e.target.value, ""); }}>
+			<select
+				className="h-10 w-full rounded-xl bg-zinc-800 text-zinc-100 border border-zinc-600 px-3 text-sm"
+				value={selectedProvider}
+				onChange={(e) => {
+					setSelectedProvider(e.target.value);
+					save(e.target.value, "");
+				}}
+			>
 				<option value="ollama">Ollama</option>
 				<option value="lm_studio">LM Studio</option>
 			</select>
-			<select className="h-10 w-full rounded-xl bg-white/5 border border-white/10 px-3 text-sm text-foreground"
-				value={selectedModel} onChange={(e) => { setSelectedModel(e.target.value); save(selectedProvider, e.target.value); }}>
-				{models.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+			<select
+				className="h-10 w-full rounded-xl bg-zinc-800 text-zinc-100 border border-zinc-600 px-3 text-sm"
+				value={selectedModel}
+				onChange={(e) => {
+					setSelectedModel(e.target.value);
+					save(selectedProvider, e.target.value);
+				}}
+			>
+				{models.map((m) => (
+					<option key={m.name} value={m.name}>
+						{m.name}
+					</option>
+				))}
 			</select>
-			<p className="text-[9px] text-muted-foreground italic">Saved to browser storage. Used by AI tools and LLM chat.</p>
+			<p className="text-[11px] text-muted-foreground italic">
+				Saved to browser storage. Used by AI tools and LLM chat.
+			</p>
 		</div>
 	);
 }
@@ -77,15 +106,30 @@ export default function Settings() {
 	});
 
 	const configItems = [
-		{ label: "Frontend Node", value: "10749", status: "online", icon: Globe },
-		{ label: "Backend Hub", value: "10748", status: "online", icon: Server },
 		{
-			label: "Standard",
-			value: "January 2026 SOTA",
-			status: "compliant",
+			label: "Frontend Node",
+			value: "10749",
+			status: "dev server",
+			icon: Globe,
+		},
+		{
+			label: "Backend Hub",
+			value: "10748",
+			status: status ? "online" : "offline",
+			icon: Server,
+		},
+		{
+			label: "Platform",
+			value: status?.platform ?? "...",
+			status: status ? "detected" : "unknown",
 			icon: ShieldCheck,
 		},
-		{ label: "Latency", value: "4ms", status: "optimized", icon: Activity },
+		{
+			label: "Python",
+			value: status?.python_version ?? "...",
+			status: "runtime",
+			icon: Activity,
+		},
 	];
 
 	return (
@@ -102,7 +146,7 @@ export default function Settings() {
 				</div>
 				<div className="flex items-center gap-2 px-4 py-2 rounded-full glass border-primary/20 backdrop-blur-xl">
 					<div className="w-2 h-2 rounded-full bg-primary animate-ping" />
-					<span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+					<span className="text-xs font-bold uppercase tracking-widest text-primary">
 						REAL-TIME SYNC
 					</span>
 				</div>
@@ -121,7 +165,7 @@ export default function Settings() {
 							<item.icon className="w-6 h-6" />
 						</div>
 						<div>
-							<p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+							<p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">
 								{item.label}
 							</p>
 							<p className="text-xl font-bold mt-1 text-foreground leading-none">
@@ -130,7 +174,7 @@ export default function Settings() {
 						</div>
 						<Badge
 							variant="outline"
-							className="bg-primary/5 text-primary border-primary/20 text-[9px] uppercase tracking-widest py-0"
+							className="bg-primary/5 text-primary border-primary/20 text-[11px] uppercase tracking-widest py-0"
 						>
 							{item.status}
 						</Badge>
@@ -175,15 +219,15 @@ export default function Settings() {
 										Runtime Host
 									</span>
 									<span className="text-sm font-mono text-foreground font-bold">
-										Goliath-v2
+										{status?.host ?? "..."}
 									</span>
 								</div>
 								<div className="flex items-center justify-between py-2 border-b border-white/5">
 									<span className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-										Node Version
+										Python Runtime
 									</span>
 									<span className="text-sm font-mono text-foreground font-bold">
-										22.1.0-STABLE
+										{status?.python_version ?? "..."}
 									</span>
 								</div>
 								<div className="flex items-center justify-between py-2 border-b border-white/5">
@@ -191,19 +235,11 @@ export default function Settings() {
 										FastMCP Core
 									</span>
 									<span className="text-sm font-mono text-primary font-bold">
-										3.1.1
+										3.4.5
 									</span>
 								</div>
 							</div>
 							<div className="space-y-4">
-								<div className="flex items-center justify-between py-2 border-b border-white/5">
-									<span className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-										Build Target
-									</span>
-									<span className="text-sm font-mono text-foreground font-bold">
-										ESNEXT-OPTIMIZED
-									</span>
-								</div>
 								<div className="flex items-center justify-between py-2 border-b border-white/5">
 									<span className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
 										CSS Engine
@@ -230,9 +266,10 @@ export default function Settings() {
 							<div>
 								<h4 className="text-sm font-bold">Architecture Note</h4>
 								<p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-									This instance is operating in **Composite Mode**, merging
-									physical OS hooks with a virtual MCP container. All telemetry
-									is aggregated via the FastAPI Unified Bridge.
+									FastAPI bridge in front of a FastMCP 3.4 ASGI app. stdio
+									transport for Claude Desktop / IDE clients; HTTP on
+									127.0.0.1:10748 for the webapp (REST /api/*, MCP streamable at
+									/mcp).
 								</p>
 							</div>
 						</div>
@@ -264,14 +301,14 @@ export default function Settings() {
 									<p className="text-sm font-black tracking-tight">
 										FASTAPI U-BRIDGE
 									</p>
-									<p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-1">
+									<p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">
 										{status
 											? `Synced as ${status.user}`
 											: "Service Disconnected"}
 									</p>
 								</div>
 								{status && (
-									<Badge className="vibrant-gradient border-none text-[10px] py-0">
+									<Badge className="vibrant-gradient border-none text-xs py-0">
 										{status.mcp}
 									</Badge>
 								)}
@@ -291,7 +328,7 @@ export default function Settings() {
 								<div className="flex items-center gap-3">
 									<HardDrive className="w-4 h-4 text-muted-foreground" />
 									<span className="text-xs font-bold uppercase tracking-widest">
-										Metadata DB
+										Log Ring Buffer
 									</span>
 								</div>
 								<div className="w-2 h-2 rounded-full bg-success" />
@@ -300,13 +337,14 @@ export default function Settings() {
 								<div className="flex items-center gap-3">
 									<Info className="w-4 h-4 text-muted-foreground" />
 									<span className="text-xs font-bold uppercase tracking-widest">
-										Audit Logs
+										Structured Logging
 									</span>
 								</div>
 								<div className="w-2 h-2 rounded-full bg-success" />
 							</div>
-							<p className="text-[9px] text-muted-foreground italic leading-tight text-center px-4">
-								Auto-compaction active. Retention period: 7 days.
+							<p className="text-[11px] text-muted-foreground italic leading-tight text-center px-4">
+								In-memory ring buffer, 5000 entries, backed by structlog. See
+								the Logs page.
 							</p>
 						</CardContent>
 					</Card>

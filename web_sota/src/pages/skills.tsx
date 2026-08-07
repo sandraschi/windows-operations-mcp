@@ -38,7 +38,7 @@ export default function SkillsPage() {
       >
         <div className="flex items-center gap-2 mb-1">
           <Lightbulb className="w-5 h-5 text-primary" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
             Server Capabilities
           </span>
         </div>

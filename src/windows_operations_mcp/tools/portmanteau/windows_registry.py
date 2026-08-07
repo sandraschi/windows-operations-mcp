@@ -113,7 +113,7 @@ def _list_blocking(hkey, path: str) -> tuple[list, dict]:
 
 def register_windows_registry(parent_mcp: FastMCP) -> None:
     """Mount atomic registry tools under namespace 'winops_reg'."""
-    ns = FastMCP(name="winops_reg")
+    ns = FastMCP(name="winops_reg", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -295,5 +295,5 @@ def register_windows_registry(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    parent_mcp.mount(ns, prefix="winops_reg")
+    parent_mcp.mount(ns, namespace="winops_reg")
     logger.info("Mounted atomic tools: winops_reg/read, /write, /delete, /list_keys, /export, /import_reg")

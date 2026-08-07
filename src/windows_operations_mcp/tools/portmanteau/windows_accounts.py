@@ -39,7 +39,7 @@ async def _net(args: list[str]) -> str:
 
 def register_windows_accounts(parent_mcp: FastMCP) -> None:
     """Mount atomic account management tools under namespace 'winops_accounts'."""
-    ns = FastMCP(name="winops_accounts")
+    ns = FastMCP(name="winops_accounts", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -222,7 +222,7 @@ def register_windows_accounts(parent_mcp: FastMCP) -> None:
                 f"Operation failed: {e}", suggestions=["Run as Administrator. Verify both user and group exist."]
             )
 
-    parent_mcp.mount(ns, prefix="winops_accounts")
+    parent_mcp.mount(ns, namespace="winops_accounts")
     logger.info(
         "Mounted atomic tools: winops_accounts/list_users, /add_user, /remove_user, /set_password, /list_groups, /group_members, /manage_group"
     )

@@ -35,7 +35,7 @@ export default function Logging() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [userScrolled, setUserScrolled] = useState(false);
   const afterIdRef = useRef<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const fetchLogs = useCallback(async (opts: { tail?: boolean; after_id?: string } = {}) => {
     setLoading(true);
@@ -177,7 +177,7 @@ export default function Logging() {
         {entries.map((e) => (
           <div key={e.id} className="flex gap-3 py-0.5 hover:bg-slate-900/50 rounded px-1">
             <span className="text-slate-600 w-20 shrink-0">{e.timestamp.split(".")[0].split("T")[1] || e.timestamp}</span>
-            <span className={`w-16 shrink-0 text-center rounded text-[10px] font-bold ${LEVEL_COLORS[e.level] || "text-slate-400"}`}>
+            <span className={`w-16 shrink-0 text-center rounded text-xs font-bold ${LEVEL_COLORS[e.level] || "text-slate-400"}`}>
               {e.level}
             </span>
             {e.kind && <span className="text-slate-500 w-16 shrink-0">[{e.kind}]</span>}

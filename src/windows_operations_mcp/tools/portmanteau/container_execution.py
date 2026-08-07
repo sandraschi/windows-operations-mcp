@@ -70,7 +70,7 @@ async def _docker(
 
 def register_container_execution(parent_mcp: FastMCP) -> None:
     """Mount atomic container execution tools under namespace 'winops_container'."""
-    ns = FastMCP(name="winops_container")
+    ns = FastMCP(name="winops_container", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(
@@ -195,5 +195,5 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    parent_mcp.mount(ns, prefix="winops_container")
+    parent_mcp.mount(ns, namespace="winops_container")
     logger.info("Mounted atomic tools: winops_container/exec, winops_container/cp")

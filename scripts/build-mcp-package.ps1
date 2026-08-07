@@ -54,25 +54,25 @@ try {
         New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
     }
 
-    Write-Host "ðŸ“ Project root: $projectRoot" -ForegroundColor Yellow
-    Write-Host "ðŸ“¦ Output directory: $OutputDir" -ForegroundColor Yellow
+    Write-Host "ðŸ" Project root: $projectRoot" -ForegroundColor Yellow
+    Write-Host "ðŸ"¦ Output directory: $OutputDir" -ForegroundColor Yellow
 
     # Step 1: Validate manifest
-    Write-Host "ðŸ” Validating MCPB manifest..." -ForegroundColor Blue
+    Write-Host "ðŸ" Validating MCPB manifest..." -ForegroundColor Blue
     try {
         # Check if MCPB CLI is available
         $mcpbVersion = & mcpb --version 2>$null
         if ($LASTEXITCODE -ne 0) {
             throw "MCPB CLI not found. Install with: npm install -g @anthropic-ai/mcpb"
         }
-        Write-Host "âœ… MCPB CLI version: $mcpbVersion" -ForegroundColor Green
+        Write-Host "âœ... MCPB CLI version: $mcpbVersion" -ForegroundColor Green
 
         # Validate manifest
         & mcpb validate mcpb/manifest.json
         if ($LASTEXITCODE -ne 0) {
             throw "Manifest validation failed. Check mcpb/manifest.json for errors."
         }
-        Write-Host "âœ… Manifest validation passed" -ForegroundColor Green
+        Write-Host "âœ... Manifest validation passed" -ForegroundColor Green
 
     } catch {
         Write-Error "Validation failed: $_"
@@ -96,7 +96,7 @@ try {
             throw "Package build failed. Check the build output for errors."
         }
 
-        Write-Host "âœ… Package built: $packagePath" -ForegroundColor Green
+        Write-Host "âœ... Package built: $packagePath" -ForegroundColor Green
 
     } catch {
         Write-Error "Build failed: $_"
@@ -105,7 +105,7 @@ try {
 
     # Step 3: Sign the package (if not disabled)
     if (-not $NoSign) {
-        Write-Host "ðŸ” Signing MCPB package..." -ForegroundColor Blue
+        Write-Host "ðŸ" Signing MCPB package..." -ForegroundColor Blue
         try {
             # Note: Package signing requires proper signing infrastructure
             # For now, we'll skip signing but show the command that would be used
@@ -120,25 +120,25 @@ try {
     }
 
     # Step 4: Verify the package
-    Write-Host "ðŸ” Verifying MCPB package..." -ForegroundColor Blue
+    Write-Host "ðŸ" Verifying MCPB package..." -ForegroundColor Blue
     try {
         & mcpb verify $packagePath
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Package verification failed, but package may still work."
         } else {
-            Write-Host "âœ… Package verification passed" -ForegroundColor Green
+            Write-Host "âœ... Package verification passed" -ForegroundColor Green
         }
     } catch {
         Write-Warning "Package verification failed: $_"
     }
 
     # Step 5: Show package information
-    Write-Host "ðŸ“Š Package Information:" -ForegroundColor Blue
+    Write-Host "ðŸ"Š Package Information:" -ForegroundColor Blue
     try {
         $packageSize = (Get-Item $packagePath).Length
-        Write-Host "   ðŸ“¦ Package size: $([math]::Round($packageSize / 1MB, 2)) MB" -ForegroundColor Gray
-        Write-Host "   ðŸ“ Location: $packagePath" -ForegroundColor Gray
-        Write-Host "   ðŸ“‹ To install: Drag the .mcpb file to Claude Desktop" -ForegroundColor Gray
+        Write-Host "   ðŸ"¦ Package size: $([math]::Round($packageSize / 1MB, 2)) MB" -ForegroundColor Gray
+        Write-Host "   ðŸ" Location: $packagePath" -ForegroundColor Gray
+        Write-Host "   ðŸ"‹ To install: Drag the .mcpb file to Claude Desktop" -ForegroundColor Gray
     } catch {
         Write-Warning "Could not get package information: $_"
     }
@@ -154,7 +154,7 @@ try {
 } catch {
     Write-Error "Build failed: $_"
     Write-Host ""
-    Write-Host "ðŸ”§ Troubleshooting:" -ForegroundColor Red
+    Write-Host "ðŸ"§ Troubleshooting:" -ForegroundColor Red
     Write-Host "1. Ensure all dependencies are installed" -ForegroundColor White
     Write-Host "2. Check mcpb/manifest.json for errors" -ForegroundColor White
     Write-Host "3. Verify Python environment is clean" -ForegroundColor White

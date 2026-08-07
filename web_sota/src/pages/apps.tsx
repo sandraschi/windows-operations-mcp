@@ -59,7 +59,7 @@ export default function AppsHub() {
       >
         <div className="flex items-center gap-2 mb-1">
           <Wifi className="w-5 h-5 text-primary" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
             Fleet Discovery
           </span>
         </div>
@@ -100,7 +100,7 @@ export default function AppsHub() {
                           : "bg-red-500"
                     }`}
                   />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     {alive === undefined ? "..." : alive ? "Online" : "Offline"}
                   </span>
                 </div>
@@ -115,7 +115,7 @@ export default function AppsHub() {
                 </p>
               )}
 
-              <div className="mt-4 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">
+              <div className="mt-4 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">
                 <span>Open</span>
                 <ExternalLink className="w-3 h-3" />
               </div>

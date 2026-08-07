@@ -49,14 +49,20 @@ def _query_events_blocking(log_name: str, max_events: int, hours: int, event_id:
             if not batch:
                 break
             for ev in batch:
-                ev_time = datetime.fromtimestamp(ev.TimeGenerated)
-                if ev_time < cutoff:
+                # TimeGenerated is already a pywintypes.datetime (a datetime
+                # subclass) — fromtimestamp() would choke on it.
+                ev_time = ev.TimeGenerated
+                if isinstance(ev_time, datetime):
+                    ev_dt = ev_time
+                else:
+                    ev_dt = datetime.fromtimestamp(ev_time)
+                if ev_dt < cutoff:
                     continue
                 if event_id and ev.EventID != event_id:
                     continue
                 events.append(
                     {
-                        "timestamp": ev_time.isoformat(),
+                        "timestamp": ev_dt.isoformat(),
                         "id": ev.EventID,
                         "source": ev.SourceName,
                         "level": level_map.get(ev.EventType, "Other"),
@@ -72,7 +78,7 @@ def _query_events_blocking(log_name: str, max_events: int, hours: int, event_id:
 
 def register_windows_event_logs(parent_mcp: FastMCP) -> None:
     """Mount atomic event log tools under namespace 'winops_evtlog'."""
-    ns = FastMCP(name="winops_evtlog")
+    ns = FastMCP(name="winops_evtlog", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -199,5 +205,5 @@ def register_windows_event_logs(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}", suggestions=["Run as Administrator to clear Security log."])
 
-    parent_mcp.mount(ns, prefix="winops_evtlog")
+    parent_mcp.mount(ns, namespace="winops_evtlog")
     logger.info("Mounted atomic tools: winops_evtlog/query, /list, /export, /clear")

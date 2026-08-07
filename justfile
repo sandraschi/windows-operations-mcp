@@ -5,13 +5,13 @@ import 'scripts/just/fleet.just'
 __version__ := "14.1.0"
 __name__ := "windows-operations-mcp"
 
-# ── Dashboard ─────────────────────────────────────────────────────────────────
+# --- Dashboard ---
 
 # Open the interactive recipe dashboard in the browser
 default:
     @just --list
 
-# ── Environment ────────────────────────────────────────────────────────────────
+# --- Environment ---
 
 # Install Python deps (uv sync)
 install:
@@ -23,14 +23,14 @@ update:
 	Set-Location '{{justfile_directory()}}'
 	uv lock --upgrade
 
-# ── Development ──────────────────────────────────────────────────────────────
+# --- Development ---
 
 # Run MCP server over stdio (Claude Desktop / MCP clients)
 mcp:
 	Set-Location '{{justfile_directory()}}'
 	uv run windows-operations-mcp
 
-# Start Vite + FastAPI hub (ports 10749 / 10748) — same as .\\start.ps1
+# --- Start Vite  FastAPI hub  ports 10749  same as  start ps1 ---
 web:
 	Set-Location '{{justfile_directory()}}'
 	powershell.exe -NoProfile -File .\start.ps1
@@ -51,7 +51,7 @@ ui:
 	Set-Location '{{justfile_directory()}}\web_sota'
 	npm run dev -- --port 10749 --host
 
-# ── Quality ───────────────────────────────────────────────────────────────────
+# --- Quality ---
 
 # Ruff + Biome (CI-style, no writes)
 lint:
@@ -75,7 +75,7 @@ format:
 	Set-Location '{{justfile_directory()}}\web_sota'
 	npx biome format --write .
 
-# ── Testing ───────────────────────────────────────────────────────────────────
+# --- Testing ---
 
 # Full pytest run (verbose)
 test:
@@ -85,7 +85,7 @@ test:
 # Lint + tests (quick gate)
 check: lint test
 
-# ── Security ─────────────────────────────────────────────────────────────────
+# --- Security ---
 
 # Bandit scan on src/ (install dev tools if missing: uv tool install bandit)
 check-sec:
@@ -97,7 +97,7 @@ audit-deps:
 	Set-Location '{{justfile_directory()}}'
 	uv run safety check
 
-# ── Packaging & verify ─────────────────────────────────────────────────────
+# --- Packaging  verify ---
 
 # Build MCPB bundle via project script (legacy helper; prefer `just mcpb-pack` from fleet.just)
 build:
@@ -111,7 +111,7 @@ verify:
 	Set-Location '{{justfile_directory()}}'
 	uv run python -c "from windows_operations_mcp.mcp_server import mcp; print('OK:', mcp.name)"
 
-# ── Housekeeping ─────────────────────────────────────────────────────────────
+# --- Housekeeping ---
 
 # Remove build artifacts and common caches
 clean:
@@ -124,7 +124,7 @@ clean:
 	Get-ChildItem -Path . -Filter '*.mcpb' -ErrorAction SilentlyContinue | Remove-Item -Force
 	Write-Host 'Clean complete.' -ForegroundColor Green
 
-# ── Fleet Operations ─────────────────────────────────────────────────────────
+# --- Fleet Operations ---
 
 # Track modified files in the last N hours (default 4) across the fleet
 heartbeat hours="4":
@@ -142,7 +142,7 @@ sync-research:
 kill-fleet:
 	powershell.exe -NoProfile -File .\scripts\kill-fleet.ps1
 
-# ── Tauri NSIS ─────────────────────────────────────────────────────────────────
+# --- Tauri NSIS ---
 
 # Build the PyInstaller backend .exe and copy to Tauri resources
 build-sidecar:
@@ -158,3 +158,9 @@ build-native: build-sidecar
 	npx @tauri-apps/cli build --bundles nsis
 
 # cua-nsis-test: provided by scripts/just/fleet.just
+
+# Bootstrap: install dev deps + pre-commit hook
+bootstrap:
+    uv sync --group dev
+    uv run pre-commit install
+    Write-Host "Pre-commit hooks installed." -ForegroundColor Green

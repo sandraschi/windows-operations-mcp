@@ -25,7 +25,7 @@ export default function Workflows() {
 				<div className="space-y-2">
 					<div className="flex items-center gap-2 mb-1">
 						<Zap className="w-3.5 h-3.5 text-primary" />
-						<span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+						<span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
 							Automation Engineering
 						</span>
 					</div>
@@ -56,7 +56,7 @@ export default function Workflows() {
 								</div>
 								<Badge
 									variant="outline"
-									className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] font-black tracking-widest px-3 py-1"
+									className="bg-green-500/10 text-green-400 border-green-500/20 text-xs font-black tracking-widest px-3 py-1"
 								>
 									READY_TO_DEPLOY
 								</Badge>
@@ -72,7 +72,7 @@ export default function Workflows() {
 						</div>
 
 						<div className="mt-8 space-y-6">
-							<div className="flex items-center gap-6 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+							<div className="flex items-center gap-6 text-xs font-bold text-muted-foreground uppercase tracking-widest">
 								<div className="flex items-center gap-2">
 									<Clock className="w-3.5 h-3.5 text-primary/60" />
 									Weekly Sched.
@@ -86,7 +86,7 @@ export default function Workflows() {
 							<button className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group/btn group-hover:shadow-lg ">
 								<span className="flex items-center gap-3">
 									<Play className="w-4 h-4 text-primary" />
-									<span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">
+									<span className="text-xs font-black uppercase tracking-[0.2em] text-foreground">
 										Execute Protocol
 									</span>
 								</span>
@@ -109,7 +109,7 @@ export default function Workflows() {
 							</p>
 							<Button
 								variant="outline"
-								className="mt-8 rounded-xl border-white/10 text-[10px] font-black uppercase tracking-widest px-8"
+								className="mt-8 rounded-xl border-white/10 text-xs font-black uppercase tracking-widest px-8"
 							>
 								Browse Templates
 							</Button>

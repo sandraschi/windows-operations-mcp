@@ -32,7 +32,7 @@ async def _run(cmd: list[str]) -> str:
 
 def register_windows_automation(parent_mcp: FastMCP) -> None:
     """Mount atomic automation tools under namespace 'winops_auto'."""
-    ns = FastMCP(name="winops_auto")
+    ns = FastMCP(name="winops_auto", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -178,5 +178,5 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
                 suggestions=["Verify wmi_class name. Try Win32_OperatingSystem for a basic test."],
             )
 
-    parent_mcp.mount(ns, prefix="winops_auto")
+    parent_mcp.mount(ns, namespace="winops_auto")
     logger.info("Mounted atomic tools: winops_auto/task_list, /task_create, /task_delete, /task_run, /wmi_query")

@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 def register_windows_performance(parent_mcp: FastMCP) -> None:
     """Mount atomic performance tools under namespace 'winops_perf'."""
-    ns = FastMCP(name="winops_perf")
+    ns = FastMCP(name="winops_perf", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -107,5 +107,5 @@ def register_windows_performance(parent_mcp: FastMCP) -> None:
         except psutil.NoSuchProcess:
             return fail_response(f"Process {pid} not found", suggestions=["Verify PID with winops_process/list."])
 
-    parent_mcp.mount(ns, prefix="winops_perf")
+    parent_mcp.mount(ns, namespace="winops_perf")
     logger.info("Mounted atomic tools: winops_perf/system, winops_perf/process")

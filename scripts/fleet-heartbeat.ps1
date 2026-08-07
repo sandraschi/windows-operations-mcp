@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Fleet Heartbeat — recently modified files under D:\Dev\repos via WizTree MFT export.
+    Fleet Heartbeat - recently modified files under D:\Dev\repos via WizTree MFT export.
 
 .PARAMETER LookbackHours
     Hours to look back. Default 4.
@@ -31,7 +31,7 @@ Write-Host "[Heartbeat] Lookback: since $($LookbackDate.ToString('yyyy-MM-dd HH:
 Write-Host "[Heartbeat] Scan roots: $($ScanPaths -join ', ')" -ForegroundColor Cyan
 
 if (-not (Test-Path $WizTreePath)) {
-    Write-Error "WizTree not found at $WizTreePath — install WizTree or fix path."
+    Write-Error "WizTree not found at $WizTreePath - install WizTree or fix path."
     exit 1
 }
 
@@ -105,7 +105,7 @@ foreach ($Path in $ScanPaths) {
     }
 
     $TempCsv = Join-Path $env:TEMP "fleet_heartbeat_$(Get-Random).csv"
-    Write-Host "[Heartbeat] WizTree scanning $Path ... (1–5 min on full fleet; MFT export)" -ForegroundColor Yellow
+    Write-Host "[Heartbeat] WizTree scanning $Path ... (1-5 min on full fleet; MFT export)" -ForegroundColor Yellow
 
     $Proc = Start-Process `
         -FilePath $WizTreePath `
@@ -117,7 +117,7 @@ foreach ($Path in $ScanPaths) {
     }
 
     if (-not (Test-Path $TempCsv)) {
-        Write-Error "[Heartbeat] WizTree did not write $TempCsv — try running WizTree once manually or use /admin=1 with elevation."
+        Write-Error "[Heartbeat] WizTree did not write $TempCsv - try running WizTree once manually or use /admin=1 with elevation."
         continue
     }
 
@@ -155,7 +155,7 @@ foreach ($Path in $ScanPaths) {
         $matched++
     }
 
-    Write-Host "[Heartbeat] $Path — $matched files in window" -ForegroundColor Green
+    Write-Host "[Heartbeat] $Path - $matched files in window" -ForegroundColor Green
 }
 
 $SortedResults = $Results | Sort-Object Modified -Descending
@@ -163,7 +163,7 @@ $Elapsed = (Get-Date) - $StartedAt
 
 # Console summary
 Write-Host ""
-Write-Host "[Heartbeat] Done in $([math]::Round($Elapsed.TotalSeconds, 1))s — $($SortedResults.Count) files" -ForegroundColor Cyan
+Write-Host "[Heartbeat] Done in $([math]::Round($Elapsed.TotalSeconds, 1))s - $($SortedResults.Count) files" -ForegroundColor Cyan
 
 if ($SortedResults.Count -eq 0) {
     Write-Host "[Heartbeat] No file changes in lookback window." -ForegroundColor Gray
@@ -211,7 +211,7 @@ $Report = @"
 $ReportBody
 
 ---
-*Fleet Heartbeat — WizTree MFT export*
+*Fleet Heartbeat - WizTree MFT export*
 "@
 
 $Report | Out-File -FilePath $OutputFile -Encoding utf8

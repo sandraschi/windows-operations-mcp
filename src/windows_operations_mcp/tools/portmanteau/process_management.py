@@ -32,7 +32,7 @@ except ImportError:
 
 def register_process_management(parent_mcp: FastMCP) -> None:
     """Mount atomic process management tools under namespace 'winops_process'."""
-    ns = FastMCP(name="winops_process")
+    ns = FastMCP(name="winops_process", mask_error_details=True)
 
     @ns.tool(
         name="list",
@@ -240,5 +240,5 @@ def register_process_management(parent_mcp: FastMCP) -> None:
                 suggestions=["Run MCP server as Administrator to kill system processes."],
             )
 
-    parent_mcp.mount(ns, prefix="winops_process")
+    parent_mcp.mount(ns, namespace="winops_process")
     logger.info("Mounted atomic tools: winops_process/list, /info, /resources, /kill")

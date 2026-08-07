@@ -53,7 +53,7 @@ function ToolCard({ tool, idx }: { tool: string; idx: number }) {
 					<h3 className="text-xl font-black tracking-tighter italic">{tool}</h3>
 					<Badge
 						variant="secondary"
-						className="bg-white/5 border-white/5 text-[10px] font-bold tracking-widest uppercase"
+						className="bg-white/5 border-white/5 text-xs font-bold tracking-widest uppercase"
 					>
 						MCP TOOL
 					</Badge>
@@ -63,7 +63,7 @@ function ToolCard({ tool, idx }: { tool: string; idx: number }) {
 						Authoritative Bridge Integration
 					</p>
 					<div className="w-1 h-1 rounded-full bg-muted/30" />
-					<p className="text-[10px] font-mono text-primary/40 uppercase tracking-widest">
+					<p className="text-xs font-mono text-primary/40 uppercase tracking-widest">
 						windows_operations_mcp.core
 					</p>
 				</div>
@@ -100,7 +100,7 @@ export default function Tools() {
 				<div className="space-y-2">
 					<div className="flex items-center gap-2 mb-1">
 						<Wrench className="w-3.5 h-3.5 text-primary" />
-						<span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+						<span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
 							Capabilities Inventory
 						</span>
 					</div>
@@ -140,7 +140,7 @@ export default function Tools() {
 							No authoritative tools were discovered on the current bridge.
 							Check connection status.
 						</p>
-						<button className="mt-8 px-8 py-3 rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary hover:border-primary/40 transition-all">
+						<button className="mt-8 px-8 py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary hover:border-primary/40 transition-all">
 							Force Discovery
 						</button>
 					</motion.div>

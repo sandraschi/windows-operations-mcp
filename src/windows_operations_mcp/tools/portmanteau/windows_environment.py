@@ -83,7 +83,7 @@ def _broadcast_change() -> None:
 
 def register_windows_environment(parent_mcp: FastMCP) -> None:
     """Mount atomic environment variable tools under namespace 'winops_env'."""
-    ns = FastMCP(name="winops_env")
+    ns = FastMCP(name="winops_env", mask_error_details=True)
 
     @ns.tool(
         name="list",
@@ -199,5 +199,5 @@ def register_windows_environment(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(str(e))
 
-    parent_mcp.mount(ns, prefix="winops_env")
+    parent_mcp.mount(ns, namespace="winops_env")
     logger.info("Mounted atomic tools: winops_env/list, /get, /set, /delete")

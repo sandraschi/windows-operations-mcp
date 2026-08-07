@@ -62,7 +62,7 @@ def _patch_blocking(path: str, patch_data: dict, indent: int) -> dict:
 
 def register_json_operations(parent_mcp: FastMCP) -> None:
     """Mount atomic JSON operation tools under namespace 'winops_json'."""
-    ns = FastMCP(name="winops_json")
+    ns = FastMCP(name="winops_json", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -217,5 +217,5 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
         except json.JSONDecodeError as e:
             return fail_response(str(e), suggestions=["Use winops_json/validate first to locate syntax errors."])
 
-    parent_mcp.mount(ns, prefix="winops_json")
+    parent_mcp.mount(ns, namespace="winops_json")
     logger.info("Mounted atomic tools: winops_json/read, /write, /validate, /patch, /extract_from_text, /format")

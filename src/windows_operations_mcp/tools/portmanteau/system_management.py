@@ -25,7 +25,7 @@ _SAMPLE_TIMEOUT = 10.0
 
 def register_system_management(parent_mcp: FastMCP) -> None:
     """Mount atomic system management tools under namespace 'winops_sys'."""
-    ns = FastMCP(name="winops_sys")
+    ns = FastMCP(name="winops_sys", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -161,5 +161,5 @@ def register_system_management(parent_mcp: FastMCP) -> None:
 
         return {"success": True, "host": host, "port": port, "reachable": reachable}
 
-    parent_mcp.mount(ns, prefix="winops_sys")
+    parent_mcp.mount(ns, namespace="winops_sys")
     logger.info("Mounted atomic tools: winops_sys/info, /health, /test_port")

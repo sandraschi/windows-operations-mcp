@@ -43,6 +43,12 @@
 			);
 		background-attachment: fixed;
 	}
+
+	select,
+	input,
+	textarea {
+		color-scheme: dark;
+	}
 }
 
 @layer components {
@@ -72,4 +78,18 @@
 	::-webkit-scrollbar-thumb {
 		@apply bg-muted/50 rounded-full hover:bg-muted transition-colors;
 	}
+}
+
+/* EXPERIMENTAL light mode (invert hack) — NOT fleet standard, reversible.
+   Toggling .dark off <html> inverts the whole UI. Remove this block to
+   revert to permanently-dark. */
+html:not(.dark) {
+	filter: invert(1) hue-rotate(180deg);
+	background: #f4f4f5;
+}
+html:not(.dark) img,
+html:not(.dark) video,
+html:not(.dark) canvas,
+html:not(.dark) iframe {
+	filter: invert(1) hue-rotate(180deg);
 }

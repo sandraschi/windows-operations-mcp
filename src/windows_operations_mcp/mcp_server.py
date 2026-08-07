@@ -89,8 +89,15 @@ def _register_prefab_tools() -> None:
         logger.warning(f"Prefab tool registration failed: {e}")
 
 
+_TOOLS_REGISTERED = False
+
+
 def register_all_tools() -> None:
     """Register all portmanteau modules, prompts, resources, skills, and prefab tools."""
+    global _TOOLS_REGISTERED
+    if _TOOLS_REGISTERED:
+        return
+    _TOOLS_REGISTERED = True
     try:
         logger.info("Starting SOTA v14.2 tool registration...")
 
@@ -111,6 +118,8 @@ def register_all_tools() -> None:
             "windows_network",
             "windows_environment",
             "windows_apps",
+            "file_operations",
+            "windows_registry",
             "agentic_operations",
         ]
 

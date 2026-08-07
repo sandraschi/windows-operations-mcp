@@ -42,7 +42,7 @@ async def _ps(command: str) -> Any:
 
 def register_windows_apps(parent_mcp: FastMCP) -> None:
     """Mount atomic AppX package tools under namespace 'winops_apps'."""
-    ns = FastMCP(name="winops_apps")
+    ns = FastMCP(name="winops_apps", mask_error_details=True)
 
     @ns.tool(
         name="list",
@@ -110,5 +110,5 @@ def register_windows_apps(parent_mcp: FastMCP) -> None:
                 suggestions=["Run as Administrator for system packages.", "Get PackageFullName from winops_apps/list."],
             )
 
-    parent_mcp.mount(ns, prefix="winops_apps")
+    parent_mcp.mount(ns, namespace="winops_apps")
     logger.info("Mounted atomic tools: winops_apps/list, winops_apps/uninstall")

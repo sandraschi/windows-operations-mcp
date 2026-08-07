@@ -76,7 +76,7 @@ def _add_blocking(path: str, source_files: list[str]) -> None:
 
 def register_archive_management(parent_mcp: FastMCP) -> None:
     """Mount atomic archive tools under namespace 'winops_archive'."""
-    ns = FastMCP(name="winops_archive")
+    ns = FastMCP(name="winops_archive", mask_error_details=True)
 
     @ns.tool(
         name="list",
@@ -227,5 +227,5 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    parent_mcp.mount(ns, prefix="winops_archive")
+    parent_mcp.mount(ns, namespace="winops_archive")
     logger.info("Mounted atomic tools: winops_archive/list, /extract, /create, /add, /expand_cab")

@@ -23,7 +23,7 @@ _TIMEOUT_WARN_S = 10.0  # cap on ctx.sample() calls
 
 def register_command_execution(parent_mcp: FastMCP) -> None:
     """Mount atomic command execution tools under namespace 'winops_cmd'."""
-    ns = FastMCP(name="winops_cmd")
+    ns = FastMCP(name="winops_cmd", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(
@@ -217,5 +217,5 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
 
         return response
 
-    parent_mcp.mount(ns, prefix="winops_cmd")
+    parent_mcp.mount(ns, namespace="winops_cmd")
     logger.info("Mounted atomic tools: winops_cmd/powershell, winops_cmd/cmd")

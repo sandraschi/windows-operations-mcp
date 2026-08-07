@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 
 def register_file_operations(parent_mcp: FastMCP) -> None:
     """Mount atomic file operation tools under namespace 'winops_file'."""
-    ns = FastMCP(name="winops_file")
+    ns = FastMCP(name="winops_file", mask_error_details=True)
 
     @ns.tool(
         annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -342,5 +342,5 @@ def register_file_operations(parent_mcp: FastMCP) -> None:
         except Exception as e:
             return fail_response(f"Operation failed: {e}")
 
-    parent_mcp.mount(ns, prefix="winops_file")
+    parent_mcp.mount(ns, namespace="winops_file")
     logger.info("Mounted atomic tools: winops_file/read, /write, /edit, /delete, /move, /copy, /list, /info")

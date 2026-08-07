@@ -79,7 +79,7 @@ async def _wait_for_status(name: str, target: str, timeout: int, ctx: Context | 
 
 def register_windows_services(parent_mcp: FastMCP) -> None:
     """Mount atomic service management tools under namespace 'winops_svc'."""
-    ns = FastMCP(name="winops_svc")
+    ns = FastMCP(name="winops_svc", mask_error_details=True)
 
     @ns.tool(
         name="list",
@@ -252,5 +252,5 @@ def register_windows_services(parent_mcp: FastMCP) -> None:
                 f"Service restart failed: {e}", suggestions=["Use winops_svc/status to check current state."]
             )
 
-    parent_mcp.mount(ns, prefix="winops_svc")
+    parent_mcp.mount(ns, namespace="winops_svc")
     logger.info("Mounted atomic tools: winops_svc/list, /status, /start, /stop, /restart")
