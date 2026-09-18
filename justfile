@@ -48,32 +48,21 @@ api:
 
 # Frontend only: Vite dev (after npm install in web_sota)
 ui:
-	Set-Location '{{justfile_directory()}}\web_sota'
-	npm run dev -- --port 10749 --host
+	Set-Location '{{justfile_directory()}}\web_sota'; npm run dev -- --port 10749 --host
 
 # --- Quality ---
 
 # Ruff + Biome (CI-style, no writes)
 lint:
-	Set-Location '{{justfile_directory()}}'
-	uv run ruff check .
-	Set-Location '{{justfile_directory()}}\web_sota'
-	npx biome ci .
+	Set-Location '{{justfile_directory()}}'; uv run ruff check .; Set-Location '{{justfile_directory()}}\web_sota'; npx biome ci .
 
 # Ruff and Biome auto-fix + format
 fix:
-	Set-Location '{{justfile_directory()}}'
-	uv run ruff check . --fix --unsafe-fixes
-	uv run ruff format .
-	Set-Location '{{justfile_directory()}}\web_sota'
-	npx biome check --write .
+	Set-Location '{{justfile_directory()}}'; uv run ruff check . --fix --unsafe-fixes; uv run ruff format .; Set-Location '{{justfile_directory()}}\web_sota'; npx biome check --write .
 
 # Format only (Python + JSON in web_sota via Biome)
 format:
-	Set-Location '{{justfile_directory()}}'
-	uv run ruff format .
-	Set-Location '{{justfile_directory()}}\web_sota'
-	npx biome format --write .
+	Set-Location '{{justfile_directory()}}'; uv run ruff format .; Set-Location '{{justfile_directory()}}\web_sota'; npx biome format --write .
 
 # --- Testing ---
 
