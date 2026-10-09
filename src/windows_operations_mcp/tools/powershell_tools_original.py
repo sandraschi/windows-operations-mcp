@@ -336,7 +336,7 @@ def register_powershell_tools(mcp):
             try:
                 console_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
                 encoding = f"cp{console_cp}"
-            except:
+            except Exception:
                 encoding = "cp1252"  # Windows CMD fallback
 
             # Execute command

@@ -46,7 +46,7 @@ async def system_health_card(ctx: Context | None = None) -> Any:
 
     with Card(css_class="max-w-lg") as view:
         with CardHeader():
-            CardTitle("Goliath — System Health")
+            CardTitle("Goliath - System Health")
         with CardContent():
             Text(f"CPU Average: {cpu_avg:.1f}%")
             Text(f"CPU Cores: {len(cpu_per_core)} ({min(cpu_per_core):.1f}% min / {max(cpu_per_core):.1f}% max)")
@@ -89,7 +89,7 @@ async def process_list_card(
 
     with Card(css_class="max-w-xl") as view:
         with CardHeader():
-            CardTitle(f"Processes — {summary}")
+            CardTitle(f"Processes - {summary}")
         with CardContent():
             for p in procs:
                 name = p.get("name") or "unknown"

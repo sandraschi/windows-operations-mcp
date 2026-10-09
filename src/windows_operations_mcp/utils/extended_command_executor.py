@@ -194,11 +194,11 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
                 try:
                     process.terminate()
                     await asyncio.wait_for(process.wait(), timeout=5)
-                except:
+                except Exception:
                     if process.returncode is None:
                         try:
                             process.kill()
-                        except:
+                        except Exception:
                             pass
 
             return CommandResult(
@@ -285,14 +285,14 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
                         result.success = data.get("success", result.success)
                         result.stdout = data.get("stdout", result.stdout)
                         result.stderr = data.get("stderr", result.stderr)
-                except:
+                except Exception:
                     pass
 
             return result
         finally:
             try:
                 os.unlink(temp_path)
-            except:
+            except Exception:
                 pass
 
 

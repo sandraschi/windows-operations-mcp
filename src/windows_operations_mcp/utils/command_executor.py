@@ -134,7 +134,7 @@ class CommandExecutor:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     try:
-                        # CRITICAL: bounded — an unbounded communicate() here
+                        # CRITICAL: bounded - an unbounded communicate() here
                         # deadlocks until detached grandchildren holding
                         # inherited pipe handles exit (v15.1 wedge fix).
                         stdout, stderr = process.communicate(timeout=5)
