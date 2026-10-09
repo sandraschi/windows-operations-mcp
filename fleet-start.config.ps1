@@ -1,15 +1,16 @@
-﻿# Per-repo fleet start config for windows-operations-mcp
+# Per-repo fleet start config for windows-operations-mcp
 # Edit ports/backend target here - start.ps1 is fleet-standard.
 @{
     Name         = 'windows-operations-mcp'
     BackendPort  = 10748
     FrontendPort = 10749
     HealthPath   = '/health'
-    WebRoot      = 'D:\Dev\repos\windows-operations-mcp\web_sota'
+    WebRoot      = 'web_sota'
     Backend = @{
         Kind          = 'uvicorn'
         UvicornTarget = 'windows_operations_mcp.server:app'
         SyncExtras    = @('dev')
+        SyncOnStart  = $true
         Env           = @{ WEB_PORT = '10748' }
     }
     Frontend = @{
