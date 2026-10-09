@@ -79,7 +79,7 @@ line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "S", "UP", "RUF"]
+select = ["E", "F", "W", "I", "B", "S", "UP", "RUF", "T20"]
 # B904/S110/E722: broad exception patterns in system tooling; E501: long CLI/help strings;
 # S6xx: trusted local subprocess/git; S102: dynamic edit shim; S202: controlled tar paths; S112: parse skip
 ignore = [
@@ -147,4 +147,9 @@ fallback-version = "14.1.0"
 packages = ["src/windows_operations_mcp"]
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/*" = ["B007", "S310", "S603", "S607"]
+"scripts/*" = ["B007", "S310", "S603", "S607", "T20"]
+"tests/*" = ["T20", "S101"]
+"build_*.py" = ["T20"]
+"fix_*.py" = ["T20"]
+"simple_test.py" = ["T20"]
+"test_*.py" = ["T20"]

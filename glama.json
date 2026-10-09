@@ -1,12 +1,12 @@
 {
   "name": "windows-operations-mcp",
-  "version": "1.20.0",
+  "version": "15.3.0",
   "description": "Premium Windows System Orchestration MCP",
   "homepage": "http://localhost:10749",
   "author": "Sandra Schipal",
   "mcp": {
     "name": "windows-operations-mcp",
-    "version": "1.20.0",
+    "version": "15.3.0",
     "capabilities": {
       "tools": true,
       "resources": true,

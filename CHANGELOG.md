@@ -18,6 +18,12 @@ All notable changes to the `windows-operations-mcp` project will be documented i
 
 ## [Unreleased]
 
+### Fixed (assfix 2026-10-09)
+- tests: stale portmanteau imports in test_portmanteau_ext.py now skip with reason instead of breaking collection (H3 partial)
+- lint: ruff T20 print-ban enforced with per-file-ignores for scripts/tests/build helpers (M1)
+- ci: triggers on push/PR to main/master, not tags-only (L2)
+- docs: glama.json version synced to 15.3.0 (M3 partial); reports/ gitignored, *.bak.* covered (M6/L1)
+
 ## [15.2.0] - 2026-06-11
 
 ### Fixed — corrupted PATHEXT in subprocess environment

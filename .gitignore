@@ -133,3 +133,8 @@ _dashboard/
 # on every pack. Never hand-edit, never commit.
 mcpb/src/
 
+# Assess reports: working snapshots are regenerable, registry copy is committed
+reports/
+*.bak.*
+!docs/assess-reports/
+
