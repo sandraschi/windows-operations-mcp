@@ -8,7 +8,7 @@ SAFETY (June 2026, v15.3):
   - Em dash (U+2014) block: corrupts PowerShell parser pipeline.
   - Both apply at the executor entry point, before any subprocess call.
 
-DETACHED-CHILD DEADLOCK FIX (v15.1) — "the Start-Process wedge":
+DETACHED-CHILD DEADLOCK FIX (v15.1) - "the Start-Process wedge":
   Commands that launched background/detached processes (Start-Process,
   `start /b`, dev servers, NSSM, etc.) wedged the tool until the *entire
   detached process tree* exited, ignoring timeout_seconds entirely.
@@ -18,24 +18,24 @@ DETACHED-CHILD DEADLOCK FIX (v15.1) — "the Start-Process wedge":
      inheritable. When the shell spawns a grandchild with redirection
      (PowerShell's Start-Process -RedirectStandardOutput uses CreateProcess
      with bInheritHandles=TRUE), the grandchild inherits copies of our pipe
-     write handles — even though its own std handles point elsewhere. The
+     write handles - even though its own std handles point elsewhere. The
      read side then never sees EOF until every handle holder exits.
   2. CPython's subprocess.run timeout handler makes this fatal on Windows:
      on TimeoutExpired it calls `process.communicate()` with NO timeout to
      collect residual output (CPython subprocess.py, `if _mswindows:` branch).
-     That join blocks on the reader threads' fh.read() until EOF — i.e. until
+     That join blocks on the reader threads' fh.read() until EOF - i.e. until
      the detached grandchild dies. `timeout=` is therefore not honored.
 
   Fix: capture stdout/stderr into TEMP FILES instead of pipes. There is no
-  EOF dependency: we wait on the DIRECT child only (process.wait(timeout) —
+  EOF dependency: we wait on the DIRECT child only (process.wait(timeout) -
   no reader threads), then read the files. Detached grandchildren can hold
   inherited file handles forever without blocking us. On a genuine timeout
   of the direct child we kill the process tree (taskkill /T /F) and still
-  return whatever partial output reached the files — an improvement over
+  return whatever partial output reached the files - an improvement over
   the old behavior, which returned empty output on timeout.
 
   Semantics note: output a detached grandchild writes AFTER the direct shell
-  exits is intentionally not captured — redirect such processes to their own
+  exits is intentionally not captured - redirect such processes to their own
   log files (which is what callers launching servers do anyway).
 
 RETAINED from v15.0:
@@ -43,7 +43,7 @@ RETAINED from v15.0:
    ([Console]::OutputEncoding + $OutputEncoding)
 2. PowerShell: Uses -OutputFormat Text for text-mode output
 3. PowerShell: Appends | Out-String -Width 4096 to capture native exe output
-   (docker, psql, etc. — PowerShell 5.1 silently drops their stdout otherwise)
+   (docker, psql, etc. - PowerShell 5.1 silently drops their stdout otherwise)
 4. PowerShell/Cmd: stdin_data parameter for piping input
 5. CMD: shell=True with raw command string to prevent list2cmdline
    quote-mangling (fixes nested quoting with docker exec ... sh -c "...")
@@ -114,7 +114,7 @@ def _validate_command_safe(command: str) -> str | None:
         m = pat.search(command)
         if m:
             return (
-                f"Command contains Linux-ism '{m.group()}' — "
+                f"Command contains Linux-ism '{m.group()}' - "
                 "use the native PowerShell equivalent "
                 "(see mcp-central-docs/standards/powershell_sota.md)"
             )
@@ -260,7 +260,7 @@ class CMDExecutor:
     """
 
     def __init__(self):
-        logger.info("CMD executor initialized (v15.3 — safety guards, file-capture, tree-kill)")
+        logger.info("CMD executor initialized (v15.3 - safety guards, file-capture, tree-kill)")
 
     def execute(
         self,
@@ -303,7 +303,7 @@ class PowerShellExecutor:
 
     def __init__(self):
         logger.info(
-            "PowerShell executor initialized (v15.4 — scriptblock wrap, safety guards, file-capture, tree-kill)"
+            "PowerShell executor initialized (v15.4 - scriptblock wrap, safety guards, file-capture, tree-kill)"
         )
 
     def _build_command(self, command: str) -> str:

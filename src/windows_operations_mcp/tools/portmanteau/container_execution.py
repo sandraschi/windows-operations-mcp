@@ -90,7 +90,7 @@ def register_container_execution(parent_mcp: FastMCP) -> None:
 
         Uses subprocess directly (not CMD/PowerShell wrapper) to avoid nested-quoting
         issues and list2cmdline mangling. stdin_data is piped directly to the container
-        command — no need for `docker cp` + exec dance.
+        command - no need for `docker cp` + exec dance.
 
         ## Return Format
         ```json

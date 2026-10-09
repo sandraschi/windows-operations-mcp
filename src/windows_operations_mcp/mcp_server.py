@@ -43,7 +43,7 @@ mcp = FastMCP(
     name="windows-operations-mcp",
     version="14.2.0",
     lifespan=lifespan,
-    instructions="SOTA v14.2.0: Windows Control Plane & Data Surgery Hub — full FastMCP 3.2 conformance (sampling, skills, prompts, prefab)",
+    instructions="SOTA v14.2.0: Windows Control Plane & Data Surgery Hub - full FastMCP 3.2 conformance (sampling, skills, prompts, prefab)",
     strict_input_validation=True,
     mask_error_details=True,
     client_log_level="info",
@@ -68,15 +68,15 @@ def _register_skills_provider() -> None:
         else:
             logger.warning(f"Skills dir not found at {skills_dir}, skipping provider")
     except ImportError:
-        logger.warning("SkillsDirectoryProvider not available in this FastMCP build — skipping")
+        logger.warning("SkillsDirectoryProvider not available in this FastMCP build - skipping")
     except Exception as e:
         logger.warning(f"Skills provider registration failed: {e}")
 
 
 def _register_prefab_tools() -> None:
-    """Register Prefab UI tools (optional — requires [apps] extra)."""
+    """Register Prefab UI tools (optional - requires [apps] extra)."""
     if os.getenv("WINOPS_PREFAB_APPS", "1") == "0":
-        logger.info("WINOPS_PREFAB_APPS=0 — prefab tools disabled")
+        logger.info("WINOPS_PREFAB_APPS=0 - prefab tools disabled")
         return
     try:
         from windows_operations_mcp.tools.prefab import register_prefab_tools
@@ -84,7 +84,7 @@ def _register_prefab_tools() -> None:
         register_prefab_tools(mcp)
         logger.info("Prefab tools registered")
     except ImportError:
-        logger.info("prefab-ui not installed (uv sync --extra apps) — prefab tools skipped")
+        logger.info("prefab-ui not installed (uv sync --extra apps) - prefab tools skipped")
     except Exception as e:
         logger.warning(f"Prefab tool registration failed: {e}")
 
@@ -143,7 +143,7 @@ def register_all_tools() -> None:
         except Exception as e:
             logger.warning(f"Prompt registration failed: {e}")
 
-        # Resources (legacy resource:// URIs — kept for back-compat)
+        # Resources (legacy resource:// URIs - kept for back-compat)
         try:
             from .resources import register_resources
 
@@ -155,7 +155,7 @@ def register_all_tools() -> None:
         # Skills Provider (FastMCP 3.2+ skill:// URIs)
         _register_skills_provider()
 
-        # Prefab Tools (FastMCP 3.2+ / prefab-ui — optional [apps] extra)
+        # Prefab Tools (FastMCP 3.2+ / prefab-ui - optional [apps] extra)
         _register_prefab_tools()
 
         logger.info("Tool registration completed successfully.")

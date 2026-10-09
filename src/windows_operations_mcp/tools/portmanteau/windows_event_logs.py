@@ -50,7 +50,7 @@ def _query_events_blocking(log_name: str, max_events: int, hours: int, event_id:
                 break
             for ev in batch:
                 # TimeGenerated is already a pywintypes.datetime (a datetime
-                # subclass) — fromtimestamp() would choke on it.
+                # subclass) - fromtimestamp() would choke on it.
                 ev_time = ev.TimeGenerated
                 if isinstance(ev_time, datetime):
                     ev_dt = ev_time

@@ -281,7 +281,7 @@ def atomic_write(
                 # Clean up the temporary file if something went wrong
                 try:
                     tmp_path.unlink()
-                except:
+                except Exception:
                     pass
                 raise
 

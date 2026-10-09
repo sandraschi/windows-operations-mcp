@@ -18,7 +18,7 @@ def create_bridge_app(mcp_app: FastMCP) -> FastAPI:
     setup_webapp(web_app, mcp_app)
     web_app.mount("/mcp", _mcp_http)
 
-    # Fleet CORS standard — unconditional allow_origin_regex covering Tailscale,
+    # Fleet CORS standard - unconditional allow_origin_regex covering Tailscale,
     # LAN IPs, Tailscale CGNAT, localhost, and Tauri webview origins.
     web_app.add_middleware(
         CORSMiddleware,
@@ -37,7 +37,7 @@ def create_bridge_app(mcp_app: FastMCP) -> FastAPI:
     return web_app
 
 
-# 1. Initialize tools (idempotent — safe to import from multiple paths)
+# 1. Initialize tools (idempotent - safe to import from multiple paths)
 register_all_tools()
 
 # 2. Build the bridge

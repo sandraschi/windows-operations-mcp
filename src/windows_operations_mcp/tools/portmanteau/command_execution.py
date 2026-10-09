@@ -62,7 +62,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             powershell(command="Get-Process | Sort-Object CPU -Descending | Select -First 10")
 
         Notes:
-         - Uses asyncio.to_thread — never blocks the event loop.
+         - Uses asyncio.to_thread - never blocks the event loop.
          - ctx.sample() capped at 10s to prevent hang on unsupported clients.
          - Safety guards block Linux-isms (grep, tail, rm -rf, etc.) and em dashes.
          - stdout/stderr truncated at max_output_size chars each.
@@ -158,7 +158,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             cmd(command="ipconfig /all")
 
         Notes:
-         - Uses asyncio.to_thread — never blocks the event loop.
+         - Uses asyncio.to_thread - never blocks the event loop.
          - ctx.sample() capped at 10s to prevent hang on unsupported clients.
          - Safety guards block Linux-isms (grep, tail, rm -rf, etc.) and em dashes.
          - stdout/stderr truncated at max_output_size chars each.

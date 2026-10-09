@@ -51,7 +51,7 @@ class _RingBufferHandler(logging.Handler):
 _ring = _RingBufferHandler()
 logging.getLogger().addHandler(_ring)
 
-# httpx/httpcore log every request at INFO — pure noise in console + ring buffer
+# httpx/httpcore log every request at INFO - pure noise in console + ring buffer
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
@@ -164,9 +164,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
             procs = [p for p in procs if needle in p["name"].lower()]
 
         # Sort by CPU usage and take top N (default 10, cap 500)
-        sorted_procs = sorted(procs, key=lambda x: x["cpu_percent"], reverse=True)[
-            : min(max(limit, 1), 500)
-        ]
+        sorted_procs = sorted(procs, key=lambda x: x["cpu_percent"], reverse=True)[: min(max(limit, 1), 500)]
         return {"processes": sorted_procs, "count": len(sorted_procs), "total": len(procs)}
 
     @app.delete("/api/processes/{pid}")
@@ -199,17 +197,13 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
         from windows_operations_mcp.tools.portmanteau.windows_services import _list_services_blocking
 
         try:
-            data = await asyncio.to_thread(
-                _list_services_blocking, filter_status or None, include_system
-            )
+            data = await asyncio.to_thread(_list_services_blocking, filter_status or None, include_system)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"pywin32 unavailable: {e}")
         return {"success": True, **data}
 
     @app.post("/api/services/{name}/action")
-    async def service_action(
-        name: str, action: str = Body(..., embed=True), _user: str = Depends(authenticate)
-    ):
+    async def service_action(name: str, action: str = Body(..., embed=True), _user: str = Depends(authenticate)):
         """Start, stop, or restart a Windows service by name."""
         if action not in ("start", "stop", "restart"):
             raise HTTPException(status_code=400, detail=f"Unknown action '{action}'")
@@ -315,9 +309,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
             ("ollama", "http://127.0.0.1:11434/api/tags", "models", "name"),
             ("lm_studio", "http://127.0.0.1:1234/v1/models", "data", "id"),
         ]
-        results = await asyncio.gather(
-            *[_probe_llm_provider(k, u, c, f) for k, u, c, f in probes]
-        )
+        results = await asyncio.gather(*[_probe_llm_provider(k, u, c, f) for k, u, c, f in probes])
         return {key: models for key, models in results}
 
     @app.get("/api/logs")

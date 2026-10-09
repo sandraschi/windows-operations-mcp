@@ -1,7 +1,7 @@
 """
 Agentic Operations - SOTA v15.0 (FastMCP 3.2+ Projected Atomic Tools)
 
-Two high-level orchestrators registered directly (no namespace prefix needed — they
+Two high-level orchestrators registered directly (no namespace prefix needed - they
 are not operation families, they are missions):
   agentic_system_hardening   - Autonomous security hardening of services/registry/accounts
   autonomous_troubleshooter  - Root-cause analysis for Windows operation failures
@@ -172,7 +172,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
         ```
 
         ## Examples
-            autonomous_troubleshooter(operation_failure="Could not start WinRM service — access denied")
+            autonomous_troubleshooter(operation_failure="Could not start WinRM service - access denied")
 
         Notes:
          - ctx is required for sampling.
