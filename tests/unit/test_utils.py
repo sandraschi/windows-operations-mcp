@@ -122,8 +122,11 @@ class TestFileUtils(unittest.TestCase):
         result = validate_directory(self.test_dir)
         self.assertTrue(result[0])  # Returns (bool, str) tuple
 
-        # Test nonexistent directory
-        result = validate_directory("/nonexistent/directory")
+        # Test nonexistent directory (hermetic: D:\nonexistent exists on
+        # some dev machines, so build the missing path under the temp dir)
+        missing = os.path.join(tempfile.gettempdir(), "winops-definitely-missing-7f3a9c")
+        assert not os.path.exists(missing)
+        result = validate_directory(missing)
         self.assertFalse(result[0])  # Returns (bool, str) tuple
 
     def test_validate_directory_with_creation(self):

@@ -33,6 +33,10 @@ jobs:
         ruff check .
         ruff format --check .
 
+    - name: Typecheck with pyright
+      run: |
+        pyright src/
+
     - name: Run tests
       run: |
         pytest tests/ -v --cov=windows_operations_mcp --cov-report=xml
@@ -41,6 +45,28 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
+
+  frontend:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: "1.2.6"
+
+    - name: Install frontend deps
+      working-directory: web_sota
+      run: bun install --frozen-lockfile
+
+    - name: Biome gate
+      working-directory: web_sota
+      run: bun run biome:ci
+
+    - name: Frontend typecheck
+      working-directory: web_sota
+      run: bun run typecheck
 
   build:
     runs-on: windows-latest

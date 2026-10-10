@@ -15,11 +15,17 @@ class TestMCPServerDetailed(unittest.TestCase):
         import windows_operations_mcp.mcp_server as mcp_server
 
         original_mcp = mcp_server.mcp
+        was_registered = mcp_server._TOOLS_REGISTERED
         mcp_server.mcp = self.mcp
+        # register_all_tools() is idempotent via the module flag; a bare
+        # FastMCP here needs a fresh registration pass without clobbering
+        # the flag for suites that use the shared server.
+        mcp_server._TOOLS_REGISTERED = False
         try:
             register_all_tools()
         finally:
             mcp_server.mcp = original_mcp
+            mcp_server._TOOLS_REGISTERED = was_registered
 
     def tearDown(self):
         import shutil

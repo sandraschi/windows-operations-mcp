@@ -44,7 +44,11 @@ class TestComprehensive(unittest.TestCase):
         self.assertFalse(is_positive_number(-1)[0])
 
         self.assertTrue(is_valid_path(self.test_dir)[0])
-        self.assertFalse(is_valid_path("/nonexistent")[0])
+        # Hermetic missing-path: never assert on a fixed absolute path
+        # (D:\nonexistent exists on some dev machines).
+        missing = os.path.join(tempfile.gettempdir(), "winops-definitely-missing-7f3a9c")
+        assert not os.path.exists(missing)
+        self.assertFalse(is_valid_path(missing)[0])
 
         self.assertTrue(is_valid_port(8080)[0])
         self.assertFalse(is_valid_port(99999)[0])

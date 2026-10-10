@@ -49,7 +49,10 @@ async def test_command_execution_cmd():
 async def test_command_execution_failure_sampling():
     """Verify failed commands report failure (requires MCP session for ctx)."""
     try:
-        result = await server.call_tool("winops_cmd_powershell", {"command": "NonExistentCmdlet-ErrorTest"})
+        # NOTE: a bare nonexistent cmdlet is a *non-terminating* error in
+        # PowerShell (exit 0). `throw` is terminating -> exit 1, which is
+        # what the executor reports as failure.
+        result = await server.call_tool("winops_cmd_powershell", {"command": 'throw "SOTA_2026_FAIL"'})
         data = _parse(result)
         assert data.get("success") is False
         assert data.get("exit_code") != 0

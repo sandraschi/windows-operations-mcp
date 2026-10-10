@@ -79,7 +79,10 @@ def test_powershell_plain_command_still_works():
 
 
 def test_powershell_stdin_data():
-    result = ps_executor.execute("$input | ForEach-Object { $_.ToUpper() }", timeout=15, stdin_data="quiet please\n")
+    # NOTE: `$input` does not survive the executor's `& { ... }` scriptblock
+    # wrap (v15.4) — inside the block it binds to block input, not process
+    # stdin. [Console]::In exercises the real stdin pipe instead.
+    result = ps_executor.execute("[Console]::In.ReadToEnd().ToUpper()", timeout=15, stdin_data="quiet please\n")
     assert result["success"], f"stderr: {result['stderr']}"
     assert "QUIET PLEASE" in result["stdout"]
 

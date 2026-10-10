@@ -21,6 +21,16 @@ logger = get_logger(__name__)
 _TIMEOUT_WARN_S = 10.0  # cap on ctx.sample() calls
 
 
+def _ctx_interactive(ctx: Context | None) -> bool:
+    """True when ctx can actually reach a client session.
+
+    In-memory `call_tool` (tests, sessionless agents) injects a Context
+    whose request_context is None — info/report_progress/sample raise
+    RuntimeError there, so gate on this, not on `if ctx:`.
+    """
+    return ctx is not None and ctx.request_context is not None
+
+
 def register_command_execution(parent_mcp: FastMCP) -> None:
     """Mount atomic command execution tools under namespace 'winops_cmd'."""
     ns = FastMCP(name="winops_cmd", mask_error_details=True)
@@ -70,7 +80,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         if not command:
             return fail_response("command must be non-empty", suggestions=["Provide a PowerShell command string."])
 
-        if ctx:
+        if _ctx_interactive(ctx):
             await ctx.info(f"PS> {command[:80]}")
             await ctx.report_progress(10, 100)
 
@@ -84,7 +94,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             stdin_data=stdin_data,
         )
 
-        if ctx:
+        if _ctx_interactive(ctx):
             await ctx.report_progress(90, 100)
 
         response: dict[str, Any] = {
@@ -102,7 +112,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         if len(response["stderr"]) > max_output_size:
             response["stderr"] = response["stderr"][:max_output_size] + "\n[ERROR TRUNCATED]"
 
-        if not response["success"] and ctx:
+        if not response["success"] and _ctx_interactive(ctx):
             try:
                 advice = await asyncio.wait_for(
                     ctx.sample(
@@ -116,7 +126,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             except Exception as sampling_error:
                 logger.debug(f"sampling advice unavailable, continuing without it: {sampling_error}")
 
-        if ctx:
+        if _ctx_interactive(ctx):
             await ctx.report_progress(100, 100)
 
         return response
@@ -166,7 +176,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         if not command:
             return fail_response("command must be non-empty", suggestions=["Provide a CMD command string."])
 
-        if ctx:
+        if _ctx_interactive(ctx):
             await ctx.info(f"CMD> {command[:80]}")
             await ctx.report_progress(10, 100)
 
@@ -180,7 +190,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             stdin_data=stdin_data,
         )
 
-        if ctx:
+        if _ctx_interactive(ctx):
             await ctx.report_progress(90, 100)
 
         response: dict[str, Any] = {
@@ -198,7 +208,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
         if len(response["stderr"]) > max_output_size:
             response["stderr"] = response["stderr"][:max_output_size] + "\n[ERROR TRUNCATED]"
 
-        if not response["success"] and ctx:
+        if not response["success"] and _ctx_interactive(ctx):
             try:
                 advice = await asyncio.wait_for(
                     ctx.sample(
@@ -212,7 +222,7 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
             except Exception as sampling_error:
                 logger.debug(f"sampling advice unavailable, continuing without it: {sampling_error}")
 
-        if ctx:
+        if _ctx_interactive(ctx):
             await ctx.report_progress(100, 100)
 
         return response
