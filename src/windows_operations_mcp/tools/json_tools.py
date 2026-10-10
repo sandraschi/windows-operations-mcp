@@ -13,6 +13,9 @@ from typing import Any, TypeVar
 from windows_operations_mcp.utils import fail_response
 
 from ..decorators import tool
+from ..logging_config import get_logger
+
+logger = get_logger(__name__)
 
 T = TypeVar("T")
 
@@ -211,8 +214,9 @@ if __name__ == "__main__":
         # Merge JSON objects
         merged = merge_json({"a": 1, "b": {"x": 10}}, {"b": {"y": 20}, "c": 30})
 
-    except Exception:
-        pass
+    except Exception as demo_error:
+        logger.warning(f"JSON tools example failed: {demo_error}")
+        raise
 
 
 @tool(

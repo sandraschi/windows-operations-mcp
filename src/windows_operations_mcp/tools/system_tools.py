@@ -176,8 +176,8 @@ def get_system_info(detailed: bool = False) -> dict[str, Any]:
                     ) as key:
                         product_name = winreg.QueryValueEx(key, "ProductName")[0]
                         system_info["windows"]["product_name"] = product_name
-                except Exception:
-                    pass
+                except Exception as reg_error:
+                    logger.debug(f"system info: ProductName lookup failed: {reg_error}")
 
             except ImportError:
                 system_info["windows"] = {"note": "winreg not available"}

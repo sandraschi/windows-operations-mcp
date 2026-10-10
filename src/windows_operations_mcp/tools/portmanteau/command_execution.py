@@ -113,8 +113,8 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
                 )
                 if advice and advice.content:
                     response["sampling_advice"] = advice.content[0].text
-            except Exception:
-                pass
+            except Exception as sampling_error:
+                logger.debug(f"sampling advice unavailable, continuing without it: {sampling_error}")
 
         if ctx:
             await ctx.report_progress(100, 100)
@@ -209,8 +209,8 @@ def register_command_execution(parent_mcp: FastMCP) -> None:
                 )
                 if advice and advice.content:
                     response["sampling_advice"] = advice.content[0].text
-            except Exception:
-                pass
+            except Exception as sampling_error:
+                logger.debug(f"sampling advice unavailable, continuing without it: {sampling_error}")
 
         if ctx:
             await ctx.report_progress(100, 100)

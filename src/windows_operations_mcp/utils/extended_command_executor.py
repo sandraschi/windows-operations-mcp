@@ -194,12 +194,13 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
                 try:
                     process.terminate()
                     await asyncio.wait_for(process.wait(), timeout=5)
-                except Exception:
+                except Exception as term_error:
+                    logger.debug(f"timeout cleanup: terminate failed: {term_error}")
                     if process.returncode is None:
                         try:
                             process.kill()
-                        except Exception:
-                            pass
+                        except Exception as kill_error:
+                            logger.debug(f"timeout cleanup: kill failed: {kill_error}")
 
             return CommandResult(
                 success=False,
@@ -285,15 +286,15 @@ class ExtendedCommandExecutor(BaseCommandExecutor):
                         result.success = data.get("success", result.success)
                         result.stdout = data.get("stdout", result.stdout)
                         result.stderr = data.get("stderr", result.stderr)
-                except Exception:
-                    pass
+                except Exception as json_error:
+                    logger.debug(f"powershell advanced: stdout is not JSON, keeping raw: {json_error}")
 
             return result
         finally:
             try:
                 os.unlink(temp_path)
-            except Exception:
-                pass
+            except OSError as unlink_error:
+                logger.debug(f"powershell advanced: temp cleanup failed: {unlink_error}")
 
 
 if __name__ == "__main__":

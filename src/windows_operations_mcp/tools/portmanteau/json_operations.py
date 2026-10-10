@@ -189,7 +189,8 @@ def register_json_operations(parent_mcp: FastMCP) -> None:
         for blob in re.findall(r"(\{.*?\}|\[.*?\])", text, re.DOTALL):
             try:
                 results.append(json.loads(blob))
-            except Exception:
+            except Exception as parse_error:
+                logger.debug(f"extract_from_text: skipping unparseable blob: {parse_error}")
                 continue
         return {"success": True, "found": len(results), "items": results}
 

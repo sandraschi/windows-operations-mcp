@@ -41,7 +41,8 @@ class _RingBufferHandler(logging.Handler):
             with self._lock:
                 self._buffer.append(entry)
         except Exception:
-            pass
+            # Logging handlers must never raise (stdlib logging contract).
+            self.handleError(record)
 
     def clear(self) -> None:
         with self._lock:
@@ -76,11 +77,9 @@ def _query_logs(
         entries = [e for e in entries if needle in e["detail"].lower()]
     entries.sort(key=lambda e: e["timestamp"], reverse=(sort != "asc"))
     if after_id:
-        try:
-            idx = next(i for i, e in enumerate(entries) if e["id"] == after_id)
+        idx = next((i for i, e in enumerate(entries) if e["id"] == after_id), None)
+        if idx is not None:
             entries = entries[:idx]
-        except StopIteration:
-            pass
     total = len(entries)
     return entries[offset : offset + limit], total
 
@@ -94,8 +93,8 @@ async def _probe_llm_provider(key: str, url: str, container: str, field: str) ->
                 payload = r.json()
                 items = payload.get(container) or []
                 models = [{"name": m.get(field)} for m in items if m.get(field)]
-    except Exception:
-        pass
+    except Exception as probe_error:
+        logging.getLogger(__name__).debug(f"LLM provider probe failed for {key}: {probe_error}")
     return key, models
 
 

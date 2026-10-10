@@ -364,8 +364,8 @@ def get_system_resources() -> dict[str, Any]:
                         "percent_used": usage.percent,
                     }
                 )
-            except Exception:
-                pass
+            except Exception as part_error:
+                logger.debug(f"disk partitions: skipping {part.mountpoint}: {part_error}")
 
         result = {
             "success": True,

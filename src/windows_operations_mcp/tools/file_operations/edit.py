@@ -281,8 +281,8 @@ def atomic_write(
                 # Clean up the temporary file if something went wrong
                 try:
                     tmp_path.unlink()
-                except Exception:
-                    pass
+                except OSError as cleanup_error:
+                    logger.debug(f"atomic-write cleanup: temp unlink failed: {cleanup_error}")
                 raise
 
     except Exception as e:

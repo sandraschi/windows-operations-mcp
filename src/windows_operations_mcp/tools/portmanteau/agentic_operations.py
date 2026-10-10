@@ -206,7 +206,8 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
                     procs.append(p.info)
                     if len(procs) >= 30:
                         break
-                except Exception:
+                except Exception as proc_error:
+                    logger.debug(f"process snapshot: skipping unreadable process: {proc_error}")
                     continue
             findings["running_processes_sample"] = procs
         except Exception as e:

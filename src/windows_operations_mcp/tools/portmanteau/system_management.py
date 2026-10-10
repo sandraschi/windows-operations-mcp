@@ -126,8 +126,8 @@ def register_system_management(parent_mcp: FastMCP) -> None:
                 )
                 if advice and advice.content:
                     data["sampling_advice"] = advice.content[0].text
-            except Exception:
-                pass
+            except Exception as sampling_error:
+                logger.debug(f"sampling advice unavailable, continuing without it: {sampling_error}")
 
         return data
 
