@@ -18,6 +18,15 @@ All notable changes to the `windows-operations-mcp` project will be documented i
 
 ## [Unreleased]
 
+### Fixed (assfix 2026-10-10, pass 2: 32 -> rescore pending)
+- lint: removed S110/S112 from ruff ignore (was triplicated) and fixed all 14 silent swallows with log-and-continue (H2)
+- tests: 12/12 triage — pytest-asyncio dep + asyncio_mode=auto (7 integration), bare-server registration flag save/restore (2 detailed), hermetic missing-paths under tempdir (2 portable-path), stdin via [Console]::In (1); found + fixed sessionless-ctx RuntimeError crash in winops_cmd via _ctx_interactive guard (H3)
+- justfile: all recipes joined to single lines (Set-Location no longer lost between lines), bootstrap --extra dev, version 15.3.0 (H4)
+- ci: pyright step + bun frontend job (biome:ci + typecheck); biome:ci + typecheck scripts added to web_sota (H6/M5)
+- web: Inbox attention queue page (event errors, backend warnings, stopped services) with search/filter/ack + nav route; @tauri-apps/api dep; stale CORS comment fixed (M4/H5)
+- mcpb: fleet pack shim (deleted vendored mcpb/pack.ps1), NSIS mcp-clients register/unregister hooks, install-mcp-clients.ps1 restored, prompts rewritten against real op signatures (M7)
+- config: .pre-commit-config.yaml + vendor hooks (ps51/biome/batcrlf); hook install deferred — legacy scripts fail ps51 parse (M2 partial)
+
 ### Fixed (assfix 2026-10-09)
 - tests: stale portmanteau imports in test_portmanteau_ext.py now skip with reason instead of breaking collection (H3 partial)
 - lint: ruff T20 print-ban enforced with per-file-ignores for scripts/tests/build helpers (M1)

@@ -27,6 +27,29 @@ See [INSTALL.md](INSTALL.md) for manual setup or Claude Desktop integration.
 
 ---
 
+## Install the MCPB bundle
+
+Claude Desktop (Windows) one-liner — Claude-only:
+
+```powershell
+irm https://github.com/sandraschi/windows-operations-mcp/releases/latest/download/install.ps1 | iex
+```
+
+Every other MCP client (Cursor, Windsurf, OpenCode, Copilot, Antigravity) via `uvx`:
+
+```json
+{
+  "mcpServers": {
+    "windows-operations-mcp": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/sandraschi/windows-operations-mcp", "windows-operations-mcp"]
+    }
+  }
+}
+```
+
+---
+
 ## Tools
 
 | Tool | What it does |
