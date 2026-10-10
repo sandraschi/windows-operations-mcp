@@ -8,6 +8,7 @@
 		"dev": "vite",
 		"build": "tsc -b && vite build",
 		"lint": "biome check --write .",
+		"biome:ci": "biome ci .",
 		"format": "biome format --write .",
 		"typecheck": "tsc --noEmit",
 		"preview": "vite preview"
@@ -24,6 +25,7 @@
 		"@radix-ui/react-tabs": "^1.1.13",
 		"@radix-ui/react-tooltip": "^1.2.8",
 		"@tanstack/react-query": "^5.90.21",
+		"@tauri-apps/api": "^2.2.0",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"framer-motion": "^12.38.0",

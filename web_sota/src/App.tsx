@@ -10,6 +10,7 @@ import {
 	ExternalLink,
 	Globe,
 	HelpCircle,
+	Inbox as InboxIcon,
 	LayoutDashboard,
 	Moon,
 	ScrollText,
@@ -37,6 +38,7 @@ import Chat from "./pages/chat";
 import Dashboard from "./pages/dashboard";
 import EventLogs from "./pages/eventlogs";
 import Help from "./pages/help";
+import Inbox from "./pages/inbox";
 import Logging from "./pages/Logging";
 import Processes from "./pages/processes";
 import Services from "./pages/services";
@@ -53,6 +55,7 @@ function Sidebar() {
 
 	const navItems = [
 		{ name: "Dashboard", path: "/", icon: LayoutDashboard },
+		{ name: "Inbox", path: "/inbox", icon: InboxIcon },
 		{ name: "Services", path: "/services", icon: Server },
 		{ name: "Processes", path: "/processes", icon: Cpu },
 		{ name: "Event Logs", path: "/eventlogs", icon: ScrollText },
@@ -217,7 +220,7 @@ function TopBar() {
 		let cancelled = false;
 		const check = async () => {
 			try {
-				const r = await fetch(API_BASE + "/health", {
+				const r = await fetch(`${API_BASE}/health`, {
 					signal: AbortSignal.timeout(3000),
 				});
 				if (!cancelled) setBackendOk(r.ok);
@@ -337,6 +340,7 @@ function AnimatedRoutes() {
 			>
 				<Routes location={location}>
 					<Route path="/" element={<Dashboard />} />
+					<Route path="/inbox" element={<Inbox />} />
 					<Route path="/services" element={<Services />} />
 					<Route path="/processes" element={<Processes />} />
 					<Route path="/eventlogs" element={<EventLogs />} />
