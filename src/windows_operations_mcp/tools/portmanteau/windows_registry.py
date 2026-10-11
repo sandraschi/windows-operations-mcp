@@ -11,6 +11,7 @@ Atomic tools mounted under namespace "winops_reg":
 """
 
 import asyncio
+import os
 import winreg
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,7 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
 
@@ -35,6 +37,36 @@ HIVES = {
 HiveKey = Literal["HKLM", "HKCU", "HKU", "HKCR"]
 
 
+# Localized messages emitted by reg.exe when a key or value is absent.
+# reg.exe localizes its output to the console code page, so matching only the
+# English wording made safe_mode fail on every non-English Windows install.
+_MISSING_KEY_MARKERS = (
+    "unable to find",  # en
+    "找不到",  # zh-CN / zh-TW
+    "nicht gefunden",  # de
+    "no se encuentra",  # es
+    "introuvable",  # fr
+    "не удается найти",  # ru
+    "見つかりません",  # ja
+    "찾을 수 없",  # ko
+)
+
+
+def _is_missing_key_error(message: str) -> bool:
+    """True when reg.exe reported that the key or value does not exist.
+
+    Checks localized wording rather than English-only text. This matters
+    because the previous implementation matched the English phrase only, so
+    on a Chinese Windows install the "key does not exist" case was treated
+    as a hard failure and safe_mode could never create a new key.
+    """
+    lowered = message.lower()
+    if any(marker.lower() in lowered for marker in _MISSING_KEY_MARKERS):
+        return True
+    # Stable fallback: Windows error code 2 == ERROR_FILE_NOT_FOUND.
+    return "error code 2" in lowered
+
+
 async def _reg(*args: str) -> str:
     proc = await asyncio.create_subprocess_exec(
         "reg.exe",
@@ -44,28 +76,74 @@ async def _reg(*args: str) -> str:
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        err = stderr.decode(errors="replace").strip()
-        if "export" in args and "unable to find" in err.lower():
+        err = decode_windows_output(stderr)
+        if "export" in args and _is_missing_key_error(err):
+            # Exporting a key that does not exist yet is the normal path when
+            # safe_mode backs up before creating a brand-new key.
             return "no_existing_key"
-        raise RuntimeError(err or stdout.decode(errors="replace").strip())
+        raise RuntimeError(err or decode_windows_output(stdout))
     return args[2] if len(args) > 2 else "ok"
 
 
-async def _auto_backup(hive: str, key_path: str) -> str:
+def _backup_dir() -> Path:
+    """Resolve the registry backup directory.
+
+    ``WINOPPS_REG_BACKUP_DIR`` overrides; otherwise backups land under the
+    user profile so they survive a drive-letter change and are easy to find.
+    The previous hard-coded "D:/Dev/repos/temp/reg_backups" (the upstream
+    author path) raised on machines without a D: drive, which aborted the
+    whole write operation.
+    """
+    override = os.environ.get("WINOPPS_REG_BACKUP_DIR")
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / ".dsh" / "mcp" / "reg_backups"
+
+
+async def _auto_backup(hive: str, key_path: str) -> str | None:
+    """Export a key to .reg as a safety net before a destructive change.
+
+    Returns the backup path, or None when the key does not exist yet (nothing
+    to back up - this is the normal path for a first write).
+    """
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_dir = Path("D:/Dev/repos/temp/reg_backups")
+    backup_dir = _backup_dir()
     backup_dir.mkdir(parents=True, exist_ok=True)
     safe = key_path.replace("\\", "_").replace("/", "_")[:80]
     out = backup_dir / f"{ts}_{hive}_{safe}.reg"
-    await _reg("export", f"{hive}\\{key_path}", str(out), "/y")
+    result = await _reg("export", f"{hive}\\{key_path}", str(out), "/y")
+    if result == "no_existing_key":
+        return None
     return str(out)
 
 
+# Explicit registry *value type* map.
+#
+# winreg exposes both value types (REG_SZ, REG_DWORD, ...) and access/option
+# flags (REG_CREATED_NEW_KEY, REG_NOTIFY_CHANGE_NAME, ...) under the same REG_
+# prefix, and several of them share the same integer. Enumerating dir(winreg)
+# therefore returned whichever name sorted first alphabetically: REG_SZ (1)
+# was reported as REG_CREATED_NEW_KEY, and REG_RESOURCE_LIST (8) as
+# REG_NOTIFY_CHANGE_SECURITY. Only real value types belong in this map.
+_VTYPE_NAMES = {
+    0: "REG_NONE",
+    1: "REG_SZ",
+    2: "REG_EXPAND_SZ",
+    3: "REG_BINARY",
+    4: "REG_DWORD",
+    5: "REG_DWORD_BIG_ENDIAN",
+    6: "REG_LINK",
+    7: "REG_MULTI_SZ",
+    8: "REG_RESOURCE_LIST",
+    9: "REG_FULL_RESOURCE_DESCRIPTOR",
+    10: "REG_RESOURCE_REQUIREMENTS_LIST",
+    11: "REG_QWORD",
+}
+
+
 def _vtype_name(vtype: int) -> str:
-    for name in dir(winreg):
-        if name.startswith("REG_") and getattr(winreg, name) == vtype:
-            return name
-    return str(vtype)
+    """Return the canonical REG_* name for a registry value type."""
+    return _VTYPE_NAMES.get(vtype, f"UNKNOWN({vtype})")
 
 
 def _read_value_blocking(hkey, path: str, name: str | None):

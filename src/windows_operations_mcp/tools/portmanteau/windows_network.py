@@ -17,6 +17,7 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
 
@@ -25,8 +26,8 @@ async def _run_cmd(cmd: list[str]) -> str:
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        raise RuntimeError(stderr.decode(errors="replace").strip() or stdout.decode(errors="replace").strip())
-    return stdout.decode(errors="replace").strip()
+        raise RuntimeError(decode_windows_output(stderr) or decode_windows_output(stdout))
+    return decode_windows_output(stdout)
 
 
 def register_windows_network(parent_mcp: FastMCP) -> None:

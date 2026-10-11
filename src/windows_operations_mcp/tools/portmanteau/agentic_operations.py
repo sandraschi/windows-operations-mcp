@@ -17,6 +17,7 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
 
@@ -97,7 +98,7 @@ def register_agentic_operations(parent_mcp: FastMCP) -> None:
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
-                findings = {"raw_users": stdout.decode(errors="replace").strip()}
+                findings = {"raw_users": decode_windows_output(stdout)}
 
             await ctx.report_progress(30, 100)
 
