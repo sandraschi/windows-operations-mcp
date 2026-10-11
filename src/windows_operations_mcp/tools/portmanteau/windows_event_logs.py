@@ -18,6 +18,7 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
 
@@ -31,8 +32,30 @@ async def _wevtutil(*args: str) -> str:
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        raise RuntimeError(stderr.decode(errors="replace").strip())
-    return stdout.decode(errors="replace").strip()
+        raise RuntimeError(decode_windows_output(stderr))
+    return decode_windows_output(stdout)
+
+
+_CHANNEL_CACHE: set[str] | None = None
+
+
+async def _available_channels() -> set[str]:
+    """Return the set of valid event log channel names (cached per process).
+
+    Used to reject unknown channels up front. A failure to enumerate returns an
+    empty set, which callers treat as "cannot validate" rather than "no valid
+    channels", so a transient wevtutil problem never blocks legitimate queries.
+    """
+    global _CHANNEL_CACHE
+    if _CHANNEL_CACHE is not None:
+        return _CHANNEL_CACHE
+    try:
+        raw = await _wevtutil("el")
+        _CHANNEL_CACHE = {line.strip() for line in raw.splitlines() if line.strip()}
+    except Exception as exc:  # pragma: no cover - depends on host state
+        logger.warning("Could not enumerate event log channels: %s", exc)
+        return set()
+    return _CHANNEL_CACHE
 
 
 def _query_events_blocking(log_name: str, max_events: int, hours: int, event_id: int | None) -> list[dict]:
@@ -113,6 +136,21 @@ def register_windows_event_logs(parent_mcp: FastMCP) -> None:
          - Returns success=false if pywin32 is not installed or log_name is invalid.
         """
         try:
+            # Validate the channel BEFORE querying. win32evtlog.OpenEventLog is a
+            # legacy API that silently falls back to the Application log for an
+            # unknown channel name instead of raising, which made this tool return
+            # `success: true` with events from a completely different log.
+            available = await _available_channels()
+            if available and log_name not in available:
+                return fail_response(
+                    f"Event log channel {log_name!r} does not exist.",
+                    error=f"Unknown channel: {log_name}",
+                    suggestions=[
+                        "Use winops_evtlog/list to see valid channel names.",
+                        "Common channels: Application, System, Security.",
+                    ],
+                    available_sample=sorted(available)[:15],
+                )
             events = await asyncio.to_thread(_query_events_blocking, log_name, max_events, time_range_hours, event_id)
             return {
                 "success": True,

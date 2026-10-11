@@ -16,6 +16,7 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
 
@@ -32,8 +33,8 @@ async def _ps(command: str) -> Any:
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        raise RuntimeError(stderr.decode(errors="replace").strip())
-    text = stdout.decode(errors="replace").strip()
+        raise RuntimeError(decode_windows_output(stderr))
+    text = decode_windows_output(stdout)
     try:
         return json.loads(text)
     except Exception:

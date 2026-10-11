@@ -21,6 +21,7 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
 
@@ -43,8 +44,8 @@ async def _docker(
             proc.communicate(input=stdin_data.encode() if stdin_data else None),
             timeout=timeout,
         )
-        stdout = stdout_bytes.decode(errors="replace") if stdout_bytes else ""
-        stderr = stderr_bytes.decode(errors="replace") if stderr_bytes else ""
+        stdout = decode_windows_output(stdout_bytes)
+        stderr = decode_windows_output(stderr_bytes)
         return {
             "success": proc.returncode == 0,
             "stdout": stdout,
