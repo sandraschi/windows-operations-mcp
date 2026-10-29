@@ -22,6 +22,7 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
 
@@ -222,7 +223,8 @@ def register_archive_management(parent_mcp: FastMCP) -> None:
             )
             _stdout, stderr = await proc.communicate()
             if proc.returncode != 0:
-                raise RuntimeError(stderr.decode(errors="replace").strip())
+                detail = decode_windows_output(stderr) or decode_windows_output(_stdout)
+                raise RuntimeError(detail or f"expand.exe exited with code {proc.returncode}")
             return {"success": True, "path": path, "target_dir": target_dir}
         except Exception as e:
             return fail_response(f"Operation failed: {e}")

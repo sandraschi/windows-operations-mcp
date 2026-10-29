@@ -18,16 +18,25 @@ from pydantic import Field
 
 from windows_operations_mcp.logging_config import get_logger
 from windows_operations_mcp.utils import fail_response
+from windows_operations_mcp.utils.wintext import decode_windows_output
 
 logger = get_logger(__name__)
+
+
+def _try_json(text: str) -> Any:
+    """Parse JSON when possible, otherwise return the text unchanged."""
+    try:
+        return json.loads(text)
+    except Exception:
+        return text
 
 
 async def _run(cmd: list[str]) -> str:
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        raise RuntimeError(stderr.decode(errors="replace").strip() or stdout.decode(errors="replace").strip())
-    return stdout.decode(errors="replace").strip()
+        raise RuntimeError(decode_windows_output(stderr) or decode_windows_output(stdout))
+    return decode_windows_output(stdout)
 
 
 def register_windows_automation(parent_mcp: FastMCP) -> None:
@@ -170,8 +179,24 @@ def register_windows_automation(parent_mcp: FastMCP) -> None:
             wmi_query(wmi_class="Win32_BIOS")
         """
         try:
-            result = await _run(["wmic.exe", f"/namespace:{wmi_namespace}", "path", wmi_class, "get", "/format:list"])
-            return {"success": True, "wmi_class": wmi_class, "result": result}
+            # wmic.exe was removed from Windows 11 24H2+, so drive the query
+            # through the CIM cmdlets that ship with PowerShell instead.
+            # ConvertTo-Json keeps the result structured; -Depth covers the
+            # nested objects WMI returns.
+            ps = (
+                f"Get-CimInstance -Namespace '{wmi_namespace}' "
+                f"-ClassName '{wmi_class}' | Select-Object * | ConvertTo-Json -Depth 3"
+            )
+            result = await _run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps])
+            if not result.strip():
+                return fail_response(
+                    f"WMI class {wmi_class!r} returned no instances.",
+                    error=f"No instances for {wmi_class}",
+                    wmi_class=wmi_class,
+                    suggestions=["Verify the class name, e.g. Win32_OperatingSystem or Win32_Processor."],
+                )
+            parsed = _try_json(result)
+            return {"success": True, "wmi_class": wmi_class, "result": parsed}
         except Exception as e:
             return fail_response(
                 f"WMI query failed: {e}",
